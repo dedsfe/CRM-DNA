@@ -79,9 +79,15 @@ function createMCPServer() {
             properties: {
               id: { type: "string", description: "UUID of the client" },
               name: { type: "string" },
+              emoji: { type: "string" },
               status: { type: "string", enum: ["active", "negotiation"] },
+              since: { type: "string", description: "Date in YYYY-MM-DD format" },
               contact_email: { type: "string" },
               contact_phone: { type: "string" },
+              conn_drive: { type: "string" },
+              conn_instagram: { type: "string" },
+              conn_tiktok: { type: "string" },
+              conn_website: { type: "string" },
             },
             required: ["id"],
           },
@@ -178,6 +184,29 @@ function createMCPServer() {
             required: ["parent_type", "parent_id", "author", "body"],
           },
         },
+        {
+          name: "update_comment",
+          description: "Update a comment",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string", description: "UUID of the comment" },
+              body: { type: "string" },
+            },
+            required: ["id", "body"],
+          },
+        },
+        {
+          name: "delete_comment",
+          description: "Remove a comment",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string", description: "UUID of the comment" },
+            },
+            required: ["id"],
+          },
+        },
       ],
     };
   });
@@ -260,6 +289,20 @@ function createMCPServer() {
           const { data, error } = await supabase.from("comments").insert([args]).select();
           if (error) throw new Error(error.message);
           return { content: [{ type: "text", text: JSON.stringify(data[0], null, 2) }] };
+        }
+
+        case "update_comment": {
+          const { id, body } = args;
+          const { data, error } = await supabase.from("comments").update({ body }).eq("id", id).select();
+          if (error) throw new Error(error.message);
+          return { content: [{ type: "text", text: JSON.stringify(data[0], null, 2) }] };
+        }
+
+        case "delete_comment": {
+          const { id } = args;
+          const { error } = await supabase.from("comments").delete().eq("id", id);
+          if (error) throw new Error(error.message);
+          return { content: [{ type: "text", text: `Comment ${id} deleted successfully.` }] };
         }
 
         default:
