@@ -76,11 +76,64 @@
 
 .search-input::placeholder { color: var(--mid-gray); }
 
-/* ── CLIENT CARDS GRID ── */
-.cp-grid {
+/* ── CLIENT KANBAN ── */
+.client-kanban {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-16);
+  align-items: start;
+}
+
+.client-col {
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  border: 1px solid var(--light-gray);
+  display: flex;
+  flex-direction: column;
+}
+
+.client-col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--s-16) var(--s-20);
+}
+
+.client-col-head--blue  { background: var(--blue); }
+.client-col-head--green { background: linear-gradient(100deg, #1A7D4E, #34C759); }
+
+.client-col-head-left {
+  display: flex;
+  align-items: center;
   gap: var(--s-12);
+}
+
+.client-col-body {
+  background: var(--white);
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-16);
+  gap: var(--s-12);
+  min-height: 200px;
+  transition: background-color 0.2s, border 0.2s;
+  border: 2px dashed transparent;
+}
+
+.client-col-body--drag-valid {
+  background-color: rgba(52, 199, 89, 0.08);
+  border: 2px dashed var(--green);
+}
+
+.client-col-body--drag-invalid {
+  background-color: rgba(255, 59, 48, 0.08);
+  border: 2px dashed var(--red);
+}
+
+.client-card--dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
 }
 
 .client-card {

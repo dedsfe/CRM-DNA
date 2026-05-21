@@ -41,7 +41,6 @@ const toTask = (r) => ({
   description: r.description ?? '',
   dueDate:     r.due_date ?? '',
   assignees:   r.assignees ?? (r.assignee ? [r.assignee] : ['André']),
-  stage:       r.stage,
   priority:    r.priority,
   status:      r.status,
 });
@@ -52,7 +51,6 @@ const fromTask = (t) => ({
   description: t.description || null,
   due_date:    t.dueDate || null,
   assignees:   t.assignees,
-  stage:       t.stage,
   priority:    t.priority,
   status:      t.status,
 });

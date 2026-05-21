@@ -27,7 +27,6 @@ create table if not exists tasks (
   description text,
   due_date    date,
   assignees   text[] not null default array['André']::text[],
-  stage       text not null default 'pre-acquisition' check (stage in ('pre-acquisition','post-acquisition')),
   priority    text not null default 'medium' check (priority in ('high','medium','low')),
   status      text not null default 'pending' check (status in ('pending','completed')),
   created_at  timestamptz default now(),
@@ -77,23 +76,22 @@ on conflict do nothing;
 
 -- seed tasks referencing client IDs
 with c as (select id, name from clients)
-insert into tasks (client_id, title, description, due_date, assignees, stage, priority, status)
+insert into tasks (client_id, title, description, due_date, assignees, priority, status)
 select
   c.id,
   v.title,
   v.description,
   v.due_date::date,
   v.assignees,
-  v.stage,
   v.priority,
   v.status
 from c
 join (values
-  ('Padaria do João',      'Enviar Proposta Comercial',  'Preparar e enviar proposta de social media.', '2026-05-25', array['André'],             'pre-acquisition',  'high',   'pending'),
-  ('TechNova Solutions',   'Reunião de Onboarding',      'Apresentar equipe e cronograma de entregas.', '2026-05-22', array['André','Danyelle'],  'post-acquisition', 'medium', 'completed'),
-  ('TechNova Solutions',   'Aprovar Artes de Maio',      'Revisar artes do feed de maio.',              '2026-05-26', array['Danyelle'],          'post-acquisition', 'high',   'pending'),
-  ('Beleza & Estilo',      'Criar Roteiro de Reels',     'Roteiro para 4 reels de junho.',              '2026-05-30', array['André'],             'post-acquisition', 'low',    'pending')
-) as v(client_name, title, description, due_date, assignees, stage, priority, status)
+  ('Padaria do João',      'Enviar Proposta Comercial',  'Preparar e enviar proposta de social media.', '2026-05-25', array['André'],             'high',   'pending'),
+  ('TechNova Solutions',   'Reunião de Onboarding',      'Apresentar equipe e cronograma de entregas.', '2026-05-22', array['André','Danyelle'],  'medium', 'completed'),
+  ('TechNova Solutions',   'Aprovar Artes de Maio',      'Revisar artes do feed de maio.',              '2026-05-26', array['Danyelle'],          'high',   'pending'),
+  ('Beleza & Estilo',      'Criar Roteiro de Reels',     'Roteiro para 4 reels de junho.',              '2026-05-30', array['André'],             'low',    'pending')
+) as v(client_name, title, description, due_date, assignees, priority, status)
   on c.name = v.client_name
 on conflict do nothing;
 

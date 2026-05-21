@@ -130,7 +130,7 @@ function ClientModal({ client, onClose, onSave }) {
 }
 
 /* ─── Campos compartilhados do formulário de tarefa ─── */
-function TaskFields({ form, set, showStage = true }) {
+function TaskFields({ form, set }) {
   return (
     <>
       <div className="field">
@@ -169,16 +169,6 @@ function TaskFields({ form, set, showStage = true }) {
       </div>
 
       <div className="field-row">
-        {showStage && (
-          <div className="field">
-            <label className="field-label">Etapa</label>
-            <select className="input" value={form.stage}
-              onChange={e => set('stage', e.target.value)}>
-              <option value="pre-acquisition">🎯 Pré-Aquisição</option>
-              <option value="post-acquisition">🚀 Pós-Aquisição</option>
-            </select>
-          </div>
-        )}
         <div className="field">
           <label className="field-label">Prioridade</label>
           <select className="input" value={form.priority}
@@ -226,7 +216,7 @@ function TaskEditModal({ task, onClose, onSave, onDelete }) {
 }
 
 /* ─── Formulário inline (criar tarefa dentro da coluna) ─── */
-function InlineAddTask({ clientId, stage, onAdd, onCancel }) {
+function InlineAddTask({ clientId, onAdd, onCancel }) {
   const [form, setForm] = useState({
     title: '', description: '', dueDate: '', assignees: ['André'], priority: 'medium',
   });
@@ -236,13 +226,13 @@ function InlineAddTask({ clientId, stage, onAdd, onCancel }) {
 
   return (
     <div className="inline-form">
-      <TaskFields form={form} set={set} showStage={false} />
+      <TaskFields form={form} set={set} />
       <div className="inline-form-actions">
         <button className="btn btn-secondary btn-sm" onClick={onCancel} disabled={busy}>Cancelar</button>
         <button className="btn btn-primary btn-sm" disabled={!valid || busy}
           onClick={async () => {
             setBusy(true);
-            await onAdd({ ...form, clientId, stage, status: 'pending' });
+            await onAdd({ ...form, clientId, status: 'pending' });
             onCancel();
           }}>
           {busy ? 'Adicionando…' : 'Adicionar'}
@@ -323,11 +313,113 @@ function TaskColumn({ variant, label, tasks, clientId, stage,
             )
         }
         {adding
-          ? <InlineAddTask clientId={clientId} stage={stage} onAdd={onAdd} onCancel={onCancelAdd} />
-          : <button className="k-add" onClick={onStartAdd}>
+          ? <InlineAddTask clientId={clientId} onAdd={onAdd} onCancel={onCancelAdd} />
+          : (!adding && onStartAdd && <button className="k-add" onClick={onStartAdd}>
               <Plus size={15} /> Nova tarefa
-            </button>
+            </button>)
         }
+      </div>
+    </div>
+  );
+}
+
+/* ─── Kanban de Clientes ─── */
+function ClientCard({ c, tasks, isActive, onClick, draggedClient, setDraggedClient, onComment }) {
+  const ct = tasks.filter(t => t.clientId === c.id);
+  const pending = ct.filter(t => t.status === 'pending').length;
+  const isDragging = draggedClient?.id === c.id;
+
+  return (
+    <button
+      className={`client-card ${isActive ? 'client-card--active' : ''} ${isDragging ? 'client-card--dragging' : ''}`}
+      onClick={onClick}
+      draggable
+      onDragStart={(e) => {
+        setDraggedClient(c);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnd={() => setDraggedClient(null)}
+    >
+      <div className="cc-emoji">{c.emoji}</div>
+      <div className="cc-info">
+        <span className="cc-name">{c.name}</span>
+        <span className={`badge ${c.status === 'active' ? 'badge-green' : 'badge-orange'}`}>
+          {c.status === 'active' ? 'Ativo' : 'Negociação'}
+        </span>
+      </div>
+      {pending > 0 && <div className="cc-badge">{pending}</div>}
+      <span
+        className="comment-btn card-comment"
+        role="button"
+        tabIndex={0}
+        title="Comentários"
+        onClick={(e) => { e.stopPropagation(); onComment(c); }}
+      >
+        <MessageSquare size={13} />
+      </span>
+    </button>
+  );
+}
+
+function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, selectedId, setSelectedId, draggedClient, setDraggedClient, onDropClient, onComment }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (draggedClient && draggedClient.status !== status) {
+      onDropClient({ ...draggedClient, status });
+    }
+    setDraggedClient(null);
+  };
+
+  let dropClass = '';
+  if (isDragOver && draggedClient) {
+    dropClass = draggedClient.status === status ? 'client-col-body--drag-invalid' : 'client-col-body--drag-valid';
+  }
+
+  return (
+    <div className="client-col">
+      <div className={`client-col-head client-col-head--${variant}`}>
+        <div className="client-col-head-left">
+          <span className="k-col-emoji">{emoji}</span>
+          <h3 className="k-col-title">{label}</h3>
+        </div>
+        <span className="k-count">{clients.length}</span>
+      </div>
+      <div className={`client-col-body ${dropClass}`}
+           onDragOver={handleDragOver} 
+           onDragEnter={handleDragOver} 
+           onDragLeave={handleDragLeave} 
+           onDrop={handleDrop}>
+        {clients.length === 0 ? (
+           <p className="tasks-empty">Nenhum cliente</p>
+        ) : (
+          clients.map(c => (
+            <ClientCard 
+              key={c.id} 
+              c={c} 
+              tasks={tasks} 
+              isActive={selectedId === c.id} 
+              onClick={() => setSelectedId(selectedId === c.id ? null : c.id)}
+              draggedClient={draggedClient}
+              setDraggedClient={setDraggedClient}
+              onComment={onComment}
+            />
+          ))
+        )}
       </div>
     </div>
   );
@@ -343,8 +435,9 @@ export default function Clients() {
   const [selectedId, setSelectedId] = useState(null);
   const [clientModal, setClientModal] = useState(null); // null | {} | {client}
   const [editingTask, setEditingTask] = useState(null);
-  const [addingStage, setAddingStage] = useState(null);
+  const [addingTask, setAddingTask] = useState(false);
   const [commentTarget, setCommentTarget] = useState(null);
+  const [draggedClient, setDraggedClient] = useState(null);
   const { user } = useAuth();
 
   const openTaskComments   = (task)   => setCommentTarget({ type: 'task',   id: task.id,   title: task.title });
@@ -363,9 +456,9 @@ export default function Clients() {
   const selected = clients.find(c => c.id === selectedId) ?? null;
 
   const clientTasks = tasks.filter(t => t.clientId === selectedId);
-  const preTasks    = clientTasks.filter(t => t.stage === 'pre-acquisition');
-  const postTasks   = clientTasks.filter(t => t.stage === 'post-acquisition');
-  const pendingCount = clientTasks.filter(t => t.status === 'pending').length;
+  const pendingTasks = clientTasks.filter(t => t.status === 'pending');
+  const completedTasks = clientTasks.filter(t => t.status === 'completed');
+  const pendingCount = pendingTasks.length;
 
   /* task handlers */
   const toggle = async (id) => {
@@ -443,40 +536,22 @@ export default function Clients() {
         <div className="db-loading">Carregando clientes…</div>
       ) : (
       <>
-      {/* ── CLIENT CARDS GRID ── */}
-      <div className="cp-grid">
-        {filtered.map(c => {
-          const ct = tasks.filter(t => t.clientId === c.id);
-          const pending = ct.filter(t => t.status === 'pending').length;
-          const isActive = selectedId === c.id;
-          return (
-            <button
-              key={c.id}
-              className={`client-card ${isActive ? 'client-card--active' : ''}`}
-              onClick={() => setSelectedId(isActive ? null : c.id)}
-            >
-              <div className="cc-emoji">{c.emoji}</div>
-              <div className="cc-info">
-                <span className="cc-name">{c.name}</span>
-                <span className={`badge ${c.status === 'active' ? 'badge-green' : 'badge-orange'}`}>
-                  {c.status === 'active' ? 'Ativo' : 'Negociação'}
-                </span>
-              </div>
-              {pending > 0 && (
-                <div className="cc-badge">{pending}</div>
-              )}
-              <span
-                className="comment-btn card-comment"
-                role="button"
-                tabIndex={0}
-                title="Comentários"
-                onClick={(e) => { e.stopPropagation(); openClientComments(c); }}
-              >
-                <MessageSquare size={13} />
-              </span>
-            </button>
-          );
-        })}
+      {/* ── CLIENT KANBAN ── */}
+      <div className="client-kanban">
+        <ClientKanbanColumn 
+          status="negotiation" label="Pré-Aquisição" emoji="🎯" variant="blue"
+          clients={filtered.filter(c => c.status === 'negotiation')}
+          tasks={tasks} selectedId={selectedId} setSelectedId={setSelectedId}
+          draggedClient={draggedClient} setDraggedClient={setDraggedClient}
+          onDropClient={saveClient} onComment={openClientComments}
+        />
+        <ClientKanbanColumn 
+          status="active" label="Pós-Aquisição" emoji="🚀" variant="green"
+          clients={filtered.filter(c => c.status === 'active')}
+          tasks={tasks} selectedId={selectedId} setSelectedId={setSelectedId}
+          draggedClient={draggedClient} setDraggedClient={setDraggedClient}
+          onDropClient={saveClient} onComment={openClientComments}
+        />
       </div>
 
       {/* ── EXPANDED PROFILE ── */}
@@ -570,20 +645,18 @@ export default function Clients() {
 
             <div className="tasks-columns">
               <TaskColumn
-                variant="blue" label="🎯 Pré-Aquisição" tasks={preTasks}
-                clientId={selected.id} stage="pre-acquisition"
-                adding={addingStage === 'pre-acquisition'}
-                onStartAdd={() => setAddingStage('pre-acquisition')}
-                onCancelAdd={() => setAddingStage(null)}
+                variant="blue" label="⏳ Pendentes" tasks={pendingTasks}
+                clientId={selected.id}
+                adding={addingTask}
+                onStartAdd={() => setAddingTask(true)}
+                onCancelAdd={() => setAddingTask(false)}
                 onAdd={addTask} onToggle={toggle} onDelete={remove} onEdit={setEditingTask}
                 onComment={openTaskComments}
               />
               <TaskColumn
-                variant="green" label="🚀 Pós-Aquisição" tasks={postTasks}
-                clientId={selected.id} stage="post-acquisition"
-                adding={addingStage === 'post-acquisition'}
-                onStartAdd={() => setAddingStage('post-acquisition')}
-                onCancelAdd={() => setAddingStage(null)}
+                variant="green" label="✅ Concluídas" tasks={completedTasks}
+                clientId={selected.id}
+                adding={false}
                 onAdd={addTask} onToggle={toggle} onDelete={remove} onEdit={setEditingTask}
                 onComment={openTaskComments}
               />

@@ -35,7 +35,7 @@ const toggleInArray = (arr, val) =>
   arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
 /* ─── Campos compartilhados do formulário de tarefa ─── */
-function TaskFields({ form, set, clients, showStage = true }) {
+function TaskFields({ form, set, clients }) {
   return (
     <>
       <div className="field">
@@ -83,15 +83,6 @@ function TaskFields({ form, set, clients, showStage = true }) {
       </div>
 
       <div className="field-row">
-        {showStage && (
-          <div className="field">
-            <label className="field-label">Etapa</label>
-            <select className="input" value={form.stage} onChange={e => set('stage', e.target.value)}>
-              <option value="pre-acquisition">🎯 Pré-Aquisição</option>
-              <option value="post-acquisition">🚀 Pós-Aquisição</option>
-            </select>
-          </div>
-        )}
         <div className="field">
           <label className="field-label">Prioridade</label>
           <select className="input" value={form.priority} onChange={e => set('priority', e.target.value)}>
@@ -138,10 +129,10 @@ function TaskEditModal({ task, clients, onClose, onSave, onDelete }) {
 }
 
 /* ─── Formulário inline (criar tarefa dentro da coluna) ─── */
-function InlineAddTask({ stage, clients, onAdd, onCancel }) {
+function InlineAddTask({ status, clients, onAdd, onCancel }) {
   const [form, setForm] = useState({
     title: '', description: '', dueDate: '', assignees: ['André'],
-    stage, priority: 'medium', clientId: clients[0]?.id ?? '',
+    priority: 'medium', clientId: clients[0]?.id ?? '',
   });
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -149,13 +140,13 @@ function InlineAddTask({ stage, clients, onAdd, onCancel }) {
 
   return (
     <div className="inline-form">
-      <TaskFields form={form} set={set} clients={clients} showStage={false} />
+      <TaskFields form={form} set={set} clients={clients} />
       <div className="inline-form-actions">
         <button className="btn btn-secondary btn-sm" onClick={onCancel} disabled={busy}>Cancelar</button>
         <button className="btn btn-primary btn-sm" disabled={!valid || busy}
           onClick={async () => {
             setBusy(true);
-            await onAdd({ ...form, status: 'pending' });
+            await onAdd({ ...form, status });
             onCancel();
           }}>
           {busy ? 'Adicionando…' : 'Adicionar'}
@@ -238,7 +229,7 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, dragge
 }
 
 /* ─── Coluna do Kanban ─── */
-function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients,
+function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, clients,
                         adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment,
                         draggedTask, setDraggedTask, onDropTask }) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -258,15 +249,15 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (draggedTask && draggedTask.stage !== stage) {
-      onDropTask({ ...draggedTask, stage }); // change stage and update
+    if (draggedTask && draggedTask.status !== status) {
+      onDropTask({ ...draggedTask, status }); // change status and update
     }
     setDraggedTask(null);
   };
 
   let dropClass = '';
   if (isDragOver && draggedTask) {
-    dropClass = draggedTask.stage === stage ? 'k-col-body--drag-invalid' : 'k-col-body--drag-valid';
+    dropClass = draggedTask.status === status ? 'k-col-body--drag-invalid' : 'k-col-body--drag-valid';
   }
 
   return (
@@ -295,10 +286,10 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients
             ))
         }
         {adding
-          ? <InlineAddTask stage={stage} clients={clients} onAdd={onAdd} onCancel={onCancelAdd} />
-          : <button className="k-add" onClick={onStartAdd} disabled={clients.length === 0}>
+          ? <InlineAddTask status={status} clients={clients} onAdd={onAdd} onCancel={onCancelAdd} />
+          : (!adding && onStartAdd && <button className="k-add" onClick={onStartAdd} disabled={clients.length === 0}>
               <Plus size={15} /> Nova tarefa
-            </button>
+            </button>)
         }
       </div>
     </div>
@@ -393,17 +384,19 @@ export default function Tasks() {
     }
   }
 
-  const pending   = byFilter.filter(t => t.status === 'pending');
-  const completed = byFilter.filter(t => t.status === 'completed');
-  const overdue   = pending.filter(t => isOverdue(t.dueDate));
+  if (filterStage !== 'All') {
+    const requiredStatus = filterStage === 'pre-acquisition' ? 'negotiation' : 'active';
+    byFilter = byFilter.filter(t => {
+      const c = clients.find(client => client.id === t.clientId);
+      return c && c.status === requiredStatus;
+    });
+  }
 
-  const showPre  = filterStage === 'All' || filterStage === 'pre-acquisition';
-  const showPost = filterStage === 'All' || filterStage === 'post-acquisition';
-
-  const preTasks  = pending.filter(t => t.stage === 'pre-acquisition')
+  const pendingTasks = byFilter.filter(t => t.status === 'pending')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const postTasks = pending.filter(t => t.stage === 'post-acquisition')
+  const completedTasks = byFilter.filter(t => t.status === 'completed')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const overdue   = pendingTasks.filter(t => isOverdue(t.dueDate));
 
   return (
     <div className="tp">
@@ -425,7 +418,7 @@ export default function Tasks() {
       {/* ── SUMMARY BAR ── */}
       <div className="summary-bar">
         <div className="summary-item summary-item--orange">
-          <span className="summary-n">{pending.length}</span>
+          <span className="summary-n">{pendingTasks.length}</span>
           <span className="summary-l">⏳ Pendentes</span>
         </div>
         <div className="summary-item summary-item--red">
@@ -433,7 +426,7 @@ export default function Tasks() {
           <span className="summary-l">⚠️ Atrasadas</span>
         </div>
         <div className="summary-item summary-item--green">
-          <span className="summary-n">{completed.length}</span>
+          <span className="summary-n">{completedTasks.length}</span>
           <span className="summary-l">✅ Concluídas</span>
         </div>
         <div className="summary-item summary-item--gray">
@@ -461,9 +454,9 @@ export default function Tasks() {
 
           <div className="filter-pills">
             {[
-              { val: 'All',              label: '📋 Todas Etapas' },
-              { val: 'pre-acquisition',  label: '🎯 Pré-Aquisição' },
-              { val: 'post-acquisition', label: '🚀 Pós-Aquisição' },
+              { val: 'All',              label: '📋 Qualquer Fase' },
+              { val: 'pre-acquisition',  label: '🎯 Clientes em Negociação' },
+              { val: 'post-acquisition', label: '🚀 Clientes Ativos' },
             ].map(({ val, label }) => (
               <button
                 key={val}
@@ -505,56 +498,29 @@ export default function Tasks() {
       </div>
 
       {/* ── KANBAN COLUMNS ── */}
-      <div className={`kanban ${filterStage !== 'All' ? 'kanban--single' : ''}`}>
+      <div className="kanban">
+        <KanbanColumn
+          variant="blue" emoji="⏳" stageLabel="Tarefas" title="A Fazer"
+          status="pending" tasks={pendingTasks} clients={clients}
+          adding={addingStage === 'pending'}
+          onStartAdd={() => setAddingStage('pending')}
+          onCancelAdd={() => setAddingStage(null)}
+          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+          onComment={openComments}
+          draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+        />
 
-        {showPre && (
-          <KanbanColumn
-            variant="blue" emoji="🎯" stageLabel="Etapa 1" title="Pré-Aquisição"
-            stage="pre-acquisition" tasks={preTasks} clients={clients}
-            adding={addingStage === 'pre-acquisition'}
-            onStartAdd={() => setAddingStage('pre-acquisition')}
-            onCancelAdd={() => setAddingStage(null)}
-            onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
-            onComment={openComments}
-            draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
-          />
-        )}
-
-        {showPost && (
-          <KanbanColumn
-            variant="green" emoji="🚀" stageLabel="Etapa 2" title="Pós-Aquisição"
-            stage="post-acquisition" tasks={postTasks} clients={clients}
-            adding={addingStage === 'post-acquisition'}
-            onStartAdd={() => setAddingStage('post-acquisition')}
-            onCancelAdd={() => setAddingStage(null)}
-            onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
-            onComment={openComments}
-            draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
-          />
-        )}
-
+        <KanbanColumn
+          variant="green" emoji="✅" stageLabel="Tarefas" title="Feito"
+          status="completed" tasks={completedTasks} clients={clients}
+          adding={addingStage === 'completed'}
+          onStartAdd={() => setAddingStage('completed')}
+          onCancelAdd={() => setAddingStage(null)}
+          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+          onComment={openComments}
+          draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+        />
       </div>
-
-      {/* ── COMPLETED (collapsible) ── */}
-      {completed.length > 0 && (
-        <div className="done-section">
-          <button className="done-toggle" onClick={() => setShowDone(d => !d)}>
-            <CheckCircle2 size={16} className="chk-green" />
-            {completed.length} tarefa{completed.length > 1 ? 's' : ''} concluída{completed.length > 1 ? 's' : ''}
-            <span className="done-toggle-arrow">{showDone ? '▲' : '▼'}</span>
-          </button>
-
-          {showDone && (
-            <div className="done-list">
-              {completed.map(t => (
-                <TaskCard key={t.id} task={t} clients={clients}
-                  onToggle={toggle} onDelete={remove} onEdit={setEditing} onComment={openComments}
-                  draggedTask={null} setDraggedTask={() => {}} />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
       </>
       )}
 
