@@ -1,0 +1,184 @@
+.sidebar {
+  width: 248px;
+  min-height: 100vh;
+  background-color: #FAFAFA;
+  border-right: 1px solid var(--light-gray);
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-24) var(--s-16);
+  gap: var(--s-32);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  flex-shrink: 0;
+}
+
+/* Logo */
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--s-12);
+  padding: var(--s-4) var(--s-8);
+}
+
+.sidebar-logo-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.sidebar-logo-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  letter-spacing: -0.02em;
+}
+
+.sidebar-logo-sub {
+  display: block;
+  font-size: 11px;
+  color: var(--mid-gray);
+  font-weight: 400;
+}
+
+/* Section label */
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--mid-gray);
+  padding: 0 var(--s-8);
+  margin-bottom: var(--s-4);
+}
+
+/* Nav */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-12);
+  padding: 9px var(--s-12);
+  border-radius: var(--r-md);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--dark-gray);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-item:hover {
+  background: var(--light-gray);
+  color: var(--black);
+  text-decoration: none;
+}
+
+.sidebar-item--active {
+  background: var(--blue-light);
+  color: var(--blue);
+}
+
+.sidebar-item--active:hover {
+  background: var(--blue-light);
+  color: var(--blue);
+}
+
+.sidebar-item-emoji {
+  font-size: 18px;
+  width: 24px;
+  text-align: center;
+}
+
+.sidebar-item-label {
+  flex: 1;
+}
+
+/* Users section */
+.sidebar-users {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-8);
+}
+
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: var(--s-12);
+  padding: var(--s-8) var(--s-8);
+  border-radius: var(--r-md);
+}
+
+.sidebar-user--me {
+  background: var(--blue-light);
+}
+
+.sidebar-user--me .sidebar-user-role {
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.sidebar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.sidebar-avatar--blue   { background: var(--blue); }
+.sidebar-avatar--purple { background: #7C3AED; }
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+}
+
+.sidebar-user-role {
+  font-size: 11px;
+  color: var(--mid-gray);
+}
+
+/* Settings */
+.sidebar-settings {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+  padding: 9px var(--s-12);
+  border-radius: var(--r-md);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--mid-gray);
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-settings:hover {
+  background: var(--light-gray);
+  color: var(--black);
+}

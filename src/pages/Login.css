@@ -1,0 +1,136 @@
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--off-white);
+  padding: var(--s-20);
+}
+
+.login-card {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--s-48) var(--s-40);
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.login-logo {
+  width: 52px;
+  height: 52px;
+  background: var(--black);
+  color: var(--white);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--s-16);
+}
+
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--black);
+}
+
+.login-sub {
+  font-size: 14px;
+  color: var(--mid-gray);
+  margin-top: var(--s-8);
+  margin-bottom: var(--s-24);
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-12);
+}
+
+.login-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login-input-ico {
+  position: absolute;
+  left: 14px;
+  color: var(--mid-gray);
+  pointer-events: none;
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px 14px 12px 38px;
+  background: var(--off-white);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  color: var(--black);
+  outline: none;
+  transition: border-color .18s, background .18s;
+}
+
+.login-input:focus {
+  border-color: var(--blue);
+  background: var(--white);
+}
+
+.login-input-wrap--error .login-input {
+  border-color: var(--red);
+}
+
+.login-error {
+  font-size: 13px;
+  color: var(--red);
+  font-weight: 600;
+}
+
+.login-btn {
+  width: 100%;
+  margin-top: var(--s-4);
+}
+
+.login-users {
+  display: flex;
+  gap: var(--s-12);
+  width: 100%;
+}
+
+.login-user {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-8);
+  padding: var(--s-20) var(--s-12);
+  background: var(--off-white);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-lg);
+  font-family: var(--font);
+  transition: border-color .15s, background .15s, transform .15s;
+}
+
+.login-user:hover {
+  border-color: var(--blue);
+  background: var(--blue-light);
+  transform: translateY(-2px);
+}
+
+.login-user-emoji { font-size: 32px; }
+
+.login-user-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--black);
+}

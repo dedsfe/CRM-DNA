@@ -1,0 +1,209 @@
+/* ─────────────────────────────────────────────────────────────
+   DESIGN TOKENS  —  Apple-language applied to a dashboard app
+───────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Colors */
+  --white:      #FFFFFF;
+  --off-white:  #F5F5F7;
+  --light-gray: #E8E8ED;
+  --mid-gray:   #86868B;
+  --dark-gray:  #3A3A3C;
+  --black:      #0A1628;
+  --blue:       #245BA1;
+  --blue-hover: #2C6CBD;
+  --blue-light: #E7EEF6;
+  --gold:       #C9A24B;
+  --gold-bg:    #F6EFDC;
+  --green:      #34C759;
+  --green-bg:   #D1F5DF;
+  --green-text: #1A7D4E;
+  --orange:     #FF9F0A;
+  --orange-bg:  #FEF3DC;
+  --orange-text:#9A5F00;
+  --red:        #FF3B30;
+
+  /* Typography — SF Pro fallback stack */
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
+          "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+
+  /* Spacing */
+  --s-4:  4px;
+  --s-8:  8px;
+  --s-12: 12px;
+  --s-16: 16px;
+  --s-20: 20px;
+  --s-24: 24px;
+  --s-32: 32px;
+  --s-40: 40px;
+  --s-48: 48px;
+  --s-64: 64px;
+
+  /* Radius */
+  --r-sm:   10px;
+  --r-md:   14px;
+  --r-lg:   20px;
+  --r-xl:   28px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,.06);
+  --shadow-sm: 0 2px 8px rgba(0,0,0,.08);
+  --shadow-md: 0 8px 24px rgba(0,0,0,.10);
+  --shadow-lg: 0 20px 48px rgba(0,0,0,.12);
+}
+
+/* ─── Reset ─── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background-color: var(--white);
+  color: var(--black);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: var(--font); cursor: pointer; border: none; background: none; }
+input, select, textarea { font-family: var(--font); }
+img { display: block; max-width: 100%; }
+
+/* ─── Scrollbar (WebKit) ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--light-gray); border-radius: 4px; }
+
+/* ─────────────────────
+   UTILITY CLASSES
+───────────────────── */
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-8);
+  padding: 10px 20px;
+  border-radius: var(--r-pill);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background-color: var(--blue);
+  color: var(--white);
+}
+.btn-primary:hover {
+  background-color: var(--blue-hover);
+  text-decoration: none;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-secondary {
+  background-color: var(--off-white);
+  color: var(--black);
+}
+.btn-secondary:hover {
+  background-color: var(--light-gray);
+  text-decoration: none;
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--blue);
+}
+.btn-ghost:hover {
+  background-color: var(--blue-light);
+  text-decoration: none;
+}
+
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+.btn-lg { padding: 14px 28px; font-size: 17px; }
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.badge-green  { background: var(--green-bg);  color: var(--green-text); }
+.badge-orange { background: var(--orange-bg); color: var(--orange-text); }
+.badge-blue   { background: var(--blue-light); color: var(--blue); }
+.badge-gray   { background: var(--light-gray); color: var(--dark-gray); }
+
+/* Card */
+.card {
+  background: var(--white);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--light-gray);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-2px);
+}
+
+/* Input */
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--off-white);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  color: var(--black);
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.input:focus {
+  border-color: var(--blue);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(36,91,161,.14);
+}
+.input::placeholder { color: var(--mid-gray); }
+
+/* DB error banner */
+.db-error {
+  background: #FFE8E8;
+  color: var(--red);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Loading state */
+.db-loading {
+  padding: var(--s-48);
+  text-align: center;
+  color: var(--mid-gray);
+  font-size: 14px;
+}
+
+/* Layout */
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+.page-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}

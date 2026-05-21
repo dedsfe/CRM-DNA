@@ -1,0 +1,93 @@
+export const mockClients = [
+  {
+    id: "c1",
+    name: "TechNova Solutions",
+    emoji: "🚀",
+    status: "active",
+    since: "2025-01-10",
+    contact: { email: "contato@technova.com.br", phone: "+55 11 99999-1111" },
+    connections: {
+      drive: "https://drive.google.com",
+      instagram: "@technovasol",
+      tiktok: "@technovatk",
+      website: "https://technova.com.br",
+    },
+  },
+  {
+    id: "c2",
+    name: "Padaria do João",
+    emoji: "🥖",
+    status: "negotiation",
+    since: "2026-03-22",
+    contact: { email: "joao@padaria.com", phone: "+55 11 99999-2222" },
+    connections: {
+      drive: "",
+      instagram: "@padariadojoao",
+      tiktok: "",
+      website: "",
+    },
+  },
+  {
+    id: "c3",
+    name: "Beleza & Estilo",
+    emoji: "💅",
+    status: "active",
+    since: "2025-06-05",
+    contact: { email: "oi@belezaestilo.com", phone: "+55 21 91111-3333" },
+    connections: {
+      drive: "https://drive.google.com",
+      instagram: "@belezaestilo",
+      tiktok: "@belezaestilobr",
+      website: "https://belezaestilo.com",
+    },
+  },
+];
+
+export const mockTasks = [
+  {
+    id: "t1",
+    clientId: "c2",
+    title: "Enviar Proposta Comercial",
+    description: "Preparar e enviar proposta de social media para o João.",
+    dueDate: "2026-05-25",
+    assignee: "André",
+    stage: "pre-acquisition",
+    status: "pending",
+    priority: "high",
+  },
+  {
+    id: "t2",
+    clientId: "c1",
+    title: "Reunião de Onboarding",
+    description: "Apresentar a equipe e o cronograma de entregas de maio.",
+    dueDate: "2026-05-22",
+    assignee: "Danyelle",
+    stage: "post-acquisition",
+    status: "completed",
+    priority: "medium",
+  },
+  {
+    id: "t3",
+    clientId: "c1",
+    title: "Aprovar Artes de Maio",
+    description: "Revisar e enviar para aprovação as artes do feed de maio.",
+    dueDate: "2026-05-26",
+    assignee: "Danyelle",
+    stage: "post-acquisition",
+    status: "pending",
+    priority: "high",
+  },
+  {
+    id: "t4",
+    clientId: "c3",
+    title: "Criar Roteiro de Reels",
+    description: "Roteiro para 4 reels do mês de junho.",
+    dueDate: "2026-05-30",
+    assignee: "André",
+    stage: "post-acquisition",
+    status: "pending",
+    priority: "low",
+  },
+];
+
+export const USERS = ["André", "Danyelle"];
