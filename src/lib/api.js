@@ -106,3 +106,53 @@ export async function deleteTask(id) {
   const { error } = await supabase.from('tasks').delete().eq('id', id);
   if (error) throw error;
 }
+
+/* ── notifications ── */
+
+const toNotif = (r) => ({
+  id:        r.id,
+  recipient: r.recipient,
+  actor:     r.actor,
+  kind:      r.kind,
+  taskId:    r.task_id,
+  taskTitle: r.task_title,
+  read:      r.read,
+  createdAt: r.created_at,
+});
+
+export async function fetchNotifications(recipient) {
+  const { data, error } = await supabase
+    .from('notifications').select('*')
+    .eq('recipient', recipient)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(toNotif);
+}
+
+export async function markNotificationRead(id) {
+  const { error } = await supabase
+    .from('notifications').update({ read: true }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead(recipient) {
+  const { error } = await supabase
+    .from('notifications').update({ read: true })
+    .eq('recipient', recipient).eq('read', false);
+  if (error) throw error;
+}
+
+/* Cria uma notificação para cada responsável da tarefa que não seja o autor. */
+export async function notifyAssignees(task, actor, kind) {
+  const recipients = (task.assignees || []).filter(a => a && a !== actor);
+  if (recipients.length === 0) return;
+  const rows = recipients.map(r => ({
+    recipient:  r,
+    actor,
+    kind,
+    task_id:    task.id ?? null,
+    task_title: task.title,
+  }));
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) throw error;
+}

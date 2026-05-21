@@ -386,22 +386,7 @@
   flex-wrap: wrap;
 }
 
-/* Chips */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 9px;
-  border-radius: var(--r-pill);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.chip--blue   { background: var(--blue-light); color: var(--blue); }
-.chip--purple { background: #F3E8FF;            color: #7C3AED; }
-.chip--gray   { background: var(--off-white);   color: var(--dark-gray); }
-.chip--red    { background: #FFE8E8;            color: var(--red); }
-.chip--green  { background: #D1F5DF;            color: var(--green-text); }
+/* (chips → definidos globalmente em index.css) */
 
 /* ── DONE SECTION ── */
 .done-section {
@@ -448,7 +433,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 2147483647; /* valor máximo seguro — garante aparecer acima de tudo */
   padding: var(--s-20);
 }
 

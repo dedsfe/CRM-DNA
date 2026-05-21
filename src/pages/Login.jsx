@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../lib/auth';
 import { USERS } from '../mockData';
 import { Lock } from 'lucide-react';

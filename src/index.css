@@ -57,7 +57,11 @@
 /* ─── Reset ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  /* Permite que position:fixed seja relativo ao viewport, não a um ancestral */
+  height: 100%;
+}
 
 body {
   font-family: var(--font);
@@ -66,6 +70,7 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  height: 100%;
 }
 
 a { color: var(--blue); text-decoration: none; }
@@ -146,6 +151,22 @@ img { display: block; max-width: 100%; }
 .badge-blue   { background: var(--blue-light); color: var(--blue); }
 .badge-gray   { background: var(--light-gray); color: var(--dark-gray); }
 
+/* Chips (status / responsável / data) */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 9px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 600;
+}
+.chip--blue   { background: var(--blue-light); color: var(--blue); }
+.chip--purple { background: #F3E8FF;           color: #7C3AED; }
+.chip--gray   { background: var(--off-white);  color: var(--dark-gray); }
+.chip--red    { background: #FFE8E8;           color: var(--red); }
+.chip--green  { background: #D1F5DF;           color: var(--green-text); }
+
 /* Card */
 .card {
   background: var(--white);
@@ -179,6 +200,17 @@ img { display: block; max-width: 100%; }
 }
 .input::placeholder { color: var(--mid-gray); }
 
+/* Select — chevron próprio, consistente com os inputs */
+select.input {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 38px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+}
+
 /* DB error banner */
 .db-error {
   background: #FFE8E8;
@@ -201,9 +233,12 @@ img { display: block; max-width: 100%; }
 .app-shell {
   display: flex;
   min-height: 100vh;
+  /* Não usar overflow nem transform aqui para não criar containing block para position:fixed */
 }
 .page-content {
   flex: 1;
   min-width: 0;
-  overflow-y: auto;
+  /* REMOVIDO: overflow-y: auto — causava bug em que position:fixed ficava preso dentro
+     deste elemento no Dia/Chromium/Safari, impedindo os modais de aparecerem.
+     O scroll agora é feito pelo próprio conteúdo das páginas ou pelo body. */
 }

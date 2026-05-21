@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { USERS } from '../mockData';
-import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask } from '../lib/api';
+import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle } from 'lucide-react';
 import './Tasks.css';
 
@@ -19,7 +20,19 @@ const userEmoji = (u) => (u === 'André' ? '🧑' : '👩');
 const toggleInArray = (arr, val) =>
   arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
-/* ─── Modal shell (rendered at document.body via portal) ─── */
+/* ─── Modal shell (portal + estilos inline à prova de falha) ─── */
+const OVERLAY_STYLE = {
+  position: 'fixed', top: 0, right: 0, bottom: 0, left: 0,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  background: 'rgba(0,0,0,0.55)', zIndex: 2147483000, padding: 20,
+};
+const MODAL_STYLE = {
+  background: '#FFFFFF', borderRadius: 28,
+  width: 500, maxWidth: 'calc(100vw - 40px)',
+  maxHeight: 'calc(100vh - 40px)', overflowY: 'auto',
+  boxShadow: '0 20px 48px rgba(0,0,0,0.22)',
+};
+
 function Modal({ onClose, children }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -28,8 +41,8 @@ function Modal({ onClose, children }) {
   }, [onClose]);
 
   return createPortal(
-    <div className="overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+    <div className="overlay" style={OVERLAY_STYLE} onClick={onClose}>
+      <div className="modal" style={MODAL_STYLE} onClick={e => e.stopPropagation()}>
         {children}
       </div>
     </div>,
@@ -272,6 +285,7 @@ export default function Tasks() {
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     Promise.all([fetchClients(), fetchTasks()])
@@ -281,12 +295,18 @@ export default function Tasks() {
   }, []);
 
   const add = async (task) => {
-    try { const saved = await insertTask(task); setTasks(p => [saved, ...p]); }
-    catch (e) { setError(e.message); }
+    try {
+      const saved = await insertTask(task);
+      setTasks(p => [saved, ...p]);
+      await notifyAssignees(saved, user, 'assigned');
+    } catch (e) { setError(e.message); }
   };
   const update = async (task) => {
-    try { const saved = await updateTask(task); setTasks(p => p.map(t => t.id === saved.id ? saved : t)); }
-    catch (e) { setError(e.message); }
+    try {
+      const saved = await updateTask(task);
+      setTasks(p => p.map(t => t.id === saved.id ? saved : t));
+      await notifyAssignees(saved, user, 'updated');
+    } catch (e) { setError(e.message); }
   };
   const remove = async (id) => {
     try { await deleteTask(id); setTasks(p => p.filter(t => t.id !== id)); }

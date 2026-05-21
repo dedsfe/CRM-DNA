@@ -214,8 +214,7 @@
 }
 
 .task-meta-chip--assignee { font-weight: 600; }
-.chip--blue   { background: var(--blue-light);   color: var(--blue); }
-.chip--purple { background: #F3E8FF;              color: #7C3AED; }
+/* (chip--blue / chip--purple → definidos globalmente em index.css) */
 
 /* ── ASIDE ── */
 .home-aside {

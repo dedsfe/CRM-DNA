@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchClients, fetchTasks } from '../lib/api';
-import { ArrowRight, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import './Home.css';
 
 /* ── helpers ── */

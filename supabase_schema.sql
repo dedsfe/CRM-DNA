@@ -34,12 +34,26 @@ create table if not exists tasks (
   unique (client_id, title)
 );
 
+-- ── notifications (caixa de entrada / @) ──────────
+create table if not exists notifications (
+  id          uuid primary key default gen_random_uuid(),
+  recipient   text not null,
+  actor       text not null,
+  kind        text not null default 'assigned',
+  task_id     uuid references tasks(id) on delete set null,
+  task_title  text not null,
+  read        boolean not null default false,
+  created_at  timestamptz default now()
+);
+
 -- ── indexes ───────────────────────────────────────
 create index if not exists tasks_client_id_idx on tasks (client_id);
+create index if not exists notifications_recipient_idx on notifications (recipient);
 
 -- ── RLS: disable for now (single-user app) ────────
-alter table clients disable row level security;
-alter table tasks    disable row level security;
+alter table clients       disable row level security;
+alter table tasks         disable row level security;
+alter table notifications disable row level security;
 
 -- ── seed data ─────────────────────────────────────
 insert into clients (name, emoji, status, since, contact_email, contact_phone, conn_instagram, conn_website, conn_drive)

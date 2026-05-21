@@ -1,13 +1,14 @@
-import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, ListTodo, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '../lib/auth';
+import { useNotifications } from '../lib/notifications';
 import './Sidebar.css';
 
 const NAV = [
-  { to: '/',        icon: LayoutDashboard, label: 'Home',     emoji: '🏠' },
-  { to: '/clients', icon: Users,           label: 'Clientes', emoji: '👥' },
-  { to: '/tasks',   icon: ListTodo,        label: 'Tarefas',  emoji: '✅' },
+  { to: '/',        label: 'Home',     emoji: '🏠' },
+  { to: '/clients', label: 'Clientes', emoji: '👥' },
+  { to: '/tasks',   label: 'Tarefas',  emoji: '✅' },
+  { to: '/inbox',   label: 'Inbox',    emoji: '🔔', badge: true },
 ];
 
 const TEAM = [
@@ -17,6 +18,7 @@ const TEAM = [
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
+  const { unread } = useNotifications();
 
   return (
     <aside className="sidebar">
@@ -32,7 +34,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="sidebar-nav">
         <p className="sidebar-section-label">Menu</p>
-        {NAV.map(({ to, label, emoji }) => (
+        {NAV.map(({ to, label, emoji, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -41,6 +43,9 @@ export default function Sidebar() {
           >
             <span className="sidebar-item-emoji">{emoji}</span>
             <span className="sidebar-item-label">{label}</span>
+            {badge && unread > 0 && (
+              <span className="sidebar-badge">{unread}</span>
+            )}
           </NavLink>
         ))}
       </nav>
