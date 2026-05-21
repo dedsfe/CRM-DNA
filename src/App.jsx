@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Clients from './pages/Clients';
 import Tasks from './pages/Tasks';
 import Inbox from './pages/Inbox';
+import Integrations from './pages/Integrations';
 
 function Shell() {
   const { authed, user } = useAuth();
@@ -22,12 +23,14 @@ function Shell() {
           <Sidebar />
           <div className="page-content">
             <Routes>
-              <Route path="/"        element={<Home />} />
-              <Route path="/clients" element={<Clients />} />
-              <Route path="/tasks"   element={<Tasks />} />
-              <Route path="/inbox"   element={<Inbox />} />
+              <Route path="/"            element={<Home />} />
+              <Route path="/clients"     element={<Clients />} />
+              <Route path="/tasks"       element={<Tasks />} />
+              <Route path="/inbox"       element={<Inbox />} />
+              <Route path="/integrations" element={<Integrations />} />
             </Routes>
           </div>
+
         </div>
       </BrowserRouter>
     </NotificationsProvider>

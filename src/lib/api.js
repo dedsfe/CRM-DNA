@@ -235,3 +235,33 @@ export async function notifyComment(parentType, parentId, parentTitle, author) {
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) throw error;
 }
+
+/* ── mcp_api_keys (Integrações IA) ── */
+
+const toMcpKey = (r) => ({
+  id: r.id,
+  name: r.name,
+  keyValue: r.key_value,
+  lastUsedAt: r.last_used_at,
+  createdAt: r.created_at,
+});
+
+export async function fetchMcpKeys() {
+  const { data, error } = await supabase
+    .from('mcp_api_keys').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(toMcpKey);
+}
+
+export async function createMcpKey(name) {
+  const keyValue = 'sk_mcp_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const { data, error } = await supabase
+    .from('mcp_api_keys').insert({ name, key_value: keyValue }).select().single();
+  if (error) throw error;
+  return toMcpKey(data);
+}
+
+export async function deleteMcpKey(id) {
+  const { error } = await supabase.from('mcp_api_keys').delete().eq('id', id);
+  if (error) throw error;
+}

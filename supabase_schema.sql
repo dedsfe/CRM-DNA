@@ -96,3 +96,14 @@ join (values
 ) as v(client_name, title, description, due_date, assignees, stage, priority, status)
   on c.name = v.client_name
 on conflict do nothing;
+
+-- ── mcp_api_keys (Integrações IA) ─────────────────
+create table if not exists mcp_api_keys (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  key_value text not null unique,
+  last_used_at timestamptz,
+  created_at timestamptz default now()
+);
+
+alter table mcp_api_keys disable row level security;

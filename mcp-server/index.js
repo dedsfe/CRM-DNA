@@ -18,7 +18,6 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_KEY;
-const apiKey = process.env.MCP_API_KEY || process.env["DNA-MCP-SERVER-2026"];
 
 if (!supabaseUrl || !supabaseKey) {
   console.error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_KEY in .env");
@@ -280,15 +279,35 @@ function createMCPServer() {
 const app = express();
 app.use(cors());
 
-// Authentication Middleware
-app.use((req, res, next) => {
-  if (!apiKey) return next();
+// Remove local apiKey constant since we use DB now
 
-  // Get the Authorization header, e.g., "Bearer my-secret-key"
+// Authentication Middleware
+app.use(async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || authHeader !== `Bearer ${apiKey}`) {
-    return res.status(401).json({ error: "Unauthorized. Invalid or missing MCP_API_KEY" });
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Unauthorized. Missing Bearer token." });
   }
+
+  const token = authHeader.split(" ")[1];
+
+  // Verify against Supabase
+  const { data, error } = await supabase
+    .from("mcp_api_keys")
+    .select("id, name")
+    .eq("key_value", token)
+    .single();
+
+  if (error || !data) {
+    return res.status(401).json({ error: "Unauthorized. Invalid API Key." });
+  }
+
+  // Update last_used_at without blocking the request
+  supabase.from("mcp_api_keys")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", data.id)
+    .then();
+
+  req.mcpClientName = data.name;
   next();
 });
 
@@ -342,10 +361,6 @@ if (isStdio) {
     console.log(`SSE Endpoint: http://localhost:${PORT}/sse`);
     console.log(`Messages Endpoint: http://localhost:${PORT}/messages`);
     
-    if (apiKey) {
-      console.log("🔒 Authentication is ENABLED (MCP_API_KEY).");
-    } else {
-      console.warn("⚠️ WARNING: Authentication is DISABLED. Set MCP_API_KEY in your .env to secure your server.");
-    }
+    console.log("🔒 Authentication is ENABLED via Supabase mcp_api_keys table.");
   });
 }

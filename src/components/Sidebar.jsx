@@ -5,10 +5,11 @@ import { useNotifications } from '../lib/notifications';
 import './Sidebar.css';
 
 const NAV = [
-  { to: '/',        label: 'Home',     emoji: '🏠' },
-  { to: '/clients', label: 'Clientes', emoji: '👥' },
-  { to: '/tasks',   label: 'Tarefas',  emoji: '✅' },
-  { to: '/inbox',   label: 'Inbox',    emoji: '🔔', badge: true },
+  { to: '/',             label: 'Home',           emoji: '🏠' },
+  { to: '/clients',      label: 'Clientes',       emoji: '👥' },
+  { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
+  { to: '/inbox',        label: 'Inbox',          emoji: '🔔', badge: true },
+  { to: '/integrations', label: 'Integrações (IA)', emoji: '🤖' },
 ];
 
 const TEAM = [
