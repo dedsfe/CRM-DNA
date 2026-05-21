@@ -46,9 +46,6 @@ export default function Home() {
           <p className="home-greeting">Bom dia 👋</p>
           <h1 className="home-title">Dashboard</h1>
         </div>
-        <Link to="/clients" className="btn btn-primary">
-          + Novo Cliente
-        </Link>
       </header>
 
       {/* ── STAT CARDS ── */}

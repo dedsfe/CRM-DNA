@@ -206,6 +206,21 @@ export async function insertComment({ parentType, parentId, author, body }) {
   return toComment(data);
 }
 
+/* Notifica usuários mencionados com @ em um comentário. */
+export async function notifyCommentMentions(body, actor, parentTitle) {
+  const recipients = USERS.filter(u => body.includes('@' + u) && u !== actor);
+  if (recipients.length === 0) return;
+  const rows = recipients.map(r => ({
+    recipient:  r,
+    actor,
+    kind:       'mentioned',
+    task_id:    null,
+    task_title: parentTitle,
+  }));
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) throw error;
+}
+
 /* Notifica o outro membro do time quando alguém comenta. */
 export async function notifyComment(parentType, parentId, parentTitle, author) {
   const recipients = USERS.filter(u => u !== author);

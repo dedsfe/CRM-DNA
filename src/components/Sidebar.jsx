@@ -24,9 +24,9 @@ export default function Sidebar() {
     <aside className="sidebar">
       {/* Logo */}
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">CM</div>
+        <div className="sidebar-logo-icon">DNA</div>
         <div className="sidebar-logo-text">
-          <span className="sidebar-logo-title">Client Manager</span>
+          <span className="sidebar-logo-title">DNA CRM</span>
           <span className="sidebar-logo-sub">André &amp; Danyelle</span>
         </div>
       </div>
@@ -65,7 +65,7 @@ export default function Sidebar() {
       </div>
 
       {/* Logout */}
-      <button className="sidebar-settings" onClick={logout}>
+      <button className="btn btn-secondary sidebar-logout" onClick={logout}>
         <LogOut size={16} />
         Sair
       </button>

@@ -1,36 +1,91 @@
 /* ─────────────────────────────────────────────────────────────
-   DESIGN TOKENS  —  Apple-language applied to a dashboard app
+   DESIGN TOKENS  v2
+   Escala refinada: cores, tipografia, espaçamento, sombras
 ───────────────────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
 
 :root {
-  /* Colors */
-  --white:      #FFFFFF;
-  --off-white:  #F5F5F7;
-  --light-gray: #E8E8ED;
-  --mid-gray:   #86868B;
-  --dark-gray:  #3A3A3C;
-  --black:      #0A1628;
-  --blue:       #245BA1;
-  --blue-hover: #2C6CBD;
-  --blue-light: #E7EEF6;
-  --gold:       #C9A24B;
-  --gold-bg:    #F6EFDC;
-  --green:      #34C759;
-  --green-bg:   #D1F5DF;
-  --green-text: #1A7D4E;
-  --orange:     #FF9F0A;
-  --orange-bg:  #FEF3DC;
-  --orange-text:#9A5F00;
-  --red:        #FF3B30;
+  /* ── Paleta de Azul (primária) ────────────────────────── */
+  --blue-50:  #EEF4FB;  /* fundos muito sutis */
+  --blue-100: #D6E6F5;  /* fundos de destaque leve */
+  --blue-200: #AECDE8;  /* bordas, divisores */
+  --blue-500: #245BA1;  /* cor primária — botões, links */
+  --blue-600: #1F4F8F;  /* hover primário */
+  --blue-700: #183C6D;  /* pressed / active */
 
-  /* Typography — SF Pro fallback stack */
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
-          "Inter", "Segoe UI", Helvetica, Arial, sans-serif;
+  /* Aliases semânticos — mantém compatibilidade */
+  --blue:       var(--blue-500);
+  --blue-hover: var(--blue-600);
+  --blue-light: var(--blue-50);
 
-  /* Spacing */
+  /* ── Escala de Neutros ────────────────────────────── */
+  --neutral-0:   #FFFFFF;  /* branco puro */
+  --neutral-50:  #F7F8FA;  /* fundo de página / sidebar */
+  --neutral-100: #ECEEF2;  /* bordas, divisores, inputs */
+  --neutral-200: #D8DCE4;  /* bordas mais fortes */
+  --neutral-400: #9EA8B8;  /* placeholder, texto desabilitado */
+  --neutral-600: #4A5568;  /* texto secundário / labels */
+  --neutral-900: #0D1B2E;  /* texto principal */
+
+  /* Aliases semânticos */
+  --white:      var(--neutral-0);
+  --off-white:  var(--neutral-50);
+  --light-gray: var(--neutral-100);
+  --mid-gray:   var(--neutral-400);
+  --dark-gray:  var(--neutral-600);
+  --black:      var(--neutral-900);
+
+  /* ── Cores Semânticas ─────────────────────────────── */
+  /* Verde — sucesso, concluído */
+  --green:      #16A34A;
+  --green-bg:   #DCFCE7;
+  --green-text: #14532D;
+
+  /* Laranja — atenção, pendente */
+  --orange:      #D97706;
+  --orange-bg:   #FEF3C7;
+  --orange-text: #92400E;
+
+  /* Vermelho — erro, atrasado */
+  --red:      #DC2626;
+  --red-bg:   #FEE2E2;
+  --red-text: #7F1D1D;
+
+  /* Roxo — Danyelle / tag secundária */
+  --purple:      #7C3AED;
+  --purple-bg:   #EDE9FE;
+  --purple-text: #4C1D95;
+
+  /* Ouro — usado pontualmente */
+  --gold:    #B45309;
+  --gold-bg: #FEF3C7;
+
+  /* ── Tipografia ──────────────────────────────────── */
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  /* Escala de tamanhos (base 16px) */
+  --text-xs:   11px;  /* labels, timestamps, badges */
+  --text-sm:   13px;  /* corpo auxiliar, descrições */
+  --text-base: 15px;  /* corpo principal */
+  --text-md:   17px;  /* subtítulos de card */
+  --text-lg:   20px;  /* títulos de seção */
+  --text-xl:   24px;  /* títulos de página menores */
+  --text-2xl:  30px;  /* h1 de página */
+  --text-3xl:  38px;  /* números grandes (dashboard) */
+
+  /* Pesos */
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold: 600;
+  --fw-bold:    700;
+  --fw-extrabold: 800;
+
+  /* ── Espaçamento (escala 4px) ──────────────────────── */
+  --s-2:  2px;
   --s-4:  4px;
+  --s-6:  6px;
   --s-8:  8px;
+  --s-10: 10px;
   --s-12: 12px;
   --s-16: 16px;
   --s-20: 20px;
@@ -40,18 +95,21 @@
   --s-48: 48px;
   --s-64: 64px;
 
-  /* Radius */
-  --r-sm:   10px;
-  --r-md:   14px;
-  --r-lg:   20px;
-  --r-xl:   28px;
-  --r-pill: 999px;
+  /* ── Border Radius ───────────────────────────────── */
+  --r-xs:   6px;    /* tags minúsculas */
+  --r-sm:   8px;    /* botões sm, chips */
+  --r-md:   12px;   /* inputs, cards internos */
+  --r-lg:   16px;   /* cards principais */
+  --r-xl:   24px;   /* modais, paineis */
+  --r-2xl:  32px;   /* hero cards */
+  --r-pill: 999px;  /* badges, pills */
 
-  /* Shadows */
-  --shadow-xs: 0 1px 3px rgba(0,0,0,.06);
-  --shadow-sm: 0 2px 8px rgba(0,0,0,.08);
-  --shadow-md: 0 8px 24px rgba(0,0,0,.10);
-  --shadow-lg: 0 20px 48px rgba(0,0,0,.12);
+  /* ── Sombras ────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(13,27,46,.05);
+  --shadow-sm: 0 2px 6px rgba(13,27,46,.08), 0 1px 2px rgba(13,27,46,.04);
+  --shadow-md: 0 6px 20px rgba(13,27,46,.10), 0 2px 6px rgba(13,27,46,.05);
+  --shadow-lg: 0 16px 40px rgba(13,27,46,.14), 0 4px 12px rgba(13,27,46,.06);
+  --shadow-xl: 0 32px 64px rgba(13,27,46,.18), 0 8px 24px rgba(13,27,46,.08);
 }
 
 /* ─── Reset ─── */
@@ -84,94 +142,123 @@ img { display: block; max-width: 100%; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--light-gray); border-radius: 4px; }
 
-/* ─────────────────────
+/* ───────────────────
    UTILITY CLASSES
-───────────────────── */
+─────────────────── */
 
-/* Buttons */
+/* ── Botões ────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--s-8);
-  padding: 10px 20px;
-  border-radius: var(--r-pill);
-  font-size: 15px;
-  font-weight: 500;
+  gap: var(--s-6);
+  padding: 9px 18px;
+  border-radius: var(--r-md);   /* menos arredondado que pill */
+  font-size: var(--text-sm);    /* 13px base */
+  font-weight: var(--fw-semibold);
   letter-spacing: -0.01em;
-  transition: all 0.18s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .btn-primary {
-  background-color: var(--blue);
+  background-color: var(--blue-500);
   color: var(--white);
+  box-shadow: 0 1px 3px rgba(36,91,161,.25);
 }
 .btn-primary:hover {
-  background-color: var(--blue-hover);
+  background-color: var(--blue-600);
   text-decoration: none;
   transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 4px 12px rgba(36,91,161,.30);
+}
+.btn-primary:active {
+  background-color: var(--blue-700);
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background-color: var(--off-white);
-  color: var(--black);
+  background-color: var(--neutral-100);
+  color: var(--neutral-600);
+  border: 1px solid var(--neutral-200);
 }
 .btn-secondary:hover {
-  background-color: var(--light-gray);
+  background-color: var(--neutral-200);
+  color: var(--neutral-900);
   text-decoration: none;
 }
 
 .btn-ghost {
   background-color: transparent;
-  color: var(--blue);
+  color: var(--blue-500);
 }
 .btn-ghost:hover {
-  background-color: var(--blue-light);
+  background-color: var(--blue-50);
   text-decoration: none;
 }
 
-.btn-sm { padding: 7px 14px; font-size: 13px; }
-.btn-lg { padding: 14px 28px; font-size: 17px; }
+/* Icon Button (for close, delete, edit actions) */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-400);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.icon-btn:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+}
 
-/* Badges */
+/* Tamanhos */
+.btn-xs { padding: 4px 10px; font-size: var(--text-xs); border-radius: var(--r-sm); }
+.btn-sm { padding: 6px 12px; font-size: var(--text-xs); border-radius: var(--r-sm); }
+.btn-lg { padding: 12px 24px; font-size: var(--text-base); border-radius: var(--r-lg); }
+
+/* ── Badges ────────────────────────────────────────── */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: var(--r-pill);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: var(--text-xs);    /* 11px */
+  font-weight: var(--fw-semibold);
   letter-spacing: .02em;
 }
-.badge-green  { background: var(--green-bg);  color: var(--green-text); }
-.badge-orange { background: var(--orange-bg); color: var(--orange-text); }
-.badge-blue   { background: var(--blue-light); color: var(--blue); }
-.badge-gray   { background: var(--light-gray); color: var(--dark-gray); }
+.badge-green  { background: var(--green-bg);   color: var(--green-text); }
+.badge-orange { background: var(--orange-bg);  color: var(--orange-text); }
+.badge-blue   { background: var(--blue-100);   color: var(--blue-600); }
+.badge-gray   { background: var(--neutral-100); color: var(--neutral-600); }
+.badge-red    { background: var(--red-bg);     color: var(--red-text); }
 
-/* Chips (status / responsável / data) */
+/* ── Chips (status / responsável / data) ───────────────── */
 .chip {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 9px;
+  padding: 2px 8px;
   border-radius: var(--r-pill);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: var(--text-xs);    /* 11px */
+  font-weight: var(--fw-semibold);
 }
-.chip--blue   { background: var(--blue-light); color: var(--blue); }
-.chip--purple { background: #F3E8FF;           color: #7C3AED; }
-.chip--gray   { background: var(--off-white);  color: var(--dark-gray); }
-.chip--red    { background: #FFE8E8;           color: var(--red); }
-.chip--green  { background: #D1F5DF;           color: var(--green-text); }
+.chip--blue   { background: var(--blue-100);    color: var(--blue-600); }
+.chip--purple { background: var(--purple-bg);   color: var(--purple-text); }
+.chip--gray   { background: var(--neutral-100); color: var(--neutral-600); }
+.chip--red    { background: var(--red-bg);      color: var(--red-text); }
+.chip--green  { background: var(--green-bg);    color: var(--green-text); }
 
-/* Card */
+/* ── Card ──────────────────────────────────────────── */
 .card {
   background: var(--white);
   border-radius: var(--r-lg);
-  border: 1px solid var(--light-gray);
+  border: 1px solid var(--neutral-100);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
@@ -181,17 +268,17 @@ img { display: block; max-width: 100%; }
   transform: translateY(-2px);
 }
 
-/* Input */
+/* ── Input ──────────────────────────────────────────── */
 .input {
   width: 100%;
-  padding: 10px 14px;
-  background: var(--off-white);
-  border: 1.5px solid transparent;
+  padding: 9px 13px;
+  background: var(--neutral-50);
+  border: 1.5px solid var(--neutral-100);
   border-radius: var(--r-md);
-  font-size: 15px;
-  color: var(--black);
+  font-size: var(--text-sm);    /* 13px */
+  color: var(--neutral-900);
   outline: none;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 .input:focus {
   border-color: var(--blue);
@@ -259,6 +346,14 @@ select.input {
 .mention-opt:hover { background: var(--blue-light); }
 .mention-opt-emoji { font-size: 16px; }
 
+/* @Nome destacado em azul dentro do texto do comentário */
+.mention-tag {
+  color: var(--blue);
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 0 2px;
+}
+
 /* Thread de comentários */
 .thread-sub {
   padding: 12px var(--s-24);
@@ -301,6 +396,9 @@ select.input {
   flex-shrink: 0;
 }
 
+.thread-avatar--blue   { background: var(--blue-light); }
+.thread-avatar--purple { background: #F3E8FF; }
+
 .thread-body { flex: 1; min-width: 0; }
 
 .thread-meta {
@@ -331,14 +429,26 @@ select.input {
   background: #FAFAFA;
 }
 
-.thread-compose .btn { align-self: flex-end; }
+.thread-textarea { resize: none; font-size: 14px; }
+
+.thread-compose-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.thread-hint {
+  font-size: 11px;
+  color: var(--mid-gray);
+  font-weight: 500;
+}
 
 /* Botão de comentário no hover dos cards */
 .comment-btn {
   display: flex;
   align-items: center;
   gap: 3px;
-  color: var(--mid-gray);
+  color: var(--neutral-400);
   opacity: 0;
   border-radius: var(--r-sm);
   padding: 2px 5px;
@@ -352,7 +462,7 @@ select.input {
 .task-row:hover .comment-btn,
 .client-card:hover .comment-btn { opacity: 1; }
 
-.comment-btn:hover { color: var(--blue); background: var(--blue-light); }
+.comment-btn:hover { color: var(--blue-600); background: var(--blue-100); }
 
 /* Comentário no card de cliente (canto inferior direito) */
 .card-comment {

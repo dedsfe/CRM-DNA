@@ -11,6 +11,17 @@ import './Tasks.css';
 
 /* ─── helpers ─── */
 const today = new Date().toISOString().split('T')[0];
+const getStartOfWeek = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay());
+  return d.toISOString().split('T')[0];
+};
+const getEndOfWeek = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - d.getDay() + 6);
+  return d.toISOString().split('T')[0];
+};
+
 const isOverdue = (d) => d < today;
 
 const priorityConfig = {
@@ -261,6 +272,8 @@ export default function Tasks() {
   const [error, setError]       = useState(null);
   const [filterUser, setFilter] = useState('All');
   const [filterStage, setStage] = useState('All');
+  const [filterClient, setFilterClient] = useState('All');
+  const [filterDate, setFilterDate] = useState('All');
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
@@ -317,10 +330,29 @@ export default function Tasks() {
     catch (e) { setError(e.message); }
   };
 
-  /* Filtered task set */
-  const byUser = filterUser === 'All' ? tasks : tasks.filter(t => t.assignees.includes(filterUser));
-  const pending   = byUser.filter(t => t.status === 'pending');
-  const completed = byUser.filter(t => t.status === 'completed');
+  /* Filter logic */
+  let byFilter = tasks;
+  
+  if (filterUser !== 'All') {
+    byFilter = byFilter.filter(t => t.assignees.includes(filterUser));
+  }
+  if (filterClient !== 'All') {
+    byFilter = byFilter.filter(t => t.clientId === filterClient);
+  }
+  if (filterDate !== 'All') {
+    if (filterDate === 'today') {
+      byFilter = byFilter.filter(t => t.dueDate === today);
+    } else if (filterDate === 'overdue') {
+      byFilter = byFilter.filter(t => isOverdue(t.dueDate) && t.status !== 'completed');
+    } else if (filterDate === 'week') {
+      const s = getStartOfWeek();
+      const e = getEndOfWeek();
+      byFilter = byFilter.filter(t => t.dueDate >= s && t.dueDate <= e);
+    }
+  }
+
+  const pending   = byFilter.filter(t => t.status === 'pending');
+  const completed = byFilter.filter(t => t.status === 'completed');
   const overdue   = pending.filter(t => isOverdue(t.dueDate));
 
   const showPre  = filterStage === 'All' || filterStage === 'pre-acquisition';
@@ -369,33 +401,64 @@ export default function Tasks() {
       </div>
 
       {/* ── FILTER PILLS ── */}
-      <div className="filter-row">
-        <div className="filter-pills">
-          {['All', ...USERS].map(u => (
-            <button
-              key={u}
-              className={`filter-pill ${filterUser === u ? 'filter-pill--active' : ''}`}
-              onClick={() => setFilter(u)}
-            >
-              {u === 'All' ? '👥 Todos' : u === 'André' ? '🧑 André' : '👩 Danyelle'}
-            </button>
-          ))}
+      <div className="filter-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        
+        {/* Linha 1: Filtros Principais (Pessoas e Etapas) */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          <div className="filter-pills">
+            {['All', ...USERS].map(u => (
+              <button
+                key={u}
+                className={`filter-pill ${filterUser === u ? 'filter-pill--active' : ''}`}
+                onClick={() => setFilter(u)}
+              >
+                {u === 'All' ? '👥 Todos' : u === 'André' ? '🧑 André' : '👩 Danyelle'}
+              </button>
+            ))}
+          </div>
+
+          <div className="filter-pills">
+            {[
+              { val: 'All',              label: '📋 Todas Etapas' },
+              { val: 'pre-acquisition',  label: '🎯 Pré-Aquisição' },
+              { val: 'post-acquisition', label: '🚀 Pós-Aquisição' },
+            ].map(({ val, label }) => (
+              <button
+                key={val}
+                className={`filter-pill ${filterStage === val ? 'filter-pill--active' : ''}`}
+                onClick={() => setStage(val)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="filter-pills" style={{ marginLeft: 'auto' }}>
-          {[
-            { val: 'All',              label: '📋 Todas Etapas' },
-            { val: 'pre-acquisition',  label: '🎯 Pré-Aquisição' },
-            { val: 'post-acquisition', label: '🚀 Pós-Aquisição' },
-          ].map(({ val, label }) => (
-            <button
-              key={val}
-              className={`filter-pill ${filterStage === val ? 'filter-pill--active' : ''}`}
-              onClick={() => setStage(val)}
-            >
-              {label}
-            </button>
-          ))}
+        {/* Linha 2: Filtros Secundários (Cliente e Data) */}
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <select 
+            className="input" 
+            style={{ width: '220px', padding: '6px 12px', fontSize: '13px' }}
+            value={filterClient}
+            onChange={e => setFilterClient(e.target.value)}
+          >
+            <option value="All">🏢 Todos os clientes</option>
+            {clients.map(c => (
+              <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>
+            ))}
+          </select>
+
+          <select 
+            className="input" 
+            style={{ width: '180px', padding: '6px 12px', fontSize: '13px' }}
+            value={filterDate}
+            onChange={e => setFilterDate(e.target.value)}
+          >
+            <option value="All">📅 Todas as datas</option>
+            <option value="today">⏱️ Hoje</option>
+            <option value="week">📆 Esta semana</option>
+            <option value="overdue">⚠️ Atrasadas</option>
+          </select>
         </div>
       </div>
 

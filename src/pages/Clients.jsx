@@ -431,7 +431,7 @@ export default function Clients() {
             <input className="search-input" placeholder="Buscar cliente…"
               value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => setClientModal({})}>
+          <button className="btn btn-primary" onClick={() => setClientModal({})}>
             <Plus size={15} /> Novo Cliente
           </button>
         </div>

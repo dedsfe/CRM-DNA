@@ -20,8 +20,8 @@ export default function Login() {
   return (
     <div className="login-screen">
       <div className="login-card">
-        <div className="login-logo">CM</div>
-        <h1 className="login-title">Client Manager</h1>
+        <div className="login-logo">DNA</div>
+        <h1 className="login-title">DNA CRM</h1>
 
         {!authed ? (
           <>

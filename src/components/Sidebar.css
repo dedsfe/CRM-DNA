@@ -178,21 +178,8 @@
   color: var(--mid-gray);
 }
 
-/* Settings */
-.sidebar-settings {
+/* Logout */
+.sidebar-logout {
   margin-top: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--s-8);
-  padding: 9px var(--s-12);
-  border-radius: var(--r-md);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--mid-gray);
-  transition: background 0.15s, color 0.15s;
-}
-
-.sidebar-settings:hover {
-  background: var(--light-gray);
-  color: var(--black);
+  width: 100%;
 }

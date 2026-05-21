@@ -21,17 +21,17 @@
 }
 
 .cp-title {
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  color: var(--black);
+  font-size: var(--text-2xl);     /* 30px */
+  font-weight: var(--fw-extrabold);
+  letter-spacing: -0.04em;
+  color: var(--neutral-900);
   line-height: 1;
   margin-bottom: 4px;
 }
 
 .cp-sub {
-  font-size: 14px;
-  color: var(--mid-gray);
+  font-size: var(--text-sm);
+  color: var(--neutral-400);
 }
 
 .cp-header-right {
@@ -536,17 +536,19 @@
 .dot--green  { background: var(--green); }
 
 .delete-btn {
-  color: var(--mid-gray);
-  opacity: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
   border-radius: var(--r-sm);
-  padding: 2px;
-  transition: opacity .15s, color .15s;
+  color: var(--neutral-400);
+  opacity: 0;
+  transition: opacity .15s, color .15s, background .15s;
 }
 
 .task-row:hover .delete-btn { opacity: 1; }
-.delete-btn:hover { color: var(--red); }
+.delete-btn:hover { color: var(--red); background: var(--red-bg); }
 
 .task-row-desc {
   font-size: 12px;
@@ -562,21 +564,6 @@
 }
 
 /* (chips e badges → definidos globalmente em index.css) */
-
-/* ── ICON BUTTON ── */
-.icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--mid-gray);
-  background: var(--off-white);
-  transition: background .15s, color .15s;
-}
-
-.icon-btn:hover { background: var(--light-gray); color: var(--black); }
 
 /* ── MODAL ── */
 .overlay {
