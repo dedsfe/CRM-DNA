@@ -499,3 +499,29 @@
   padding: var(--s-16) var(--s-24);
   border-top: 1px solid var(--light-gray);
 }
+
+/* ── DRAG AND DROP FEEDBACK ── */
+
+.tcard--dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  box-shadow: var(--shadow-lg);
+  cursor: grabbing;
+}
+
+.k-col-body {
+  transition: background-color 0.2s, border 0.2s;
+  border: 2px dashed transparent;
+  flex: 1; /* allow column body to stretch so drop zone is large */
+  min-height: 200px;
+}
+
+.k-col-body--drag-valid {
+  background-color: rgba(52, 199, 89, 0.08); /* light green */
+  border: 2px dashed var(--green);
+}
+
+.k-col-body--drag-invalid {
+  background-color: rgba(255, 59, 48, 0.08); /* light red */
+  border: 2px dashed var(--red);
+}

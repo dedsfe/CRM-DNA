@@ -166,14 +166,21 @@ function InlineAddTask({ stage, clients, onAdd, onCancel }) {
 }
 
 /* ─── Task Card (full detail) ─── */
-function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment }) {
+function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, draggedTask, setDraggedTask }) {
   const client  = clients.find(c => c.id === task.clientId);
   const overdue = isOverdue(task.dueDate) && task.status !== 'completed';
   const done    = task.status === 'completed';
   const p       = priorityConfig[task.priority];
+  const isDragging = draggedTask?.id === task.id;
 
   return (
-    <div className={`tcard ${done ? 'tcard--done' : ''} ${overdue ? 'tcard--overdue' : ''}`}
+    <div className={`tcard ${done ? 'tcard--done' : ''} ${overdue ? 'tcard--overdue' : ''} ${isDragging ? 'tcard--dragging' : ''}`}
+      draggable
+      onDragStart={(e) => {
+        setDraggedTask(task);
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      onDragEnd={() => setDraggedTask(null)}
       onClick={() => onEdit(task)}>
       {overdue && (
         <div className="tcard-overdue-bar">
@@ -232,7 +239,36 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment }) {
 
 /* ─── Coluna do Kanban ─── */
 function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients,
-                        adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment }) {
+                        adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment,
+                        draggedTask, setDraggedTask, onDropTask }) {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e) => {
+    e.preventDefault(); // Necessary to allow dropping
+    e.dataTransfer.dropEffect = 'move';
+    if (!isDragOver) setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (draggedTask && draggedTask.stage !== stage) {
+      onDropTask({ ...draggedTask, stage }); // change stage and update
+    }
+    setDraggedTask(null);
+  };
+
+  let dropClass = '';
+  if (isDragOver && draggedTask) {
+    dropClass = draggedTask.stage === stage ? 'k-col-body--drag-invalid' : 'k-col-body--drag-valid';
+  }
+
   return (
     <div className="k-col">
       <div className={`k-col-head k-col-head--${variant}`}>
@@ -245,12 +281,17 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients
         </div>
         <span className="k-count">{tasks.length}</span>
       </div>
-      <div className="k-col-body">
+      <div className={`k-col-body ${dropClass}`}
+           onDragOver={handleDragOver} 
+           onDragEnter={handleDragOver} 
+           onDragLeave={handleDragLeave} 
+           onDrop={handleDrop}>
         {tasks.length === 0 && !adding
           ? <div className="k-empty"><span>🎉</span><p>Tudo limpo!</p></div>
           : tasks.map(t => (
               <TaskCard key={t.id} task={t} clients={clients}
-                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment} />
+                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment}
+                draggedTask={draggedTask} setDraggedTask={setDraggedTask} />
             ))
         }
         {adding
@@ -278,6 +319,7 @@ export default function Tasks() {
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
   const [commentTarget, setCommentTarget] = useState(null);
+  const [draggedTask, setDraggedTask] = useState(null);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -474,6 +516,7 @@ export default function Tasks() {
             onCancelAdd={() => setAddingStage(null)}
             onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
             onComment={openComments}
+            draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
           />
         )}
 
@@ -486,6 +529,7 @@ export default function Tasks() {
             onCancelAdd={() => setAddingStage(null)}
             onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
             onComment={openComments}
+            draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
           />
         )}
 
@@ -504,7 +548,8 @@ export default function Tasks() {
             <div className="done-list">
               {completed.map(t => (
                 <TaskCard key={t.id} task={t} clients={clients}
-                  onToggle={toggle} onDelete={remove} onEdit={setEditing} onComment={openComments} />
+                  onToggle={toggle} onDelete={remove} onEdit={setEditing} onComment={openComments}
+                  draggedTask={null} setDraggedTask={() => {}} />
               ))}
             </div>
           )}
