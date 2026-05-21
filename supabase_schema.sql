@@ -46,14 +46,26 @@ create table if not exists notifications (
   created_at  timestamptz default now()
 );
 
+-- ── comments (threads em tarefas e clientes) ──────
+create table if not exists comments (
+  id          uuid primary key default gen_random_uuid(),
+  parent_type text not null check (parent_type in ('task','client')),
+  parent_id   uuid not null,
+  author      text not null,
+  body        text not null,
+  created_at  timestamptz default now()
+);
+
 -- ── indexes ───────────────────────────────────────
 create index if not exists tasks_client_id_idx on tasks (client_id);
 create index if not exists notifications_recipient_idx on notifications (recipient);
+create index if not exists comments_parent_idx on comments (parent_type, parent_id);
 
 -- ── RLS: disable for now (single-user app) ────────
 alter table clients       disable row level security;
 alter table tasks         disable row level security;
 alter table notifications disable row level security;
+alter table comments      disable row level security;
 
 -- ── seed data ─────────────────────────────────────
 insert into clients (name, emoji, status, since, contact_email, contact_phone, conn_instagram, conn_website, conn_drive)

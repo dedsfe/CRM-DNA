@@ -176,3 +176,47 @@ export async function notifyMentions(task, actor) {
   const { error } = await supabase.from('notifications').insert(rows);
   if (error) throw error;
 }
+
+/* ── comments (threads) ── */
+
+const toComment = (r) => ({
+  id:         r.id,
+  parentType: r.parent_type,
+  parentId:   r.parent_id,
+  author:     r.author,
+  body:       r.body,
+  createdAt:  r.created_at,
+});
+
+export async function fetchComments(parentType, parentId) {
+  const { data, error } = await supabase
+    .from('comments').select('*')
+    .eq('parent_type', parentType).eq('parent_id', parentId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data.map(toComment);
+}
+
+export async function insertComment({ parentType, parentId, author, body }) {
+  const { data, error } = await supabase
+    .from('comments')
+    .insert({ parent_type: parentType, parent_id: parentId, author, body })
+    .select().single();
+  if (error) throw error;
+  return toComment(data);
+}
+
+/* Notifica o outro membro do time quando alguém comenta. */
+export async function notifyComment(parentType, parentId, parentTitle, author) {
+  const recipients = USERS.filter(u => u !== author);
+  if (recipients.length === 0) return;
+  const rows = recipients.map(r => ({
+    recipient:  r,
+    actor:      author,
+    kind:       'commented',
+    task_id:    parentType === 'task' ? parentId : null,
+    task_title: parentTitle,
+  }));
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) throw error;
+}

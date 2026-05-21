@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import Modal from '../components/Modal';
 import MentionTextarea from '../components/MentionTextarea';
-import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle } from 'lucide-react';
+import CommentThread from '../components/CommentThread';
+import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare } from 'lucide-react';
 import './Tasks.css';
 
 /* ─── helpers ─── */
@@ -21,36 +22,6 @@ const priorityConfig = {
 const userEmoji = (u) => (u === 'André' ? '🧑' : '👩');
 const toggleInArray = (arr, val) =>
   arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
-
-/* ─── Modal shell (portal + estilos inline à prova de falha) ─── */
-const OVERLAY_STYLE = {
-  position: 'fixed', top: 0, right: 0, bottom: 0, left: 0,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  background: 'rgba(0,0,0,0.55)', zIndex: 2147483000, padding: 20,
-};
-const MODAL_STYLE = {
-  background: '#FFFFFF', borderRadius: 28,
-  width: 500, maxWidth: 'calc(100vw - 40px)',
-  maxHeight: 'calc(100vh - 40px)', overflowY: 'auto',
-  boxShadow: '0 20px 48px rgba(0,0,0,0.22)',
-};
-
-function Modal({ onClose, children }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return createPortal(
-    <div className="overlay" style={OVERLAY_STYLE} onClick={onClose}>
-      <div className="modal" style={MODAL_STYLE} onClick={e => e.stopPropagation()}>
-        {children}
-      </div>
-    </div>,
-    document.body
-  );
-}
 
 /* ─── Campos compartilhados do formulário de tarefa ─── */
 function TaskFields({ form, set, clients, showStage = true }) {
@@ -184,7 +155,7 @@ function InlineAddTask({ stage, clients, onAdd, onCancel }) {
 }
 
 /* ─── Task Card (full detail) ─── */
-function TaskCard({ task, clients, onToggle, onDelete, onEdit }) {
+function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment }) {
   const client  = clients.find(c => c.id === task.clientId);
   const overdue = isOverdue(task.dueDate) && task.status !== 'completed';
   const done    = task.status === 'completed';
@@ -213,6 +184,10 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit }) {
 
         <div className="tcard-actions">
           <span className={`priority-dot ${p.dot}`} title={p.label} />
+          <button className="comment-btn" title="Comentários"
+            onClick={(e) => { e.stopPropagation(); onComment(task); }}>
+            <MessageSquare size={13} />
+          </button>
           <button className="delete-btn"
             onClick={(e) => { e.stopPropagation(); onDelete(task.id); }}>
             <Trash2 size={13} />
@@ -246,7 +221,7 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit }) {
 
 /* ─── Coluna do Kanban ─── */
 function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients,
-                        adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit }) {
+                        adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment }) {
   return (
     <div className="k-col">
       <div className={`k-col-head k-col-head--${variant}`}>
@@ -264,7 +239,7 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, stage, clients
           ? <div className="k-empty"><span>🎉</span><p>Tudo limpo!</p></div>
           : tasks.map(t => (
               <TaskCard key={t.id} task={t} clients={clients}
-                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} />
+                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment} />
             ))
         }
         {adding
@@ -289,8 +264,12 @@ export default function Tasks() {
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
+  const [commentTarget, setCommentTarget] = useState(null);
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  const openComments = (task) =>
+    setCommentTarget({ type: 'task', id: task.id, title: task.title });
 
   useEffect(() => {
     Promise.all([fetchClients(), fetchTasks()])
@@ -431,6 +410,7 @@ export default function Tasks() {
             onStartAdd={() => setAddingStage('pre-acquisition')}
             onCancelAdd={() => setAddingStage(null)}
             onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+            onComment={openComments}
           />
         )}
 
@@ -442,6 +422,7 @@ export default function Tasks() {
             onStartAdd={() => setAddingStage('post-acquisition')}
             onCancelAdd={() => setAddingStage(null)}
             onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+            onComment={openComments}
           />
         )}
 
@@ -460,7 +441,7 @@ export default function Tasks() {
             <div className="done-list">
               {completed.map(t => (
                 <TaskCard key={t.id} task={t} clients={clients}
-                  onToggle={toggle} onDelete={remove} onEdit={setEditing} />
+                  onToggle={toggle} onDelete={remove} onEdit={setEditing} onComment={openComments} />
               ))}
             </div>
           )}
@@ -477,6 +458,16 @@ export default function Tasks() {
           onClose={() => setEditing(null)}
           onSave={update}
           onDelete={remove}
+        />
+      )}
+
+      {/* ── THREAD DE COMENTÁRIOS ── */}
+      {commentTarget && (
+        <CommentThread
+          parentType={commentTarget.type}
+          parentId={commentTarget.id}
+          parentTitle={commentTarget.title}
+          onClose={() => setCommentTarget(null)}
         />
       )}
     </div>

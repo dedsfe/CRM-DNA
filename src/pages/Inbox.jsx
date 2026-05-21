@@ -19,6 +19,7 @@ const kindText = {
   assigned:  'marcou você na tarefa',
   updated:   'atualizou a tarefa',
   mentioned: 'mencionou você em',
+  commented: 'comentou em',
 };
 
 export default function Inbox() {

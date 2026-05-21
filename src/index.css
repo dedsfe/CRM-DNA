@@ -259,6 +259,108 @@ select.input {
 .mention-opt:hover { background: var(--blue-light); }
 .mention-opt-emoji { font-size: 16px; }
 
+/* Thread de comentários */
+.thread-sub {
+  padding: 12px var(--s-24);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mid-gray);
+  border-bottom: 1px solid var(--light-gray);
+}
+
+.thread-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-16);
+  padding: var(--s-20) var(--s-24);
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.thread-empty {
+  text-align: center;
+  color: var(--mid-gray);
+  font-size: 14px;
+  padding: var(--s-20) 0;
+}
+
+.thread-item {
+  display: flex;
+  gap: var(--s-12);
+}
+
+.thread-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--off-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.thread-body { flex: 1; min-width: 0; }
+
+.thread-meta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-8);
+  font-size: 13px;
+  color: var(--black);
+  margin-bottom: 2px;
+}
+
+.thread-time { font-size: 11px; color: var(--mid-gray); font-weight: 400; }
+
+.thread-text {
+  font-size: 14px;
+  color: var(--dark-gray);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.thread-compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-12);
+  padding: var(--s-16) var(--s-24);
+  border-top: 1px solid var(--light-gray);
+  background: #FAFAFA;
+}
+
+.thread-compose .btn { align-self: flex-end; }
+
+/* Botão de comentário no hover dos cards */
+.comment-btn {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--mid-gray);
+  opacity: 0;
+  border-radius: var(--r-sm);
+  padding: 2px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font);
+  transition: opacity .15s, color .15s, background .15s;
+}
+
+.tcard:hover .comment-btn,
+.task-row:hover .comment-btn,
+.client-card:hover .comment-btn { opacity: 1; }
+
+.comment-btn:hover { color: var(--blue); background: var(--blue-light); }
+
+/* Comentário no card de cliente (canto inferior direito) */
+.card-comment {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+}
+
 /* Loading state */
 .db-loading {
   padding: var(--s-48);
