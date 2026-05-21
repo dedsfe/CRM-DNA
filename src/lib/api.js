@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { USERS } from '../mockData';
 
 /* ── mappers: DB row (snake_case, flat) ↔ app object (camelCase, nested) ── */
 
@@ -150,6 +151,25 @@ export async function notifyAssignees(task, actor, kind) {
     recipient:  r,
     actor,
     kind,
+    task_id:    task.id ?? null,
+    task_title: task.title,
+  }));
+  const { error } = await supabase.from('notifications').insert(rows);
+  if (error) throw error;
+}
+
+/* Notifica quem foi mencionado com @ na descrição (e ainda não é responsável). */
+export async function notifyMentions(task, actor) {
+  const text = task.description || '';
+  const assignees = task.assignees || [];
+  const recipients = USERS.filter(u =>
+    text.includes('@' + u) && u !== actor && !assignees.includes(u)
+  );
+  if (recipients.length === 0) return;
+  const rows = recipients.map(r => ({
+    recipient:  r,
+    actor,
+    kind:       'mentioned',
     task_id:    task.id ?? null,
     task_title: task.title,
   }));

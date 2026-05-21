@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
-import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees } from '../lib/api';
+import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import MentionTextarea from '../components/MentionTextarea';
 import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle } from 'lucide-react';
 import './Tasks.css';
 
@@ -71,9 +73,11 @@ function TaskFields({ form, set, clients, showStage = true }) {
 
       <div className="field">
         <label className="field-label">Descrição</label>
-        <textarea className="input textarea" rows={3}
-          placeholder="Descreva a tarefa em detalhes…"
-          value={form.description} onChange={e => set('description', e.target.value)} />
+        <MentionTextarea
+          value={form.description}
+          onChange={v => set('description', v)}
+          placeholder="Descreva a tarefa… digite @ para marcar alguém"
+        />
       </div>
 
       <div className="field-row">
@@ -286,6 +290,7 @@ export default function Tasks() {
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     Promise.all([fetchClients(), fetchTasks()])
@@ -294,11 +299,23 @@ export default function Tasks() {
       .finally(() => setLoading(false));
   }, []);
 
+  /* Abre a tarefa vinda de um link da caixa de entrada (?task=ID) */
+  useEffect(() => {
+    const id = searchParams.get('task');
+    if (!id || tasks.length === 0) return;
+    const t = tasks.find(x => x.id === id);
+    if (t) {
+      setEditing(t);
+      setSearchParams({}, { replace: true });
+    }
+  }, [tasks, searchParams, setSearchParams]);
+
   const add = async (task) => {
     try {
       const saved = await insertTask(task);
       setTasks(p => [saved, ...p]);
       await notifyAssignees(saved, user, 'assigned');
+      await notifyMentions(saved, user);
     } catch (e) { setError(e.message); }
   };
   const update = async (task) => {
@@ -306,6 +323,7 @@ export default function Tasks() {
       const saved = await updateTask(task);
       setTasks(p => p.map(t => t.id === saved.id ? saved : t));
       await notifyAssignees(saved, user, 'updated');
+      await notifyMentions(saved, user);
     } catch (e) { setError(e.message); }
   };
   const remove = async (id) => {

@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { USERS } from '../mockData';
 import {
   fetchClients, fetchTasks, insertClient, updateClient,
-  insertTask, updateTask, deleteTask, notifyAssignees,
+  insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions,
 } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import MentionTextarea from '../components/MentionTextarea';
 import {
   Plus, Mail, Phone, ExternalLink,
   CheckCircle2, Circle, Trash2, X, Search, Pencil
@@ -169,9 +170,11 @@ function TaskFields({ form, set, showStage = true }) {
 
       <div className="field">
         <label className="field-label">Descrição</label>
-        <textarea className="input textarea" rows={3}
-          placeholder="Descreva a tarefa em detalhes…"
-          value={form.description} onChange={e => set('description', e.target.value)} />
+        <MentionTextarea
+          value={form.description}
+          onChange={v => set('description', v)}
+          placeholder="Descreva a tarefa… digite @ para marcar alguém"
+        />
       </div>
 
       <div className="field-row">
@@ -401,6 +404,7 @@ export default function Clients() {
       const saved = await insertTask(task);
       setTasks(p => [saved, ...p]);
       await notifyAssignees(saved, user, 'assigned');
+      await notifyMentions(saved, user);
     } catch (e) { setError(e.message); }
   };
   const updateTaskFn = async (task) => {
@@ -408,6 +412,7 @@ export default function Clients() {
       const saved = await updateTask(task);
       setTasks(p => p.map(t => t.id === saved.id ? saved : t));
       await notifyAssignees(saved, user, 'updated');
+      await notifyMentions(saved, user);
     } catch (e) { setError(e.message); }
   };
 

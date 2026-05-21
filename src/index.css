@@ -221,6 +221,44 @@ select.input {
   font-weight: 600;
 }
 
+/* Menção @ (estilo Notion) */
+.mention-wrap {
+  position: relative;
+}
+
+.mention-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  background: var(--white);
+  border: 1px solid var(--light-gray);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  padding: 4px;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mention-opt {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  font-family: var(--font);
+  text-align: left;
+  transition: background .12s;
+}
+
+.mention-opt:hover { background: var(--blue-light); }
+.mention-opt-emoji { font-size: 16px; }
+
 /* Loading state */
 .db-loading {
   padding: var(--s-48);

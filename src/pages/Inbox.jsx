@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../lib/notifications';
 import { CheckCheck, Inbox as InboxIcon } from 'lucide-react';
 import './Inbox.css';
@@ -15,12 +16,19 @@ function timeAgo(iso) {
 }
 
 const kindText = {
-  assigned: 'marcou você na tarefa',
-  updated:  'atualizou a tarefa',
+  assigned:  'marcou você na tarefa',
+  updated:   'atualizou a tarefa',
+  mentioned: 'mencionou você em',
 };
 
 export default function Inbox() {
   const { notifications, unread, markRead, markAll } = useNotifications();
+  const navigate = useNavigate();
+
+  const open = (n) => {
+    if (!n.read) markRead(n.id);
+    if (n.taskId) navigate(`/tasks?task=${n.taskId}`);
+  };
 
   return (
     <div className="ib">
@@ -49,7 +57,7 @@ export default function Inbox() {
             <button
               key={n.id}
               className={`ib-item ${n.read ? '' : 'ib-item--unread'}`}
-              onClick={() => !n.read && markRead(n.id)}
+              onClick={() => open(n)}
             >
               <span className="ib-avatar">{userEmoji(n.actor)}</span>
               <div className="ib-body">
