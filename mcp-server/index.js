@@ -324,16 +324,28 @@ app.post("/messages", express.json(), async (req, res) => {
   await transport.handlePostMessage(req, res);
 });
 
-// Start the Express server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`MCP Server running on HTTP port ${PORT}`);
-  console.log(`SSE Endpoint: http://localhost:${PORT}/sse`);
-  console.log(`Messages Endpoint: http://localhost:${PORT}/messages`);
-  
-  if (apiKey) {
-    console.log("🔒 Authentication is ENABLED (MCP_API_KEY).");
-  } else {
-    console.warn("⚠️ WARNING: Authentication is DISABLED. Set MCP_API_KEY in your .env to secure your server.");
-  }
-});
+// Start the server based on mode
+const isStdio = process.argv.includes('--stdio');
+
+if (isStdio) {
+  import("@modelcontextprotocol/sdk/server/stdio.js").then(async ({ StdioServerTransport }) => {
+    const transport = new StdioServerTransport();
+    const server = createMCPServer();
+    await server.connect(transport);
+    console.error("MCP Server running on stdio");
+  });
+} else {
+  // Start the Express server
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`MCP Server running on HTTP port ${PORT}`);
+    console.log(`SSE Endpoint: http://localhost:${PORT}/sse`);
+    console.log(`Messages Endpoint: http://localhost:${PORT}/messages`);
+    
+    if (apiKey) {
+      console.log("🔒 Authentication is ENABLED (MCP_API_KEY).");
+    } else {
+      console.warn("⚠️ WARNING: Authentication is DISABLED. Set MCP_API_KEY in your .env to secure your server.");
+    }
+  });
+}
