@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { fetchTransactions, insertTransaction, deleteTransaction, fetchClients, fetchInvoices } from '../lib/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, CartesianGrid } from 'recharts';
-import { Plus, TrendingUp, TrendingDown, Trash2, DollarSign, AlertCircle, Clock, Award, Wallet, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, Trash2, DollarSign, AlertCircle, Clock, Award, Wallet, ArrowUpRight, ArrowDownRight, PieChart as PieChartIcon } from 'lucide-react';
 import './Finance.css';
 
 export default function Finance() {
