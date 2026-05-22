@@ -51,6 +51,7 @@
 }
 
 .summary-item--orange { background: #FEF3DC; }
+.summary-item--blue   { background: var(--blue-50); }
 .summary-item--red    { background: #FFE8E8; }
 .summary-item--green  { background: #D1F5DF; }
 .summary-item--gray   { background: var(--off-white); }
@@ -114,6 +115,10 @@
   align-items: start;
 }
 
+.kanban--three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
 .kanban--single {
   grid-template-columns: 1fr;
   max-width: 640px;
@@ -138,8 +143,13 @@
   border-bottom: 1px solid var(--light-gray);
 }
 
-.k-col-head--blue  { /* removido fundo forte */ }
-.k-col-head--green { /* removido fundo forte */ }
+.k-col-head--blue   { /* A Fazer — herda off-white */ }
+.k-col-head--orange { border-top: 3px solid var(--orange); }
+.k-col-head--green  { /* Feito — herda off-white */ }
+
+/* WIP exceeded — coluna em andamento fica com borda âmbar */
+.k-col--wip-exceeded { border-color: var(--orange); }
+.k-col--wip-exceeded .k-col-head { background: #FEF9EC; }
 
 .k-col-head-left {
   display: flex;
@@ -172,6 +182,20 @@
   padding: 3px 12px;
   font-size: 13px;
   font-weight: 700;
+}
+
+.k-count--wip {
+  background: var(--orange-bg);
+  color: var(--orange-text);
+}
+
+.k-wip-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--orange-text);
+  background: var(--orange-bg);
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
 }
 
 /* Column body */
@@ -311,8 +335,9 @@
 }
 
 .task-toggle:hover { transform: scale(1.15); }
-.chk-green { color: var(--green); }
-.chk-gray  { color: var(--mid-gray); }
+.chk-green  { color: var(--green); }
+.chk-orange { color: var(--orange); }
+.chk-gray   { color: var(--mid-gray); }
 
 .tcard-title {
   flex: 1;
@@ -344,6 +369,22 @@
 .dot--red    { background: var(--red); }
 .dot--orange { background: var(--orange); }
 .dot--green  { background: var(--green); }
+
+/* Advance button (→ quick-move to next column) */
+.advance-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-400);
+  opacity: 0;
+  transition: opacity .15s, color .15s, background .15s;
+}
+
+.tcard:hover .advance-btn { opacity: 1; }
+.advance-btn:hover { color: var(--blue); background: var(--blue-50); }
 
 /* Delete button */
 .delete-btn {
@@ -391,7 +432,11 @@
   flex-wrap: wrap;
 }
 
-/* (chips → definidos globalmente em index.css) */
+/* Countdown chip variants */
+.chip--countdown { font-size: 11px; font-weight: 700; }
+.chip--countdown-ok   { background: var(--neutral-100); color: var(--neutral-600); }
+.chip--countdown-soon { background: var(--orange-bg);  color: var(--orange-text); }
+.chip--countdown-late { background: var(--red-bg);     color: var(--red-text); }
 
 /* ── DONE SECTION ── */
 .done-section {

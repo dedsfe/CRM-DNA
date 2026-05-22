@@ -6,7 +6,7 @@ import { useAuth } from '../lib/auth';
 import Modal from '../components/Modal';
 import MentionTextarea from '../components/MentionTextarea';
 import CommentThread from '../components/CommentThread';
-import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare, ArrowRight } from 'lucide-react';
 import './Tasks.css';
 
 /* ─── helpers ─── */
@@ -23,6 +23,22 @@ const getEndOfWeek = () => {
 };
 
 const isOverdue = (d) => d < today;
+
+const WIP_LIMIT = 5;
+
+/* Countdown: returns { text, urgency: 'ok'|'soon'|'late' } */
+function countdown(dueDateStr) {
+  const due = new Date(dueDateStr + 'T23:59:59');
+  const now = new Date();
+  const diff = due - now;
+  if (diff < 0) return { text: 'Atrasada', urgency: 'late' };
+  const days  = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  if (days === 0 && hours <= 23) return { text: hours <= 1 ? 'Menos de 1h' : `${hours}h restantes`, urgency: 'soon' };
+  if (days === 1) return { text: '1 dia restante', urgency: 'soon' };
+  if (days <= 3)  return { text: `${days} dias`, urgency: 'soon' };
+  return { text: `${days} dias`, urgency: 'ok' };
+}
 
 const priorityConfig = {
   high:   { dot: 'dot--red',    label: 'Alta',  icon: '🔴' },
@@ -157,12 +173,15 @@ function InlineAddTask({ status, clients, onAdd, onCancel }) {
 }
 
 /* ─── Task Card (full detail) ─── */
-function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, draggedTask, setDraggedTask }) {
+function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, onAdvance, draggedTask, setDraggedTask }) {
   const client  = clients.find(c => c.id === task.clientId);
   const overdue = isOverdue(task.dueDate) && task.status !== 'completed';
   const done    = task.status === 'completed';
   const p       = priorityConfig[task.priority];
   const isDragging = draggedTask?.id === task.id;
+  const cd      = !done ? countdown(task.dueDate) : null;
+
+  const advanceLabel = task.status === 'pending' ? 'Em Andamento' : 'Concluir';
 
   return (
     <div className={`tcard ${done ? 'tcard--done' : ''} ${overdue ? 'tcard--overdue' : ''} ${isDragging ? 'tcard--dragging' : ''}`}
@@ -184,7 +203,9 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, dragge
           onClick={(e) => { e.stopPropagation(); onToggle(task.id); }}>
           {done
             ? <CheckCircle2 size={20} className="chk-green" />
-            : <Circle size={20} className="chk-gray" />}
+            : task.status === 'in_progress'
+              ? <Circle size={20} className="chk-orange" />
+              : <Circle size={20} className="chk-gray" />}
         </button>
 
         <span className={`tcard-title ${done ? 'strikethrough' : ''}`}>
@@ -193,6 +214,14 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, dragge
 
         <div className="tcard-actions">
           <span className={`priority-dot ${p.dot}`} title={p.label} />
+          {!done && (
+            <button
+              className="advance-btn"
+              title={`Mover para: ${advanceLabel}`}
+              onClick={(e) => { e.stopPropagation(); onAdvance(task.id); }}>
+              <ArrowRight size={13} />
+            </button>
+          )}
           <button className="comment-btn" title="Comentários"
             onClick={(e) => { e.stopPropagation(); onComment(task); }}>
             <MessageSquare size={13} />
@@ -219,9 +248,11 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, dragge
               {userEmoji(a)} {a}
             </span>
           ))}
-          <span className={`chip ${overdue ? 'chip--red' : 'chip--gray'}`}>
-            📅 {task.dueDate}
-          </span>
+          {cd && (
+            <span className={`chip chip--countdown chip--countdown-${cd.urgency}`}>
+              ⏱ {cd.text}
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -230,27 +261,26 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, dragge
 
 /* ─── Coluna do Kanban ─── */
 function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, clients,
-                        adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment,
-                        draggedTask, setDraggedTask, onDropTask }) {
+                        adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment, onAdvance,
+                        draggedTask, setDraggedTask, onDropTask, wipLimit }) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const isOverWip = wipLimit && tasks.length >= wipLimit;
 
   const handleDragOver = (e) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (!isDragOver) setIsDragOver(true);
   };
 
   const handleDragLeave = (e) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setIsDragOver(false);
-    }
+    if (!e.currentTarget.contains(e.relatedTarget)) setIsDragOver(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
     if (draggedTask && draggedTask.status !== status) {
-      onDropTask({ ...draggedTask, status }); // change status and update
+      onDropTask({ ...draggedTask, status });
     }
     setDraggedTask(null);
   };
@@ -261,7 +291,7 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, client
   }
 
   return (
-    <div className="k-col">
+    <div className={`k-col ${isOverWip ? 'k-col--wip-exceeded' : ''}`}>
       <div className={`k-col-head k-col-head--${variant}`}>
         <div className="k-col-head-left">
           <span className="k-col-emoji">{emoji}</span>
@@ -270,18 +300,25 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, client
             <h3 className="k-col-title">{title}</h3>
           </div>
         </div>
-        <span className="k-count">{tasks.length}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {isOverWip && (
+            <span className="k-wip-badge" title={`Limite de ${wipLimit} tarefas atingido`}>
+              ⚠️ WIP
+            </span>
+          )}
+          <span className={`k-count ${isOverWip ? 'k-count--wip' : ''}`}>{tasks.length}{wipLimit ? `/${wipLimit}` : ''}</span>
+        </div>
       </div>
       <div className={`k-col-body ${dropClass}`}
-           onDragOver={handleDragOver} 
-           onDragEnter={handleDragOver} 
-           onDragLeave={handleDragLeave} 
+           onDragOver={handleDragOver}
+           onDragEnter={handleDragOver}
+           onDragLeave={handleDragLeave}
            onDrop={handleDrop}>
         {tasks.length === 0 && !adding
           ? <div className="k-empty"><span>🎉</span><p>Tudo limpo!</p></div>
           : tasks.map(t => (
               <TaskCard key={t.id} task={t} clients={clients}
-                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment}
+                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment} onAdvance={onAdvance}
                 draggedTask={draggedTask} setDraggedTask={setDraggedTask} />
             ))
         }
@@ -358,7 +395,21 @@ export default function Tasks() {
   const toggle = async (id) => {
     const t = tasks.find(x => x.id === id);
     if (!t) return;
-    const next = { ...t, status: t.status === 'completed' ? 'pending' : 'completed' };
+    // Cycle: pending → in_progress → completed → pending
+    const nextStatus = t.status === 'pending' ? 'in_progress'
+                     : t.status === 'in_progress' ? 'completed'
+                     : 'pending';
+    const next = { ...t, status: nextStatus };
+    try { const saved = await updateTask(next); setTasks(p => p.map(x => x.id === id ? saved : x)); }
+    catch (e) { setError(e.message); }
+  };
+
+  /* Quick-advance: pending→in_progress, in_progress→completed */
+  const advance = async (id) => {
+    const t = tasks.find(x => x.id === id);
+    if (!t || t.status === 'completed') return;
+    const nextStatus = t.status === 'pending' ? 'in_progress' : 'completed';
+    const next = { ...t, status: nextStatus };
     try { const saved = await updateTask(next); setTasks(p => p.map(x => x.id === id ? saved : x)); }
     catch (e) { setError(e.message); }
   };
@@ -394,9 +445,11 @@ export default function Tasks() {
 
   const pendingTasks = byFilter.filter(t => t.status === 'pending')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+  const inProgressTasks = byFilter.filter(t => t.status === 'in_progress')
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const completedTasks = byFilter.filter(t => t.status === 'completed')
     .sort((a, b) => b.dueDate.localeCompare(a.dueDate));
-  const overdue   = pendingTasks.filter(t => isOverdue(t.dueDate));
+  const overdue = [...pendingTasks, ...inProgressTasks].filter(t => isOverdue(t.dueDate));
 
   return (
     <div className="tp">
@@ -419,7 +472,11 @@ export default function Tasks() {
       <div className="summary-bar">
         <div className="summary-item summary-item--orange">
           <span className="summary-n">{pendingTasks.length}</span>
-          <span className="summary-l">⏳ Pendentes</span>
+          <span className="summary-l">⏳ A Fazer</span>
+        </div>
+        <div className="summary-item summary-item--blue">
+          <span className="summary-n">{inProgressTasks.length}</span>
+          <span className="summary-l">🔥 Em Andamento</span>
         </div>
         <div className="summary-item summary-item--red">
           <span className="summary-n">{overdue.length}</span>
@@ -428,10 +485,6 @@ export default function Tasks() {
         <div className="summary-item summary-item--green">
           <span className="summary-n">{completedTasks.length}</span>
           <span className="summary-l">✅ Concluídas</span>
-        </div>
-        <div className="summary-item summary-item--gray">
-          <span className="summary-n">{tasks.length}</span>
-          <span className="summary-l">📋 Total</span>
         </div>
       </div>
 
@@ -498,7 +551,7 @@ export default function Tasks() {
       </div>
 
       {/* ── KANBAN COLUMNS ── */}
-      <div className="kanban">
+      <div className="kanban kanban--three">
         <KanbanColumn
           variant="blue" emoji="⏳" stageLabel="Tarefas" title="A Fazer"
           status="pending" tasks={pendingTasks} clients={clients}
@@ -506,18 +559,30 @@ export default function Tasks() {
           onStartAdd={() => setAddingStage('pending')}
           onCancelAdd={() => setAddingStage(null)}
           onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
-          onComment={openComments}
+          onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+        />
+
+        <KanbanColumn
+          variant="orange" emoji="🔥" stageLabel="Tarefas" title="Em Andamento"
+          status="in_progress" tasks={inProgressTasks} clients={clients}
+          adding={addingStage === 'in_progress'}
+          onStartAdd={() => setAddingStage('in_progress')}
+          onCancelAdd={() => setAddingStage(null)}
+          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+          onComment={openComments} onAdvance={advance}
+          draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+          wipLimit={WIP_LIMIT}
         />
 
         <KanbanColumn
           variant="green" emoji="✅" stageLabel="Tarefas" title="Feito"
           status="completed" tasks={completedTasks} clients={clients}
-          adding={addingStage === 'completed'}
-          onStartAdd={() => setAddingStage('completed')}
+          adding={false}
+          onStartAdd={null}
           onCancelAdd={() => setAddingStage(null)}
           onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
-          onComment={openComments}
+          onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
         />
       </div>
