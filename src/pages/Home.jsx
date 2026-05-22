@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { fetchClients, fetchTasks } from '../lib/api';
+import { fetchClients, fetchTasks, fetchInvoices } from '../lib/api';
 import { ArrowRight } from 'lucide-react';
 import './Home.css';
 
@@ -13,11 +13,12 @@ const priorityLabel = { high: '🔴 Alta', medium: '🟡 Média', low: '🟢 Bai
 export default function Home() {
   const [clients, setClients] = useState([]);
   const [tasks, setTasks]     = useState([]);
-  const [error, setError]     = useState(null);
+  const [invoices, setInvoices] = useState([]);
+  const [error, setError]       = useState(null);
 
   useEffect(() => {
-    Promise.all([fetchClients(), fetchTasks()])
-      .then(([c, t]) => { setClients(c); setTasks(t); })
+    Promise.all([fetchClients(), fetchTasks(), fetchInvoices()])
+      .then(([c, t, i]) => { setClients(c); setTasks(t); setInvoices(i); })
       .catch(e => setError(e.message));
   }, []);
 
@@ -32,6 +33,26 @@ export default function Home() {
     .slice(0, 4);
 
   const getClient = (id) => clients.find(c => c.id === id);
+
+  const totalMrr = active.reduce((sum, c) => sum + (Number(c.mrr) || 0), 0);
+  
+  const pendingInvoices = invoices.filter(i => i.status !== 'paid' && i.status !== 'cancelled');
+  let totalPending = 0;
+  pendingInvoices.forEach(inv => {
+    let finalAmount = Number(inv.amount) || 0;
+    const client = getClient(inv.clientId);
+    if (client && inv.dueDate < today) {
+       const daysLate = Math.floor((new Date(today) - new Date(inv.dueDate)) / (1000 * 60 * 60 * 24));
+       if (daysLate > 0) {
+          const mult = client.lateFeePercentage || 2;
+          const juros = (client.lateFeeInterestPerMonth || 1) / 30; // pro-rata per day
+          finalAmount = finalAmount + (finalAmount * (mult / 100)) + (finalAmount * (juros / 100) * daysLate);
+       }
+    }
+    totalPending += finalAmount;
+  });
+
+  const formatBRL = (val) => val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2 });
 
   return (
     <div className="home">
@@ -59,7 +80,27 @@ export default function Home() {
           <p className="stat-card-sub">contratos em andamento</p>
         </div>
 
+        <div className="stat-card stat-card--green">
+          <div className="stat-card-top">
+            <span className="stat-card-emoji">💰</span>
+            <span className="stat-card-label">MRR Total</span>
+          </div>
+          <p className="stat-card-number">{formatBRL(totalMrr)}</p>
+          <p className="stat-card-sub">receita recorrente mensal</p>
+        </div>
+
         <div className="stat-card stat-card--dark">
+          <div className="stat-card-top">
+            <span className="stat-card-emoji">⚠️</span>
+            <span className="stat-card-label">A Receber</span>
+          </div>
+          <p className="stat-card-number" style={{ color: totalPending > 0 ? '#ff9f0a' : '#fff' }}>
+            {formatBRL(totalPending)}
+          </p>
+          <p className="stat-card-sub">faturas pendentes/atrasadas</p>
+        </div>
+
+        <div className="stat-card stat-card--light">
           <div className="stat-card-top">
             <span className="stat-card-emoji">🤝</span>
             <span className="stat-card-label">Em Negociação</span>
@@ -71,13 +112,13 @@ export default function Home() {
         <div className="stat-card stat-card--light">
           <div className="stat-card-top">
             <span className="stat-card-emoji">⏳</span>
-            <span className="stat-card-label">Tarefas Pendentes</span>
+            <span className="stat-card-label">Pendentes</span>
           </div>
           <p className="stat-card-number" style={{ color: '#1d1d1f' }}>{pending.length}</p>
-          <p className="stat-card-sub" style={{ color: '#86868b' }}>a serem concluídas</p>
+          <p className="stat-card-sub" style={{ color: '#86868b' }}>tarefas a concluir</p>
         </div>
 
-        <div className="stat-card stat-card--green">
+        <div className="stat-card stat-card--light">
           <div className="stat-card-top">
             <span className="stat-card-emoji">✅</span>
             <span className="stat-card-label">Concluídas</span>

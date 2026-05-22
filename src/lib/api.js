@@ -9,6 +9,11 @@ const toClient = (r) => ({
   emoji: r.emoji,
   status: r.status,
   since: r.since,
+  mrr: r.mrr ?? 0,
+  setupFee: r.setup_fee ?? 0,
+  dueDay: r.due_day ?? 5,
+  lateFeePercentage: r.late_fee_percentage ?? 2.0,
+  lateFeeInterestPerMonth: r.late_fee_interest_per_month ?? 1.0,
   contact: {
     email: r.contact_email ?? '',
     phone: r.contact_phone ?? '',
@@ -26,6 +31,11 @@ const fromClient = (c) => ({
   emoji:          c.emoji,
   status:         c.status,
   since:          c.since,
+  mrr:            c.mrr,
+  setup_fee:      c.setupFee,
+  due_day:        c.dueDay,
+  late_fee_percentage: c.lateFeePercentage,
+  late_fee_interest_per_month: c.lateFeeInterestPerMonth,
   contact_email:  c.contact.email || null,
   contact_phone:  c.contact.phone || null,
   conn_drive:     c.connections.drive || null,
@@ -109,6 +119,46 @@ export async function updateTask(task) {
 export async function deleteTask(id) {
   const { error } = await supabase.from('tasks').delete().eq('id', id);
   if (error) throw error;
+}
+
+/* ── invoices ── */
+
+const toInvoice = (r) => ({
+  id: r.id,
+  clientId: r.client_id,
+  description: r.description,
+  amount: r.amount,
+  dueDate: r.due_date,
+  status: r.status,
+  paidAt: r.paid_at,
+  createdAt: r.created_at,
+});
+
+export async function fetchInvoices(clientId = null) {
+  let query = supabase.from('invoices').select('*').order('due_date', { ascending: false });
+  if (clientId) query = query.eq('client_id', clientId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map(toInvoice);
+}
+
+export async function insertInvoice({ clientId, description, amount, dueDate }) {
+  const { data, error } = await supabase
+    .from('invoices')
+    .insert({ client_id: clientId, description, amount, due_date: dueDate })
+    .select().single();
+  if (error) throw error;
+  return toInvoice(data);
+}
+
+export async function markInvoicePaid(id) {
+  const { data, error } = await supabase
+    .from('invoices')
+    .update({ status: 'paid', paid_at: new Date().toISOString() })
+    .eq('id', id)
+    .select().single();
+  if (error) throw error;
+  return toInvoice(data);
 }
 
 /* ── notifications ── */

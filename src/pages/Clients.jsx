@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { USERS } from '../mockData';
 import {
-  fetchClients, fetchTasks, insertClient, updateClient, deleteClient,
+  fetchClients, fetchTasks, fetchInvoices, insertClient, updateClient, deleteClient,
   insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions,
+  insertInvoice, markInvoicePaid
 } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import Modal from '../components/Modal';
@@ -32,6 +33,7 @@ const toggleInArray = (arr, val) =>
 function ClientModal({ client, onClose, onSave }) {
   const [form, setForm] = useState(client ?? {
     name: '', emoji: '🏢', status: 'active', since: today,
+    mrr: 0, setupFee: 0, dueDay: 5, lateFeePercentage: 2, lateFeeInterestPerMonth: 1,
     contact: { email: '', phone: '' },
     connections: { drive: '', instagram: '', tiktok: '', website: '' },
   });
@@ -75,6 +77,24 @@ function ClientModal({ client, onClose, onSave }) {
             <label className="field-label">Cliente desde</label>
             <input type="date" className="input" value={form.since}
               onChange={e => set('since', e.target.value)} />
+          </div>
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label className="field-label">MRR (R$)</label>
+            <input type="number" className="input" value={form.mrr}
+              onChange={e => set('mrr', Number(e.target.value))} />
+          </div>
+          <div className="field">
+            <label className="field-label">Setup Fee (R$)</label>
+            <input type="number" className="input" value={form.setupFee}
+              onChange={e => set('setupFee', Number(e.target.value))} />
+          </div>
+          <div className="field" style={{ maxWidth: 100 }}>
+            <label className="field-label">Dia Venc.</label>
+            <input type="number" min="1" max="31" className="input" value={form.dueDay}
+              onChange={e => set('dueDay', Number(e.target.value))} />
           </div>
         </div>
 
@@ -429,10 +449,12 @@ function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, sel
 export default function Clients() {
   const [clients, setClients]   = useState([]);
   const [tasks, setTasks]       = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
   const [search, setSearch]     = useState('');
   const [selectedId, setSelectedId] = useState(null);
+  const [activeTab, setActiveTab] = useState('tasks'); // 'tasks' | 'finance'
   const [clientModal, setClientModal] = useState(null); // null | {} | {client}
   const [editingTask, setEditingTask] = useState(null);
   const [addingTask, setAddingTask] = useState(false);
@@ -444,8 +466,8 @@ export default function Clients() {
   const openClientComments = (client) => setCommentTarget({ type: 'client', id: client.id, title: client.name });
 
   useEffect(() => {
-    Promise.all([fetchClients(), fetchTasks()])
-      .then(([c, t]) => { setClients(c); setTasks(t); })
+    Promise.all([fetchClients(), fetchTasks(), fetchInvoices()])
+      .then(([c, t, i]) => { setClients(c); setTasks(t); setInvoices(i); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -649,31 +671,110 @@ export default function Clients() {
             </div>
           </div>
 
-          {/* ── TASKS ── */}
-          <div className="tasks-area">
-            <div className="tasks-area-header">
-              <h3 className="tasks-area-title">Tarefas</h3>
-            </div>
-
-            <div className="tasks-columns">
-              <TaskColumn
-                variant="blue" label="⏳ Pendentes" tasks={pendingTasks}
-                clientId={selected.id}
-                adding={addingTask}
-                onStartAdd={() => setAddingTask(true)}
-                onCancelAdd={() => setAddingTask(false)}
-                onAdd={addTask} onToggle={toggle} onDelete={remove} onEdit={setEditingTask}
-                onComment={openTaskComments}
-              />
-              <TaskColumn
-                variant="green" label="✅ Concluídas" tasks={completedTasks}
-                clientId={selected.id}
-                adding={false}
-                onAdd={addTask} onToggle={toggle} onDelete={remove} onEdit={setEditingTask}
-                onComment={openTaskComments}
-              />
-            </div>
+          {/* ── TABS ── */}
+          <div className="profile-tabs" style={{ display: 'flex', gap: 16, borderBottom: '1px solid var(--light-gray)', marginBottom: 24, padding: '0 24px' }}>
+            <button className={`ptab ${activeTab === 'tasks' ? 'ptab--active' : ''}`} onClick={() => setActiveTab('tasks')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'tasks' ? '2px solid var(--blue-500)' : '2px solid transparent', padding: '12px 0', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: activeTab === 'tasks' ? 'var(--blue-500)' : 'var(--mid-gray)' }}>
+              Tarefas
+            </button>
+            <button className={`ptab ${activeTab === 'finance' ? 'ptab--active' : ''}`} onClick={() => setActiveTab('finance')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'finance' ? '2px solid var(--blue-500)' : '2px solid transparent', padding: '12px 0', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: activeTab === 'finance' ? 'var(--blue-500)' : 'var(--mid-gray)' }}>
+              Financeiro
+            </button>
           </div>
+
+          {activeTab === 'tasks' && (
+            <div className="tasks-area">
+              <div className="tasks-area-header">
+                <h3 className="tasks-area-title">Tarefas</h3>
+              </div>
+
+              <div className="tasks-columns">
+                <TaskColumn
+                  variant="blue" label="⏳ Pendentes" tasks={pendingTasks}
+                  clientId={selected.id}
+                  adding={addingTask}
+                  onStartAdd={() => setAddingTask(true)}
+                  onCancelAdd={() => setAddingTask(false)}
+                  onAdd={addTask} onToggle={toggle} onDelete={remove} onEdit={setEditingTask}
+                  onComment={openTaskComments}
+                />
+                <TaskColumn
+                  variant="green" label="✅ Concluídas" tasks={completedTasks}
+                  clientId={selected.id}
+                  adding={false}
+                  onAdd={addTask} onToggle={toggle} onDelete={remove} onEdit={setEditingTask}
+                  onComment={openTaskComments}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'finance' && (
+            <div className="finance-area" style={{ padding: '0 24px 24px' }}>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+                <div style={{ flex: 1, background: 'var(--off-white)', padding: 16, borderRadius: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--mid-gray)', fontWeight: 600, textTransform: 'uppercase' }}>MRR</p>
+                  <p style={{ fontSize: 24, fontWeight: 800 }}>{(selected.mrr || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                </div>
+                <div style={{ flex: 1, background: 'var(--off-white)', padding: 16, borderRadius: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--mid-gray)', fontWeight: 600, textTransform: 'uppercase' }}>Dia de Vencimento</p>
+                  <p style={{ fontSize: 24, fontWeight: 800 }}>{selected.dueDay}</p>
+                </div>
+              </div>
+
+              <div className="tasks-area-header">
+                <h3 className="tasks-area-title">Faturas</h3>
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                  const desc = window.prompt("Descrição da fatura:");
+                  if (!desc) return;
+                  const amt = window.prompt("Valor (R$):");
+                  if (!amt) return;
+                  const dt = window.prompt("Data de Vencimento (YYYY-MM-DD):");
+                  if (!dt) return;
+                  insertInvoice({ clientId: selected.id, description: desc, amount: parseFloat(amt), dueDate: dt })
+                    .then(inv => setInvoices(p => [inv, ...p]))
+                    .catch(e => setError(e.message));
+                }}>
+                  <Plus size={14} /> Nova Fatura
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+                {invoices.filter(i => i.clientId === selected.id).length === 0 ? (
+                  <p className="tasks-empty" style={{ margin: 0 }}>Nenhuma fatura lançada.</p>
+                ) : (
+                  invoices.filter(i => i.clientId === selected.id).map(inv => {
+                    const late = inv.status === 'pending' && inv.dueDate < today;
+                    return (
+                      <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: 'white', border: '1px solid var(--light-gray)', borderRadius: 8 }}>
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: 14 }}>{inv.description}</p>
+                          <p style={{ fontSize: 12, color: 'var(--mid-gray)', marginTop: 4 }}>
+                            Venc: {inv.dueDate}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                          <span style={{ fontWeight: 800, fontSize: 16, color: late ? 'var(--red)' : 'var(--black)' }}>
+                            {Number(inv.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </span>
+                          {inv.status === 'paid' ? (
+                            <span className="badge badge-green">Pago</span>
+                          ) : (
+                            <button className="btn btn-sm" style={{ background: 'var(--green-text)', color: 'white', border: 'none' }} onClick={() => {
+                              markInvoicePaid(inv.id).then(updated => {
+                                setInvoices(p => p.map(x => x.id === inv.id ? updated : x));
+                              }).catch(e => setError(e.message));
+                            }}>
+                              Marcar Pago
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
       </>
