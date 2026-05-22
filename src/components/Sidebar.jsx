@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useNotifications } from '../lib/notifications';
+import { useIsMobile } from '../lib/useIsMobile';
 import './Sidebar.css';
 
 const NAV = [
-  { to: '/',             label: 'Visão Geral',    emoji: '🏠' },
+  { to: '/',             label: 'Visão Geral',    short: 'Início',   emoji: '🏠' },
   { to: '/clients',      label: 'Clientes',       emoji: '👥' },
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
   { to: '/meetings',     label: 'Reuniões',       emoji: '🗓️' },
-  { to: '/finance',      label: 'Financeiro',     emoji: '💸' },
+  { to: '/finance',      label: 'Financeiro',     short: 'Finanças', emoji: '💸' },
 ];
 
 const UTILITY_NAV = [
@@ -19,6 +20,7 @@ const UTILITY_NAV = [
 export default function Sidebar() {
   const { unread } = useNotifications();
   const location = useLocation();
+  const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isUtilityActive = UTILITY_NAV.some(({ to }) => location.pathname === to);
 
@@ -43,7 +45,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="sidebar-nav sidebar-nav--primary">
         <p className="sidebar-section-label">Menu</p>
-        {NAV.map(({ to, label, emoji, badge }) => (
+        {NAV.map(({ to, label, short, emoji, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -51,7 +53,7 @@ export default function Sidebar() {
             className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
           >
             <span className="sidebar-item-emoji">{emoji}</span>
-            <span className="sidebar-item-label">{label}</span>
+            <span className="sidebar-item-label">{isMobile && short ? short : label}</span>
             {badge && unread > 0 && (
               <span className="sidebar-badge">{unread}</span>
             )}

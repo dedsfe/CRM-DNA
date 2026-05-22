@@ -110,6 +110,27 @@
   gap: var(--s-12);
 }
 
+.client-col-head-right {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+}
+
+/* Coluna retrátil (mobile) */
+.client-col-chevron {
+  color: var(--mid-gray);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.client-col--collapsed .client-col-chevron {
+  transform: rotate(-90deg);
+}
+
+.client-col--collapsed .client-col-head {
+  border-bottom: none;
+}
+
 .client-col-body {
   background: var(--white);
   display: flex;
@@ -725,6 +746,8 @@
 
   .client-col-head {
     padding: var(--s-12) var(--s-16);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
   }
 
   .client-col-body {

@@ -13,8 +13,9 @@ import MentionTextarea from '../components/MentionTextarea';
 import CommentThread from '../components/CommentThread';
 import {
   Plus, Mail, Phone, ExternalLink,
-  CheckCircle2, Circle, Trash2, X, Search, Pencil, MessageSquare
+  CheckCircle2, Circle, Trash2, X, Search, Pencil, MessageSquare, ChevronDown
 } from 'lucide-react';
+import { useIsMobile } from '../lib/useIsMobile';
 import './Clients.css';
 
 /* ─── helpers ─── */
@@ -383,8 +384,9 @@ function ClientCard({ c, tasks, isActive, onClick, draggedClient, setDraggedClie
   );
 }
 
-function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, selectedId, setSelectedId, draggedClient, setDraggedClient, onDropClient, onComment }) {
+function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, selectedId, setSelectedId, draggedClient, setDraggedClient, onDropClient, onComment, isMobile }) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -413,36 +415,42 @@ function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, sel
   }
 
   return (
-    <div className="client-col">
-      <div className={`client-col-head client-col-head--${variant}`}>
+    <div className={`client-col ${isMobile && collapsed ? 'client-col--collapsed' : ''}`}>
+      <div className={`client-col-head client-col-head--${variant}`}
+           onClick={isMobile ? () => setCollapsed(c => !c) : undefined}>
         <div className="client-col-head-left">
           <span className="k-col-emoji">{emoji}</span>
           <h3 className="k-col-title">{label}</h3>
         </div>
-        <span className="k-count">{clients.length}</span>
+        <div className="client-col-head-right">
+          <span className="k-count">{clients.length}</span>
+          {isMobile && <ChevronDown size={18} className="client-col-chevron" />}
+        </div>
       </div>
-      <div className={`client-col-body ${dropClass}`}
-           onDragOver={handleDragOver} 
-           onDragEnter={handleDragOver} 
-           onDragLeave={handleDragLeave} 
-           onDrop={handleDrop}>
-        {clients.length === 0 ? (
-           <p className="tasks-empty">Nenhum cliente</p>
-        ) : (
-          clients.map(c => (
-            <ClientCard 
-              key={c.id} 
-              c={c} 
-              tasks={tasks} 
-              isActive={selectedId === c.id} 
-              onClick={() => setSelectedId(selectedId === c.id ? null : c.id)}
-              draggedClient={draggedClient}
-              setDraggedClient={setDraggedClient}
-              onComment={onComment}
-            />
-          ))
-        )}
-      </div>
+      {!(isMobile && collapsed) && (
+        <div className={`client-col-body ${dropClass}`}
+             onDragOver={handleDragOver}
+             onDragEnter={handleDragOver}
+             onDragLeave={handleDragLeave}
+             onDrop={handleDrop}>
+          {clients.length === 0 ? (
+             <p className="tasks-empty">Nenhum cliente</p>
+          ) : (
+            clients.map(c => (
+              <ClientCard
+                key={c.id}
+                c={c}
+                tasks={tasks}
+                isActive={selectedId === c.id}
+                onClick={() => setSelectedId(selectedId === c.id ? null : c.id)}
+                draggedClient={draggedClient}
+                setDraggedClient={setDraggedClient}
+                onComment={onComment}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -464,6 +472,7 @@ export default function Clients() {
   const [addingTask, setAddingTask] = useState(false);
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedClient, setDraggedClient] = useState(null);
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
   const [searchParams] = useSearchParams();
@@ -594,19 +603,21 @@ export default function Clients() {
       <>
       {/* ── CLIENT KANBAN ── */}
       <div className="client-kanban">
-        <ClientKanbanColumn 
+        <ClientKanbanColumn
           status="negotiation" label="Pré-Aquisição" emoji="🎯" variant="blue"
           clients={filtered.filter(c => c.status === 'negotiation')}
           tasks={tasks} selectedId={selectedId} setSelectedId={setSelectedId}
           draggedClient={draggedClient} setDraggedClient={setDraggedClient}
           onDropClient={saveClient} onComment={openClientComments}
+          isMobile={isMobile}
         />
-        <ClientKanbanColumn 
+        <ClientKanbanColumn
           status="active" label="Pós-Aquisição" emoji="🚀" variant="green"
           clients={filtered.filter(c => c.status === 'active')}
           tasks={tasks} selectedId={selectedId} setSelectedId={setSelectedId}
           draggedClient={draggedClient} setDraggedClient={setDraggedClient}
           onDropClient={saveClient} onComment={openClientComments}
+          isMobile={isMobile}
         />
       </div>
 

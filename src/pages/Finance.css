@@ -533,24 +533,3 @@
     width: 100%;
   }
 }
-
-/* ── Mobile Responsiveness ── */
-@media (max-width: 768px) {
-  .finance-page { padding: 16px; }
-  .bento-card { padding: 16px; }
-  .kpi-card { padding: 16px; }
-  .chart-card { padding: 16px; }
-  .finance-ledger { padding: 16px; }
-  
-  .modal-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-  .modal-content {
-    margin: 0;
-    width: 100%;
-    max-width: 100%;
-    border-radius: var(--r-2xl) var(--r-2xl) 0 0;
-    max-height: 85vh;
-  }
-}

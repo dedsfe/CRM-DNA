@@ -7,7 +7,8 @@ import { useUndo } from '../lib/undo';
 import Modal from '../components/Modal';
 import MentionTextarea from '../components/MentionTextarea';
 import CommentThread from '../components/CommentThread';
-import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare, ArrowRight } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare, ArrowRight, ChevronDown } from 'lucide-react';
+import { useIsMobile } from '../lib/useIsMobile';
 import './Tasks.css';
 
 /* ─── helpers ─── */
@@ -263,8 +264,9 @@ function TaskCard({ task, clients, onToggle, onDelete, onEdit, onComment, onAdva
 /* ─── Coluna do Kanban ─── */
 function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, clients,
                         adding, onStartAdd, onCancelAdd, onAdd, onToggle, onDelete, onEdit, onComment, onAdvance,
-                        draggedTask, setDraggedTask, onDropTask, wipLimit }) {
+                        draggedTask, setDraggedTask, onDropTask, wipLimit, isMobile }) {
   const [isDragOver, setIsDragOver] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const isOverWip = wipLimit && tasks.length >= wipLimit;
 
   const handleDragOver = (e) => {
@@ -292,8 +294,9 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, client
   }
 
   return (
-    <div className={`k-col ${isOverWip ? 'k-col--wip-exceeded' : ''}`}>
-      <div className={`k-col-head k-col-head--${variant}`}>
+    <div className={`k-col ${isOverWip ? 'k-col--wip-exceeded' : ''} ${isMobile && collapsed ? 'k-col--collapsed' : ''}`}>
+      <div className={`k-col-head k-col-head--${variant}`}
+           onClick={isMobile ? () => setCollapsed(c => !c) : undefined}>
         <div className="k-col-head-left">
           <span className="k-col-emoji">{emoji}</span>
           <div>
@@ -308,28 +311,31 @@ function KanbanColumn({ variant, emoji, stageLabel, title, tasks, status, client
             </span>
           )}
           <span className={`k-count ${isOverWip ? 'k-count--wip' : ''}`}>{tasks.length}{wipLimit ? `/${wipLimit}` : ''}</span>
+          {isMobile && <ChevronDown size={18} className="k-col-chevron" />}
         </div>
       </div>
-      <div className={`k-col-body ${dropClass}`}
-           onDragOver={handleDragOver}
-           onDragEnter={handleDragOver}
-           onDragLeave={handleDragLeave}
-           onDrop={handleDrop}>
-        {tasks.length === 0 && !adding
-          ? <div className="k-empty"><span>🎉</span><p>Tudo limpo!</p></div>
-          : tasks.map(t => (
-              <TaskCard key={t.id} task={t} clients={clients}
-                onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment} onAdvance={onAdvance}
-                draggedTask={draggedTask} setDraggedTask={setDraggedTask} />
-            ))
-        }
-        {adding
-          ? <InlineAddTask status={status} clients={clients} onAdd={onAdd} onCancel={onCancelAdd} />
-          : (!adding && onStartAdd && <button className="k-add" onClick={onStartAdd} disabled={clients.length === 0}>
-              <Plus size={15} /> Nova tarefa
-            </button>)
-        }
-      </div>
+      {!(isMobile && collapsed) && (
+        <div className={`k-col-body ${dropClass}`}
+             onDragOver={handleDragOver}
+             onDragEnter={handleDragOver}
+             onDragLeave={handleDragLeave}
+             onDrop={handleDrop}>
+          {tasks.length === 0 && !adding
+            ? <div className="k-empty"><span>🎉</span><p>Tudo limpo!</p></div>
+            : tasks.map(t => (
+                <TaskCard key={t.id} task={t} clients={clients}
+                  onToggle={onToggle} onDelete={onDelete} onEdit={onEdit} onComment={onComment} onAdvance={onAdvance}
+                  draggedTask={draggedTask} setDraggedTask={setDraggedTask} />
+              ))
+          }
+          {adding
+            ? <InlineAddTask status={status} clients={clients} onAdd={onAdd} onCancel={onCancelAdd} />
+            : (!adding && onStartAdd && <button className="k-add" onClick={onStartAdd} disabled={clients.length === 0}>
+                <Plus size={15} /> Nova tarefa
+              </button>)
+          }
+        </div>
+      )}
     </div>
   );
 }
@@ -349,6 +355,7 @@ export default function Tasks() {
   const [addingStage, setAddingStage] = useState(null);
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
+  const isMobile = useIsMobile();
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -572,6 +579,7 @@ export default function Tasks() {
           onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
           onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+          isMobile={isMobile}
         />
 
         <KanbanColumn
@@ -584,6 +592,7 @@ export default function Tasks() {
           onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
           wipLimit={WIP_LIMIT}
+          isMobile={isMobile}
         />
 
         <KanbanColumn
@@ -595,6 +604,7 @@ export default function Tasks() {
           onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
           onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+          isMobile={isMobile}
         />
       </div>
       </>
