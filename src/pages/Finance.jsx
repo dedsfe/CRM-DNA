@@ -11,7 +11,11 @@ export default function Finance() {
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [form, setForm] = useState({ type: 'income', amount: '', description: '', category: 'Outros', date: new Date().toISOString().split('T')[0], clientId: '' });
+  const [form, setForm] = useState({ 
+    type: 'income', amount: '', description: '', category: 'Outros', 
+    date: new Date().toISOString().split('T')[0], clientId: '',
+    isRecurring: false, recurringMonths: 12
+  });
 
   useEffect(() => {
     Promise.all([fetchTransactions(), fetchClients(), fetchInvoices()])
@@ -26,19 +30,34 @@ export default function Finance() {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const newTx = await insertTransaction({
-        type: form.type,
-        amount: parseFloat(form.amount),
-        description: form.description,
-        category: form.category,
-        date: new Date(form.date).toISOString(),
-        clientId: form.clientId || null
-      });
-      setTransactions([newTx, ...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)));
+      const txsToCreate = [];
+      const months = form.isRecurring ? Number(form.recurringMonths) : 1;
+
+      for (let i = 0; i < months; i++) {
+        const d = new Date(form.date);
+        d.setMonth(d.getMonth() + i);
+        
+        txsToCreate.push({
+          type: form.type,
+          amount: parseFloat(form.amount),
+          description: months > 1 ? `${form.description} (${i + 1}/${months})` : form.description,
+          category: form.category,
+          date: d.toISOString(),
+          clientId: form.clientId || null
+        });
+      }
+
+      const newTxs = await Promise.all(txsToCreate.map(tx => insertTransaction(tx)));
+      
+      setTransactions([...newTxs, ...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)));
       setIsModalOpen(false);
-      setForm({ type: 'income', amount: '', description: '', category: 'Outros', date: new Date().toISOString().split('T')[0], clientId: '' });
+      setForm({ 
+        type: 'income', amount: '', description: '', category: 'Outros', 
+        date: new Date().toISOString().split('T')[0], clientId: '',
+        isRecurring: false, recurringMonths: 12
+      });
     } catch (err) {
-      alert('Erro ao salvar transação');
+      alert('Erro ao salvar transação(ões)');
     }
   };
 
@@ -407,7 +426,19 @@ export default function Finance() {
                 </select>
               </div>
 
-              <div className="modal-footer">
+              <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                <input type="checkbox" id="isRecurring" style={{ width: 'auto' }} checked={form.isRecurring} onChange={e => setForm({...form, isRecurring: e.target.checked})} />
+                <label htmlFor="isRecurring" style={{ cursor: 'pointer', margin: 0 }}>Lançamento Fixo / Recorrente?</label>
+              </div>
+
+              {form.isRecurring && (
+                <div className="form-group" style={{ marginTop: 8 }}>
+                  <label>Repetir por quantos meses?</label>
+                  <input type="number" min="2" max="60" value={form.recurringMonths} onChange={e => setForm({...form, recurringMonths: e.target.value})} />
+                </div>
+              )}
+
+              <div className="modal-footer" style={{ marginTop: 24 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancelar</button>
                 <button type="submit" className="btn btn-primary">Salvar Transação</button>
               </div>
