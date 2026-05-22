@@ -175,7 +175,7 @@ export default function Settings() {
                         <div className="key-card-header">
                           <h3>{key.name}</h3>
                           <button 
-                            className="btn-icon btn-danger" 
+                            className="icon-btn" style={{ color: 'var(--red)' }}
                             onClick={() => handleDelete(key.id)}
                             title="Revogar chave"
                           >
@@ -189,10 +189,10 @@ export default function Settings() {
                               {isRevealed ? key.keyValue : '••••••••••••••••••••••••••••'}
                             </span>
                             <div className="key-actions">
-                              <button className="btn-icon" onClick={() => toggleReveal(key.id)} title={isRevealed ? "Esconder" : "Mostrar"}>
+                              <button className="icon-btn" onClick={() => toggleReveal(key.id)} title={isRevealed ? "Esconder" : "Mostrar"}>
                                 {isRevealed ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
-                              <button className="btn-icon" onClick={() => handleCopy(key.keyValue, key.id)} title="Copiar Chave">
+                              <button className="icon-btn" onClick={() => handleCopy(key.keyValue, key.id)} title="Copiar Chave">
                                 {copiedId === key.id ? <CheckCircle2 size={16} color="green" /> : <Copy size={16} />}
                               </button>
                             </div>
@@ -214,7 +214,7 @@ export default function Settings() {
                                 Token / API Key: {key.keyValue}
                               </code>
                               <button 
-                                className="btn-icon btn-small"
+                                className="icon-btn btn-small"
                                 onClick={() => handleCopy(`URL: https://crm-dna.onrender.com/sse\nToken: ${key.keyValue}`, key.id + 'full')}
                               >
                                 {copiedId === key.id + 'full' ? <CheckCircle2 size={14} color="green" /> : <Copy size={14} />}
