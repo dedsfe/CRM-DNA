@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchClients, fetchTasks, fetchInvoices } from '../lib/api';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Plus, CheckSquare, BarChart, Link2 } from 'lucide-react';
 import './Home.css';
 
 /* ── helpers ── */
@@ -27,7 +27,7 @@ export default function Home() {
   const pending     = tasks.filter(t => t.status === 'pending');
   const completed   = tasks.filter(t => t.status === 'completed');
 
-  /* next 3 pending tasks sorted by date */
+  /* next 4 pending tasks sorted by date */
   const upcoming = [...pending]
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
     .slice(0, 4);
@@ -61,78 +61,58 @@ export default function Home() {
         <div className="db-error">⚠️ Erro ao carregar dados: {error}</div>
       )}
 
-      {/* ── TOP BAR ── */}
-      <header className="home-topbar">
-        <div>
-          <p className="home-greeting">Bom dia 👋</p>
-          <h1 className="home-title">Dashboard</h1>
+      {/* ── HERO SECTION ── */}
+      <header className="home-hero">
+        <div className="hero-greeting">
+          <h1>Bom dia 👋</h1>
+          <p>Aqui está o resumo do seu negócio hoje.</p>
+        </div>
+
+        <div className="hero-stats">
+          <div className="hero-stat">
+            <span className="hero-stat-label">MRR Total</span>
+            <span className="hero-stat-value">{formatBRL(totalMrr)}</span>
+          </div>
+          <div className="hero-stat-divider" />
+          <div className="hero-stat">
+            <span className="hero-stat-label">A Receber</span>
+            <span className="hero-stat-value" style={{ color: totalPending > 0 ? 'var(--orange)' : 'inherit' }}>
+              {formatBRL(totalPending)}
+            </span>
+          </div>
+          <div className="hero-stat-divider" />
+          <div className="hero-stat">
+            <span className="hero-stat-label">Clientes Ativos</span>
+            <span className="hero-stat-value">{active.length}</span>
+          </div>
         </div>
       </header>
 
-      {/* ── STAT CARDS ── */}
-      <section className="home-stats">
-        <div className="stat-card stat-card--blue">
-          <div className="stat-card-top">
-            <span className="stat-card-emoji">🏢</span>
-            <span className="stat-card-label">Clientes Ativos</span>
-          </div>
-          <p className="stat-card-number">{active.length}</p>
-          <p className="stat-card-sub">contratos em andamento</p>
-        </div>
-
-        <div className="stat-card stat-card--green">
-          <div className="stat-card-top">
-            <span className="stat-card-emoji">💰</span>
-            <span className="stat-card-label">MRR Total</span>
-          </div>
-          <p className="stat-card-number">{formatBRL(totalMrr)}</p>
-          <p className="stat-card-sub">receita recorrente mensal</p>
-        </div>
-
-        <div className="stat-card stat-card--dark">
-          <div className="stat-card-top">
-            <span className="stat-card-emoji">⚠️</span>
-            <span className="stat-card-label">A Receber</span>
-          </div>
-          <p className="stat-card-number" style={{ color: totalPending > 0 ? '#ff9f0a' : '#fff' }}>
-            {formatBRL(totalPending)}
-          </p>
-          <p className="stat-card-sub">faturas pendentes/atrasadas</p>
-        </div>
-
-        <div className="stat-card stat-card--light">
-          <div className="stat-card-top">
-            <span className="stat-card-emoji">🤝</span>
-            <span className="stat-card-label">Em Negociação</span>
-          </div>
-          <p className="stat-card-number">{negotiation.length}</p>
-          <p className="stat-card-sub">propostas abertas</p>
-        </div>
-
-        <div className="stat-card stat-card--light">
-          <div className="stat-card-top">
-            <span className="stat-card-emoji">⏳</span>
-            <span className="stat-card-label">Pendentes</span>
-          </div>
-          <p className="stat-card-number" style={{ color: '#1d1d1f' }}>{pending.length}</p>
-          <p className="stat-card-sub" style={{ color: '#86868b' }}>tarefas a concluir</p>
-        </div>
-
-        <div className="stat-card stat-card--light">
-          <div className="stat-card-top">
-            <span className="stat-card-emoji">✅</span>
-            <span className="stat-card-label">Concluídas</span>
-          </div>
-          <p className="stat-card-number">{completed.length}</p>
-          <p className="stat-card-sub">tarefas entregues</p>
-        </div>
+      {/* ── QUICK ACTIONS ── */}
+      <section className="home-actions">
+        <Link to="/clients" className="action-pill">
+          <span className="action-pill-icon"><Plus size={16} /></span>
+          Novo Cliente
+        </Link>
+        <Link to="/tasks" className="action-pill">
+          <span className="action-pill-icon"><CheckSquare size={16} /></span>
+          Nova Tarefa
+        </Link>
+        <Link to="/clients" className="action-pill">
+          <span className="action-pill-icon"><BarChart size={16} /></span>
+          Pipeline
+        </Link>
+        <Link to="/clients" className="action-pill">
+          <span className="action-pill-icon"><Link2 size={16} /></span>
+          Conexões
+        </Link>
       </section>
 
       {/* ── MAIN CONTENT ── */}
       <div className="home-body">
-
+        
         {/* LEFT: Upcoming tasks */}
-        <section className="home-section home-section--tasks">
+        <section className="home-section">
           <div className="section-head">
             <h2 className="section-title">📋 Próximas Tarefas</h2>
             <Link to="/tasks" className="section-link">
@@ -141,41 +121,64 @@ export default function Home() {
           </div>
 
           <div className="task-list">
-            {upcoming.map(task => {
-              const client = getClient(task.clientId);
-              const overdue = isOverdue(task.dueDate);
-              return (
-                <div key={task.id} className="task-row">
-                  <div className={`task-row-indicator ${overdue ? 'task-row-indicator--red' : 'task-row-indicator--orange'}`} />
+            {upcoming.length === 0 ? (
+              <p className="tasks-empty">Nenhuma tarefa pendente no momento 🎉</p>
+            ) : (
+              upcoming.map(task => {
+                const client = getClient(task.clientId);
+                const overdue = isOverdue(task.dueDate);
+                return (
+                  <div key={task.id} className="task-row">
+                    <div className={`task-row-indicator ${overdue ? 'task-row-indicator--red' : 'task-row-indicator--orange'}`} />
 
-                  <div className="task-row-body">
-                    <div className="task-row-header">
-                      <span className="task-row-title">{task.title}</span>
-                      <span className="badge badge-gray">{priorityLabel[task.priority]}</span>
-                    </div>
-                    <p className="task-row-desc">{task.description}</p>
-                    <div className="task-row-meta">
-                      <span className="task-meta-chip">
-                        {client?.emoji} {client?.name}
-                      </span>
-                      <span className="task-meta-chip">
-                        📅 {task.dueDate}
-                      </span>
-                      {task.assignees.map(a => (
-                        <span key={a} className={`task-meta-chip task-meta-chip--assignee ${a === 'André' ? 'chip--blue' : 'chip--purple'}`}>
-                          {a === 'André' ? '🧑' : '👩'} {a}
+                    <div className="task-row-body">
+                      <div className="task-row-header">
+                        <span className="task-row-title">{task.title}</span>
+                        <span className="badge badge-gray">{priorityLabel[task.priority]}</span>
+                      </div>
+                      <p className="task-row-desc">{task.description || "Sem descrição"}</p>
+                      <div className="task-row-meta">
+                        <span className="task-meta-chip">
+                          {client?.emoji} {client?.name}
                         </span>
-                      ))}
+                        <span className={`task-meta-chip ${overdue ? 'chip--red' : ''}`}>
+                          {overdue ? '⚠️' : '📅'} {task.dueDate}
+                        </span>
+                        {task.assignees.map(a => (
+                          <span key={a} className={`task-meta-chip task-meta-chip--assignee ${a === 'André' ? 'chip--blue' : 'chip--purple'}`}>
+                            {a === 'André' ? '🧑' : '👩'} {a}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </section>
 
-        {/* RIGHT: Client list + quick actions */}
+        {/* RIGHT: Radar + Clients */}
         <aside className="home-aside">
+
+          {/* Radar (Mini stats) */}
+          <div className="aside-block radar-block">
+            <h2 className="section-title" style={{ marginBottom: '16px' }}>Radar</h2>
+            <div className="radar-grid">
+              <div className="radar-item">
+                <span className="radar-val">{pending.length}</span>
+                <span className="radar-lbl">Pendentes</span>
+              </div>
+              <div className="radar-item">
+                <span className="radar-val">{completed.length}</span>
+                <span className="radar-lbl">Concluídas</span>
+              </div>
+              <div className="radar-item">
+                <span className="radar-val">{negotiation.length}</span>
+                <span className="radar-lbl">Propostas</span>
+              </div>
+            </div>
+          </div>
 
           {/* Client list */}
           <div className="aside-block">
@@ -186,41 +189,22 @@ export default function Home() {
               </Link>
             </div>
             <div className="client-mini-list">
-              {clients.map(client => (
-                <div key={client.id} className="client-mini-row">
-                  <span className="client-mini-emoji">{client.emoji}</span>
-                  <div className="client-mini-info">
-                    <p className="client-mini-name">{client.name}</p>
-                    <p className="client-mini-since">desde {client.since}</p>
+              {clients.length === 0 ? (
+                <p className="tasks-empty" style={{ margin: 0 }}>Nenhum cliente cadastrado.</p>
+              ) : (
+                clients.slice(0, 5).map(client => (
+                  <div key={client.id} className="client-mini-row">
+                    <span className="client-mini-emoji">{client.emoji}</span>
+                    <div className="client-mini-info">
+                      <p className="client-mini-name">{client.name}</p>
+                      <p className="client-mini-since">desde {client.since}</p>
+                    </div>
+                    <span className={`badge ${client.status === 'active' ? 'badge-green' : 'badge-orange'}`}>
+                      {client.status === 'active' ? 'Ativo' : 'Negoc.'}
+                    </span>
                   </div>
-                  <span className={`badge ${client.status === 'active' ? 'badge-green' : 'badge-orange'}`}>
-                    {client.status === 'active' ? 'Ativo' : 'Negoc.'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick actions */}
-          <div className="aside-block aside-block--actions">
-            <h2 className="section-title">⚡ Ações Rápidas</h2>
-            <div className="quick-actions">
-              <Link to="/clients" className="quick-action-btn">
-                <span className="quick-action-icon">➕</span>
-                <span>Novo Cliente</span>
-              </Link>
-              <Link to="/tasks" className="quick-action-btn">
-                <span className="quick-action-icon">📝</span>
-                <span>Nova Tarefa</span>
-              </Link>
-              <Link to="/tasks" className="quick-action-btn">
-                <span className="quick-action-icon">📊</span>
-                <span>Ver Pipeline</span>
-              </Link>
-              <Link to="/clients" className="quick-action-btn">
-                <span className="quick-action-icon">🔗</span>
-                <span>Conexões</span>
-              </Link>
+                ))
+              )}
             </div>
           </div>
 
