@@ -345,7 +345,7 @@
   position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(13, 27, 46, 0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 24px;
 }
 .modal-content {
-  background: var(--white); border-radius: var(--r-xl); width: 100%; max-width: 500px; box-shadow: var(--shadow-xl); animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;
+  background: var(--white); border-radius: var(--r-xl); width: 100%; max-width: 500px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden;
 }
 @keyframes modalIn {
   from { opacity: 0; transform: translateY(20px) scale(0.98); }
@@ -355,11 +355,21 @@
 .modal-header h2 { font-size: var(--text-xl); font-weight: 800; letter-spacing: -0.01em; }
 .modal-close { font-size: 28px; color: var(--mid-gray); background: none; border: none; cursor: pointer; transition: color 0.2s; line-height: 1; }
 .modal-close:hover { color: var(--black); }
-.modal-body { padding: 32px; }
+.modal-body { padding: 24px 32px; overflow-y: auto; }
 .form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 .form-group label { font-size: 13px; font-weight: 600; color: var(--dark-gray); }
 .form-group input, .form-group select {
   padding: 12px 16px; border-radius: var(--r-md); border: 1.5px solid var(--neutral-200); font-size: 14px; font-family: var(--font); transition: border-color 0.2s, box-shadow 0.2s; background: var(--off-white);
+}
+
+.form-group select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 16px;
+  padding-right: 40px;
 }
 .form-group input:focus, .form-group select:focus {
   outline: none; background: var(--white); border-color: var(--blue-500); box-shadow: 0 0 0 3px rgba(36,91,161,0.1);
