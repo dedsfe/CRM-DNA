@@ -395,7 +395,7 @@ export default function Tasks() {
   const pendingTasks = byFilter.filter(t => t.status === 'pending')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const completedTasks = byFilter.filter(t => t.status === 'completed')
-    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    .sort((a, b) => b.dueDate.localeCompare(a.dueDate));
   const overdue   = pendingTasks.filter(t => isOverdue(t.dueDate));
 
   return (
