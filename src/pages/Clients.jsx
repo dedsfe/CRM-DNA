@@ -757,26 +757,48 @@ export default function Clients() {
                   <p className="tasks-empty" style={{ margin: 0 }}>Nenhuma fatura lançada.</p>
                 ) : (
                   invoices.filter(i => i.clientId === selected.id).map(inv => {
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                          <span style={{ fontWeight: 800, fontSize: 16, color: late ? 'var(--red)' : 'var(--black)' }}>
-                            {Number(inv.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                          </span>
-                          {inv.status === 'paid' ? (
-                            <span className="badge badge-green">Pago</span>
-                          ) : (
-                            <button className="btn btn-sm" style={{ background: 'var(--green-text)', color: 'white', border: 'none' }} onClick={() => {
-                              if (window.confirm(`Marcar R$ ${finalAmount.toFixed(2)} como pago? Isso irá gerar uma Entrada automática no seu Extrato!`)) {
-                                markInvoicePaid(inv.id, finalAmount).then(updated => {
-                                  setInvoices(p => p.map(x => x.id === inv.id ? updated : x));
-                                  // Add locally to transactions
-                                  const newTx = { id: Date.now().toString(), type: 'income', amount: finalAmount, description: `Pgto Fatura: ${inv.description}`, category: 'Serviço', date: new Date().toISOString(), clientId: selected.id };
-                                  setTransactions(prev => [newTx, ...prev]);
-                                }).catch(e => setError(e.message));
-                              }
-                            }}>
-                              Marcar Pago
-                            </button>
-                          )}
+                    const isOverdue = inv.status === 'pending' && inv.dueDate < today;
+                    let finalAmount = Number(inv.amount) || 0;
+                    if (isOverdue) {
+                       const daysLate = Math.floor((new Date(today) - new Date(inv.dueDate)) / (1000 * 60 * 60 * 24));
+                       if (daysLate > 0) {
+                          const mult = selected.lateFeePercentage || 2;
+                          const juros = (selected.lateFeeInterestPerMonth || 1) / 30;
+                          finalAmount = finalAmount + (finalAmount * (mult / 100)) + (finalAmount * (juros / 100) * daysLate);
+                       }
+                    }
+                    return (
+                      <div key={inv.id} className="task-row">
+                        <div className={`task-row-indicator ${isOverdue ? 'task-row-indicator--red' : 'task-row-indicator--orange'}`} />
+                        <div className="task-row-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <p style={{ fontWeight: 600 }}>{inv.description}</p>
+                            <p style={{ fontSize: 13, color: isOverdue ? 'var(--red)' : 'var(--mid-gray)' }}>
+                              Vencimento: {new Date(inv.dueDate).toLocaleDateString()}
+                              {isOverdue && <span style={{ marginLeft: 8, fontWeight: 600 }}>R$ {finalAmount.toFixed(2)} (com juros)</span>}
+                            </p>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                            <span style={{ fontWeight: 800, fontSize: 16, color: isOverdue ? 'var(--red)' : 'var(--black)' }}>
+                              {Number(inv.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                            </span>
+                            {inv.status === 'paid' ? (
+                              <span className="badge badge-green">Pago</span>
+                            ) : (
+                              <button className="btn btn-sm" style={{ background: 'var(--green-text)', color: 'white', border: 'none' }} onClick={() => {
+                                if (window.confirm(`Marcar R$ ${finalAmount.toFixed(2)} como pago? Isso irá gerar uma Entrada automática no seu Extrato!`)) {
+                                  markInvoicePaid(inv.id, finalAmount).then(updated => {
+                                    setInvoices(p => p.map(x => x.id === inv.id ? updated : x));
+                                    // Add locally to transactions
+                                    const newTx = { id: Date.now().toString(), type: 'income', amount: finalAmount, description: `Pgto Fatura: ${inv.description}`, category: 'Serviço', date: new Date().toISOString(), clientId: selected.id };
+                                    setTransactions(prev => [newTx, ...prev]);
+                                  }).catch(e => setError(e.message));
+                                }
+                              }}>
+                                Marcar Pago
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
