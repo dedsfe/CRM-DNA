@@ -11,6 +11,60 @@
   top: 0;
   height: 100vh;
   flex-shrink: 0;
+  transition: width 0.3s ease, padding 0.3s ease;
+  overflow: hidden;
+}
+
+.sidebar--collapsed {
+  width: 80px;
+  padding: var(--s-24) var(--s-12);
+}
+
+.sidebar--collapsed .sidebar-logo-text,
+.sidebar--collapsed .sidebar-item-label,
+.sidebar--collapsed .sidebar-section-label {
+  display: none;
+}
+
+.sidebar--collapsed .sidebar-logo {
+  flex-direction: column;
+  gap: var(--s-16);
+  padding: var(--s-4) 0;
+}
+
+.sidebar--collapsed .sidebar-item {
+  justify-content: center;
+  padding: 12px;
+}
+
+.sidebar--collapsed .sidebar-item-emoji {
+  margin: 0;
+  font-size: 20px;
+}
+
+.sidebar-toggle-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--mid-gray);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--light-gray);
+  color: var(--black);
+}
+
+.sidebar--collapsed .sidebar-toggle-btn {
+  margin-left: 0;
 }
 
 /* Logo */

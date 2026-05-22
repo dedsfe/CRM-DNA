@@ -56,8 +56,8 @@
 }
 
 .mtg-card--now {
-  border-color: var(--blue-500);
-  box-shadow: 0 0 0 2px rgba(10, 132, 255, 0.2);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 1px var(--blue);
 }
 
 .mtg-card--done {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useNotifications } from '../lib/notifications';
 import './Sidebar.css';
@@ -12,9 +13,10 @@ const NAV = [
 
 export default function Sidebar() {
   const { unread } = useNotifications();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">DNA</div>
@@ -22,6 +24,13 @@ export default function Sidebar() {
           <span className="sidebar-logo-title">DNA CRM</span>
           <span className="sidebar-logo-sub">André &amp; Danyelle</span>
         </div>
+        <button 
+          className="sidebar-toggle-btn" 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? "Expandir" : "Recolher"}
+        >
+          {isCollapsed ? '❯' : '❮'}
+        </button>
       </div>
 
       {/* Nav */}
