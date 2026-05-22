@@ -71,11 +71,11 @@ export default function Home() {
 
         <section className="hm-stats">
           <div className="hm-stat">
-            <span className="hm-stat-label">MRR Total</span>
+            <span className="hm-stat-label">Faturamento Total</span>
             <span className="hm-stat-value">{formatBRL(totalMrr)}</span>
           </div>
           <div className="hm-stat">
-            <span className="hm-stat-label">A Receber</span>
+            <span className="hm-stat-label">Lucro Total</span>
             <span className="hm-stat-value" style={{ color: totalPending > 0 ? 'var(--orange)' : 'inherit' }}>
               {formatBRL(totalPending)}
             </span>
@@ -170,12 +170,12 @@ export default function Home() {
 
         <div className="hero-stats">
           <div className="hero-stat">
-            <span className="hero-stat-label">MRR Total</span>
+            <span className="hero-stat-label">Faturamento Total</span>
             <span className="hero-stat-value">{formatBRL(totalMrr)}</span>
           </div>
           <div className="hero-stat-divider" />
           <div className="hero-stat">
-            <span className="hero-stat-label">A Receber</span>
+            <span className="hero-stat-label">Lucro Total</span>
             <span className="hero-stat-value" style={{ color: totalPending > 0 ? 'var(--orange)' : 'inherit' }}>
               {formatBRL(totalPending)}
             </span>

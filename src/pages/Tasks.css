@@ -646,6 +646,7 @@
 
   .filter-pills {
     width: 100%;
+    justify-content: safe center;
     overflow-x: auto;
     border-radius: var(--r-lg);
     scrollbar-width: none;

@@ -206,7 +206,7 @@
     -webkit-backdrop-filter: blur(18px);
     overflow: visible;
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 1fr);
     gap: 4px;
   }
 
@@ -219,7 +219,7 @@
 
   .sidebar-nav--primary {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 2px;
     min-width: 0;
   }
@@ -227,7 +227,7 @@
   .sidebar-mobile-more {
     display: block;
     position: relative;
-    min-width: 56px;
+    min-width: 0;
   }
 
   .sidebar-mobile-more summary {
@@ -242,7 +242,7 @@
     position: absolute;
     right: 0;
     bottom: calc(100% + 10px);
-    width: 156px;
+    width: 172px;
     padding: 6px;
     border: 1px solid var(--neutral-100);
     border-radius: var(--r-lg);
@@ -251,6 +251,10 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  .sidebar-mobile-more:not([open]) .sidebar-mobile-more-menu {
+    display: none;
   }
 
   .sidebar-item,
@@ -270,6 +274,10 @@
     justify-content: flex-start;
     gap: var(--s-10);
     padding: 8px 10px;
+  }
+
+  .sidebar-mobile-more-trigger {
+    width: 100%;
   }
 
   .sidebar-item:hover {

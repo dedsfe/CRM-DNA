@@ -588,13 +588,3 @@ select.input {
     gap: var(--s-8);
   }
 }
-
-/* ── Mobile Global Adjustments ── */
-@media (max-width: 768px) {
-  .app-shell {
-    flex-direction: column;
-  }
-  .page-content {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  }
-}

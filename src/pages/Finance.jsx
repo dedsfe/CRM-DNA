@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchTransactions, insertTransaction, deleteTransaction, fetchClients, fetchInvoices } from '../lib/api';
+import { fetchTransactions, insertTransaction, deleteTransaction, fetchClients, fetchInvoices, processMonthlyRecurring, fetchRecurringTransactions, insertRecurringTransaction, deleteRecurringTransaction, toggleRecurringTransaction } from '../lib/api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area, CartesianGrid } from 'recharts';
 import { Plus, TrendingUp, TrendingDown, Trash2, DollarSign, AlertCircle, Clock, Award, Wallet, ArrowUpRight, ArrowDownRight, PieChart as PieChartIcon } from 'lucide-react';
 import './Finance.css';
@@ -8,56 +8,67 @@ export default function Finance() {
   const [transactions, setTransactions] = useState([]);
   const [clients, setClients] = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [recurringTxs, setRecurringTxs] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState({ 
     type: 'income', amount: '', description: '', category: 'Outros', 
     date: new Date().toISOString().split('T')[0], clientId: '',
-    isRecurring: false, recurringMonths: 12
+    isRecurring: false, dueDay: new Date().getDate()
   });
 
   useEffect(() => {
-    Promise.all([fetchTransactions(), fetchClients(), fetchInvoices()])
-      .then(([txs, cls, invs]) => {
-        setTransactions(txs);
-        setClients(cls);
-        setInvoices(invs);
-      })
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
+
+  const loadData = () => {
+    setLoading(true);
+    processMonthlyRecurring().then(() => {
+      Promise.all([fetchTransactions(), fetchClients(), fetchInvoices(), fetchRecurringTransactions()])
+        .then(([txs, cls, invs, recs]) => {
+          setTransactions(txs);
+          setClients(cls);
+          setInvoices(invs);
+          setRecurringTxs(recs);
+        })
+        .finally(() => setLoading(false));
+    });
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const txsToCreate = [];
-      const months = form.isRecurring ? Number(form.recurringMonths) : 1;
-
-      for (let i = 0; i < months; i++) {
-        const d = new Date(form.date);
-        d.setMonth(d.getMonth() + i);
-        
-        txsToCreate.push({
+      if (form.isRecurring) {
+        await insertRecurringTransaction({
           type: form.type,
           amount: parseFloat(form.amount),
-          description: months > 1 ? `${form.description} (${i + 1}/${months})` : form.description,
+          description: form.description,
           category: form.category,
-          date: d.toISOString(),
+          dueDay: Number(form.dueDay || 1),
           clientId: form.clientId || null
         });
+        await loadData();
+      } else {
+        const tx = await insertTransaction({
+          type: form.type,
+          amount: parseFloat(form.amount),
+          description: form.description,
+          category: form.category,
+          date: form.date,
+          clientId: form.clientId || null
+        });
+        setTransactions([tx, ...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)));
       }
 
-      const newTxs = await Promise.all(txsToCreate.map(tx => insertTransaction(tx)));
-      
-      setTransactions([...newTxs, ...transactions].sort((a, b) => new Date(b.date) - new Date(a.date)));
       setIsModalOpen(false);
       setForm({ 
         type: 'income', amount: '', description: '', category: 'Outros', 
         date: new Date().toISOString().split('T')[0], clientId: '',
-        isRecurring: false, recurringMonths: 12
+        isRecurring: false, dueDay: new Date().getDate()
       });
     } catch (err) {
-      alert('Erro ao salvar transação(ões)');
+      alert('Erro ao salvar transação');
     }
   };
 
@@ -68,6 +79,25 @@ export default function Finance() {
       setTransactions(transactions.filter(t => t.id !== id));
     } catch (err) {
       alert('Erro ao excluir');
+    }
+  };
+
+  const handleDeleteRecurring = async (id) => {
+    if(!confirm('Excluir regra de pagamento fixo? (Isso não apaga transações passadas)')) return;
+    try {
+      await deleteRecurringTransaction(id);
+      setRecurringTxs(recurringTxs.filter(r => r.id !== id));
+    } catch (err) {
+      alert('Erro ao excluir regra');
+    }
+  };
+
+  const handleToggleRecurring = async (rule) => {
+    try {
+      const updated = await toggleRecurringTransaction(rule.id, !rule.active);
+      setRecurringTxs(recurringTxs.map(r => r.id === updated.id ? updated : r));
+    } catch (err) {
+      alert('Erro ao alterar status');
     }
   };
 
@@ -370,6 +400,55 @@ export default function Finance() {
         </div>
       </div>
 
+      {/* Regras Fixas Mensais */}
+      <div className="card" style={{ marginTop: 24, padding: 24 }}>
+        <div className="ledger-header" style={{ marginBottom: 16 }}>
+          <h2>Fixos / Mensais (Regras de Lançamento)</h2>
+          <p style={{ color: 'var(--mid-gray)', fontSize: 13, marginTop: 4 }}>
+            Estas regras geram transações automaticamente no dia do vencimento de todo mês.
+          </p>
+        </div>
+        <div className="ledger-table-container">
+          <table className="ledger-table">
+            <thead>
+              <tr>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Vencimento</th>
+                <th>Valor Mensal</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {recurringTxs.map(rule => (
+                <tr key={rule.id} style={{ opacity: rule.active ? 1 : 0.5 }}>
+                  <td><span className={`cat-chip ${rule.type === 'income' ? 'chip-green' : 'chip-red'}`}>{rule.type === 'income' ? 'Entrada' : 'Saída'}</span></td>
+                  <td style={{ fontWeight: 600, color: 'var(--black)' }}>{rule.description}</td>
+                  <td>Todo dia {rule.dueDay}</td>
+                  <td style={{ fontWeight: 700, color: rule.type === 'income' ? 'var(--green-text)' : 'var(--red)' }}>
+                    {rule.type === 'income' ? '+' : '-'} {formatBRL(Number(rule.amount))}
+                  </td>
+                  <td>
+                    <button className="btn btn-secondary" style={{ padding: '4px 8px', fontSize: 12 }} onClick={() => handleToggleRecurring(rule)}>
+                      {rule.active ? 'Pausar' : 'Ativar'}
+                    </button>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="icon-btn" style={{ color: 'var(--red)' }} onClick={() => handleDeleteRecurring(rule.id)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {recurringTxs.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '24px 0', color: 'var(--mid-gray)' }}>Nenhuma regra mensal cadastrada.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Modal Nova Transação */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
@@ -401,8 +480,8 @@ export default function Finance() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Data</label>
-                  <input type="date" required value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+                  <label>Data (Se único)</label>
+                  <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} disabled={form.isRecurring} />
                 </div>
                 <div className="form-group">
                   <label>Categoria</label>
@@ -428,13 +507,13 @@ export default function Finance() {
 
               <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
                 <input type="checkbox" id="isRecurring" style={{ width: 'auto' }} checked={form.isRecurring} onChange={e => setForm({...form, isRecurring: e.target.checked})} />
-                <label htmlFor="isRecurring" style={{ cursor: 'pointer', margin: 0 }}>Lançamento Fixo / Recorrente?</label>
+                <label htmlFor="isRecurring" style={{ cursor: 'pointer', margin: 0, fontWeight: 'bold' }}>Tornar Mensal / Fixo</label>
               </div>
 
               {form.isRecurring && (
                 <div className="form-group" style={{ marginTop: 8 }}>
-                  <label>Repetir por quantos meses?</label>
-                  <input type="number" min="2" max="60" value={form.recurringMonths} onChange={e => setForm({...form, recurringMonths: e.target.value})} />
+                  <label>Gerar automaticamente todo mês no Dia:</label>
+                  <input type="number" min="1" max="31" value={form.dueDay} onChange={e => setForm({...form, dueDay: e.target.value})} />
                 </div>
               )}
 

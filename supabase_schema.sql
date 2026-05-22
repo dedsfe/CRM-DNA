@@ -107,3 +107,19 @@ create table if not exists mcp_api_keys (
 );
 
 alter table mcp_api_keys disable row level security;
+
+-- ── recurring_transactions (Mensal/Fixos) ──────────
+create table if not exists recurring_transactions (
+  id uuid primary key default gen_random_uuid(),
+  type text not null check (type in ('income','expense')),
+  amount numeric not null,
+  description text not null,
+  category text not null,
+  due_day integer not null check (due_day between 1 and 31),
+  client_id uuid references clients(id) on delete set null,
+  active boolean not null default true,
+  last_processed_month text,
+  created_at timestamptz default now()
+);
+
+alter table recurring_transactions disable row level security;

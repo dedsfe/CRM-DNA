@@ -17,12 +17,17 @@ const UTILITY_NAV = [
   { to: '/trash',    label: 'Lixeira', emoji: '🗑️' },
 ];
 
+const MOBILE_PRIMARY_COUNT = 4;
+
 export default function Sidebar() {
   const { unread } = useNotifications();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const isUtilityActive = UTILITY_NAV.some(({ to }) => location.pathname === to);
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
+  const primaryNav = isMobile ? NAV.slice(0, MOBILE_PRIMARY_COUNT) : NAV;
+  const mobileMoreNav = [...NAV.slice(MOBILE_PRIMARY_COUNT), ...UTILITY_NAV];
+  const isMoreActive = mobileMoreNav.some(({ to }) => location.pathname === to);
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''}`}>
@@ -45,7 +50,7 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="sidebar-nav sidebar-nav--primary">
         <p className="sidebar-section-label">Menu</p>
-        {NAV.map(({ to, label, short, emoji, badge }) => (
+        {primaryNav.map(({ to, label, short, emoji, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -77,20 +82,25 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      <details className="sidebar-mobile-more">
-        <summary className={`sidebar-item sidebar-mobile-more-trigger ${isUtilityActive ? 'sidebar-item--active' : ''}`}>
+      <details
+        className="sidebar-mobile-more"
+        open={isMobileMoreOpen}
+        onToggle={(event) => setIsMobileMoreOpen(event.currentTarget.open)}
+      >
+        <summary className={`sidebar-item sidebar-mobile-more-trigger ${isMoreActive ? 'sidebar-item--active' : ''}`}>
           <span className="sidebar-item-emoji">•••</span>
           <span className="sidebar-item-label">Mais</span>
         </summary>
         <div className="sidebar-mobile-more-menu">
-          {UTILITY_NAV.map(({ to, label, emoji }) => (
+          {mobileMoreNav.map(({ to, label, short, emoji }) => (
             <NavLink
               key={to}
               to={to}
+              onClick={() => setIsMobileMoreOpen(false)}
               className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
             >
               <span className="sidebar-item-emoji">{emoji}</span>
-              <span className="sidebar-item-label">{label}</span>
+              <span className="sidebar-item-label">{short || label}</span>
             </NavLink>
           ))}
         </div>

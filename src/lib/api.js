@@ -324,6 +324,98 @@ export async function deleteTransaction(id) {
   if (error) throw error;
 }
 
+/* ── recurring transactions (Fixos/Mensais) ── */
+
+const toRecurring = (r) => ({
+  id: r.id,
+  type: r.type,
+  amount: r.amount,
+  description: r.description,
+  category: r.category,
+  dueDay: r.due_day,
+  clientId: r.client_id,
+  active: r.active,
+  lastProcessedMonth: r.last_processed_month,
+  createdAt: r.created_at,
+});
+
+const fromRecurring = (t) => ({
+  type: t.type,
+  amount: t.amount,
+  description: t.description,
+  category: t.category,
+  due_day: t.dueDay,
+  client_id: t.clientId || null,
+  active: t.active ?? true,
+  last_processed_month: t.lastProcessedMonth || null,
+});
+
+export async function fetchRecurringTransactions() {
+  const { data, error } = await supabase
+    .from('recurring_transactions').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(toRecurring);
+}
+
+export async function insertRecurringTransaction(tx) {
+  const { data, error } = await supabase
+    .from('recurring_transactions').insert(fromRecurring(tx)).select().single();
+  if (error) throw error;
+  return toRecurring(data);
+}
+
+export async function deleteRecurringTransaction(id) {
+  const { error } = await supabase.from('recurring_transactions').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function toggleRecurringTransaction(id, activeStatus) {
+  const { data, error } = await supabase
+    .from('recurring_transactions').update({ active: activeStatus }).eq('id', id).select().single();
+  if (error) throw error;
+  return toRecurring(data);
+}
+
+/* Processador Inteligente Mensal */
+export async function processMonthlyRecurring() {
+  const d = new Date();
+  const currentMonthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  
+  const { data: recurrings, error } = await supabase
+    .from('recurring_transactions')
+    .select('*')
+    .eq('active', true)
+    .or(`last_processed_month.is.null,last_processed_month.neq.${currentMonthStr}`);
+
+  if (error || !recurrings || recurrings.length === 0) return;
+
+  const currentYear = d.getFullYear();
+  const currentMonth = d.getMonth();
+
+  for (const rule of recurrings) {
+    // Evita criar para o dia 31 num mês que só tem 30 dias (ajusta o dia final do mês)
+    const targetDate = new Date(currentYear, currentMonth, rule.due_day);
+    if (targetDate.getMonth() !== currentMonth) {
+      targetDate.setDate(0); // Último dia do mês
+    }
+    
+    // Insere a transação
+    await supabase.from('transactions').insert({
+      type: rule.type,
+      amount: rule.amount,
+      description: rule.description,
+      category: rule.category,
+      date: targetDate.toISOString(),
+      client_id: rule.client_id
+    });
+    
+    // Atualiza a regra para não gerar de novo este mês
+    await supabase.from('recurring_transactions')
+      .update({ last_processed_month: currentMonthStr })
+      .eq('id', rule.id);
+  }
+}
+
 /* ── notifications ── */
 
 const toNotif = (r) => ({
