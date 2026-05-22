@@ -78,6 +78,11 @@ export async function updateClient(client) {
   return toClient(data);
 }
 
+export async function deleteClient(id) {
+  const { error } = await supabase.from('clients').delete().eq('id', id);
+  if (error) throw error;
+}
+
 /* ── tasks ── */
 
 export async function fetchTasks() {

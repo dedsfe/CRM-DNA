@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { USERS } from '../mockData';
 import {
-  fetchClients, fetchTasks, insertClient, updateClient,
+  fetchClients, fetchTasks, insertClient, updateClient, deleteClient,
   insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions,
 } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -502,6 +502,15 @@ export default function Clients() {
     } catch (e) { setError(e.message); }
   };
 
+  const removeClient = async (id) => {
+    if (!window.confirm('Tem certeza que deseja excluir este cliente e todas as suas tarefas?')) return;
+    try {
+      await deleteClient(id);
+      setClients(p => p.filter(c => c.id !== id));
+      setSelectedId(null);
+    } catch (e) { setError(e.message); }
+  };
+
   const conns = [
     { key: 'drive',     emoji: '📁', label: 'Drive'     },
     { key: 'instagram', emoji: '📸', label: 'Instagram' },
@@ -591,6 +600,9 @@ export default function Clients() {
 
             <button className="icon-btn" onClick={() => setClientModal({ client: selected })}>
               <Pencil size={15} />
+            </button>
+            <button className="icon-btn" style={{ color: 'var(--red)' }} title="Excluir Cliente" onClick={() => removeClient(selected.id)}>
+              <Trash2 size={15} />
             </button>
             <button className="icon-btn" onClick={() => setSelectedId(null)}>
               <X size={18} />
