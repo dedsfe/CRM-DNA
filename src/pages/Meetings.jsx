@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { fetchMeetings, fetchClients, insertMeeting, updateMeeting, deleteMeeting } from '../lib/api';
-import { Calendar as CalendarIcon, Clock, Plus, Video, Trash2, Edit2, X, MessageSquare } from 'lucide-react';
+import { Clock, Plus, Video, Trash2, Edit2, X, MessageSquare } from 'lucide-react';
 import Modal from '../components/Modal';
 import './Meetings.css';
 
 const formatDateTimeLocal = (isoString) => {
   if (!isoString) return '';
-  return new Date(isoString).toISOString().slice(0, 16);
+  const date = new Date(isoString);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
 };
 
 export default function Meetings() {

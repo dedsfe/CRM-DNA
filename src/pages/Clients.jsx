@@ -30,6 +30,52 @@ const userEmoji = (u) => (u === 'André' ? '🧑' : '👩');
 const toggleInArray = (arr, val) =>
   arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
 
+const clampDayToMonth = (year, month, day) => {
+  const maxDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, maxDay));
+};
+
+const getSuggestedInvoiceDueDate = (client) => {
+  const dueDay = Math.max(1, Math.min(31, Number(client?.dueDay) || 5));
+  const now = new Date();
+  let dueDate = clampDayToMonth(now.getFullYear(), now.getMonth(), dueDay);
+
+  if (dueDate.toISOString().split('T')[0] < today) {
+    dueDate = clampDayToMonth(now.getFullYear(), now.getMonth() + 1, dueDay);
+  }
+
+  return dueDate.toISOString().split('T')[0];
+};
+
+const getSuggestedInvoiceDescription = () =>
+  `Mensalidade ${new Date().toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  })}`;
+
+const toDateTimeLocalValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+};
+
+const getNextMeetingSlot = () => {
+  const date = new Date();
+  date.setHours(date.getHours() + 1, 0, 0, 0);
+  return toDateTimeLocalValue(date.toISOString());
+};
+
+const isValidHttpUrl = (value) => {
+  if (!value) return true;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 /* ─── Modal de cliente (criar / editar) ─── */
 function ClientModal({ client, onClose, onSave }) {
   const [form, setForm] = useState(client ?? {
@@ -144,6 +190,203 @@ function ClientModal({ client, onClose, onSave }) {
         <button className="btn btn-primary btn-sm" disabled={!valid || busy}
           onClick={async () => { setBusy(true); await onSave(form); onClose(); }}>
           {busy ? 'Salvando…' : (client ? 'Salvar' : 'Criar Cliente')}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function InvoiceCreateModal({ client, onClose, onSave }) {
+  const [form, setForm] = useState({
+    description: getSuggestedInvoiceDescription(),
+    amount: client?.mrr ? String(client.mrr) : '',
+    dueDate: getSuggestedInvoiceDueDate(client),
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const valid = form.description.trim() && Number(form.amount) > 0 && form.dueDate;
+
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+
+  const handleSubmit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    setError(null);
+
+    try {
+      await onSave({
+        clientId: client.id,
+        description: form.description.trim(),
+        amount: Number(form.amount),
+        dueDate: form.dueDate,
+      });
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Não foi possível criar a fatura.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="modal-head">
+        <h3>🧾 Nova Fatura</h3>
+        <button className="icon-btn" onClick={onClose} disabled={busy}><X size={16} /></button>
+      </div>
+
+      <div className="modal-body">
+        <div className="mini-feature-highlight">
+          <strong>{client.emoji} {client.name}</strong>
+          <span>Vencimento sugerido com base no dia {client.dueDay || 5}.</span>
+        </div>
+
+        {error && <div className="db-error">⚠️ {error}</div>}
+
+        <div className="field">
+          <label className="field-label">Descrição *</label>
+          <input
+            className="input"
+            value={form.description}
+            onChange={(e) => set('description', e.target.value)}
+            placeholder="Ex: Mensalidade maio de 2026"
+            autoFocus
+          />
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label className="field-label">Valor *</label>
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              className="input"
+              value={form.amount}
+              onChange={(e) => set('amount', e.target.value)}
+              placeholder="0,00"
+            />
+          </div>
+          <div className="field">
+            <label className="field-label">Vencimento *</label>
+            <input
+              type="date"
+              className="input"
+              value={form.dueDate}
+              onChange={(e) => set('dueDate', e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="modal-foot">
+        <button className="btn btn-secondary btn-sm" onClick={onClose} disabled={busy}>Cancelar</button>
+        <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={!valid || busy}>
+          {busy ? 'Criando…' : 'Criar Fatura'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function MeetingCreateModal({ client, onClose, onSave }) {
+  const [form, setForm] = useState({
+    title: '',
+    scheduledAt: getNextMeetingSlot(),
+    meetLink: '',
+    notes: '',
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const valid = form.title.trim() && form.scheduledAt && isValidHttpUrl(form.meetLink.trim());
+
+  const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+
+  const handleSubmit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    setError(null);
+
+    try {
+      await onSave({
+        clientId: client.id,
+        title: form.title.trim(),
+        scheduledAt: new Date(form.scheduledAt).toISOString(),
+        meetLink: form.meetLink.trim(),
+        notes: form.notes.trim(),
+      });
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Não foi possível agendar a reunião.');
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="modal-head">
+        <h3>🗓️ Agendar Reunião</h3>
+        <button className="icon-btn" onClick={onClose} disabled={busy}><X size={16} /></button>
+      </div>
+
+      <div className="modal-body">
+        <div className="mini-feature-highlight">
+          <strong>{client.emoji} {client.name}</strong>
+          <span>Defina pauta, link e horário sem depender de prompt.</span>
+        </div>
+
+        {error && <div className="db-error">⚠️ {error}</div>}
+
+        <div className="field">
+          <label className="field-label">Título *</label>
+          <input
+            className="input"
+            value={form.title}
+            onChange={(e) => set('title', e.target.value)}
+            placeholder="Ex: Check-in mensal"
+            autoFocus
+          />
+        </div>
+
+        <div className="field-row">
+          <div className="field">
+            <label className="field-label">Data e Hora *</label>
+            <input
+              type="datetime-local"
+              className="input"
+              value={form.scheduledAt}
+              onChange={(e) => set('scheduledAt', e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label className="field-label">Link da Sala</label>
+            <input
+              className="input"
+              value={form.meetLink}
+              onChange={(e) => set('meetLink', e.target.value)}
+              placeholder="https://meet.google.com/..."
+            />
+          </div>
+        </div>
+
+        {!isValidHttpUrl(form.meetLink.trim()) && (
+          <div className="mini-feature-note">Use um link completo começando com `http://` ou `https://`.</div>
+        )}
+
+        <div className="field">
+          <label className="field-label">Pauta / Anotações</label>
+          <textarea
+            className="input textarea"
+            value={form.notes}
+            onChange={(e) => set('notes', e.target.value)}
+            placeholder="Objetivos, contexto e próximos passos esperados."
+          />
+        </div>
+      </div>
+
+      <div className="modal-foot">
+        <button className="btn btn-secondary btn-sm" onClick={onClose} disabled={busy}>Cancelar</button>
+        <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={!valid || busy}>
+          {busy ? 'Agendando…' : 'Salvar Reunião'}
         </button>
       </div>
     </Modal>
@@ -459,6 +702,8 @@ export default function Clients() {
   const [selectedId, setSelectedId] = useState(null);
   const [activeTab, setActiveTab] = useState('tasks'); // 'tasks' | 'finance'
   const [clientModal, setClientModal] = useState(null); // null | {} | {client}
+  const [invoiceModalClient, setInvoiceModalClient] = useState(null);
+  const [meetingModalClient, setMeetingModalClient] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
   const [addingTask, setAddingTask] = useState(false);
   const [commentTarget, setCommentTarget] = useState(null);
@@ -542,6 +787,18 @@ export default function Clients() {
       setClients(p => p.filter(c => c.id !== id));
       setSelectedId(null);
     } catch (e) { setError(e.message); }
+  };
+
+  const createInvoiceForClient = async (invoice) => {
+    const saved = await insertInvoice(invoice);
+    setInvoices((current) => [saved, ...current]);
+    return saved;
+  };
+
+  const createMeetingForClient = async (meeting) => {
+    const saved = await insertMeeting({ ...meeting, status: 'scheduled' });
+    setMeetings((current) => [...current, saved]);
+    return saved;
   };
 
   const conns = [
@@ -737,17 +994,7 @@ export default function Clients() {
 
               <div className="tasks-area-header">
                 <h3 className="tasks-area-title">Faturas</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => {
-                  const desc = window.prompt("Descrição da fatura:");
-                  if (!desc) return;
-                  const amt = window.prompt("Valor (R$):");
-                  if (!amt) return;
-                  const dt = window.prompt("Data de Vencimento (YYYY-MM-DD):");
-                  if (!dt) return;
-                  insertInvoice({ clientId: selected.id, description: desc, amount: parseFloat(amt), dueDate: dt })
-                    .then(inv => setInvoices(p => [inv, ...p]))
-                    .catch(e => setError(e.message));
-                }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setInvoiceModalClient(selected)}>
                   <Plus size={14} /> Nova Fatura
                 </button>
               </div>
@@ -834,16 +1081,7 @@ export default function Clients() {
             <div className="finance-area" style={{ padding: '0 24px 24px' }}>
               <div className="tasks-area-header">
                 <h3 className="tasks-area-title">Reuniões</h3>
-                <button className="btn btn-primary btn-sm" onClick={() => {
-                  const title = window.prompt("Título da reunião:");
-                  if (!title) return;
-                  const dt = window.prompt("Data e Hora (YYYY-MM-DDTHH:MM):");
-                  if (!dt) return;
-                  const link = window.prompt("Link do Meet (opcional):");
-                  insertMeeting({ clientId: selected.id, title, scheduledAt: new Date(dt).toISOString(), meetLink: link || '', notes: '' })
-                    .then(mtg => setMeetings(p => [...p, mtg]))
-                    .catch(e => setError(e.message));
-                }}>
+                <button className="btn btn-primary btn-sm" onClick={() => setMeetingModalClient(selected)}>
                   <Plus size={14} /> Agendar Reunião
                 </button>
               </div>
@@ -900,6 +1138,20 @@ export default function Clients() {
           client={clientModal.client}
           onClose={() => setClientModal(null)}
           onSave={saveClient}
+        />
+      )}
+      {invoiceModalClient && (
+        <InvoiceCreateModal
+          client={invoiceModalClient}
+          onClose={() => setInvoiceModalClient(null)}
+          onSave={createInvoiceForClient}
+        />
+      )}
+      {meetingModalClient && (
+        <MeetingCreateModal
+          client={meetingModalClient}
+          onClose={() => setMeetingModalClient(null)}
+          onSave={createMeetingForClient}
         />
       )}
       {editingTask && (
