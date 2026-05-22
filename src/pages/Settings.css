@@ -348,3 +348,21 @@
   align-items: center;
   gap: var(--s-16);
 }
+
+/* ── Mobile Responsiveness ── */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: var(--s-16) var(--s-12);
+  }
+  .keys-grid {
+    grid-template-columns: 1fr;
+  }
+  .issue-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-12);
+  }
+  .settings-tabs {
+    flex-wrap: wrap;
+  }
+}

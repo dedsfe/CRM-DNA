@@ -12,6 +12,9 @@
 }
 
 @media (max-width: 768px) {
+  .meetings-page {
+    padding: 16px;
+  }
   .meetings-layout {
     grid-template-columns: 1fr;
   }

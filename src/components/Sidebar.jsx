@@ -54,7 +54,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Configurações e Lixeira no bottom */}
-      <div style={{ marginTop: 'auto' }}>
+      <div className="sidebar-bottom-container">
         <nav className="sidebar-nav">
           <NavLink
             to="/settings"

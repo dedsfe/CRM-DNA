@@ -47,3 +47,10 @@
   align-items: center;
   gap: 12px;
 }
+
+/* ── Mobile Responsiveness ── */
+@media (max-width: 768px) {
+  .trash-page {
+    padding: var(--s-16) var(--s-12);
+  }
+}

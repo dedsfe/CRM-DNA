@@ -492,3 +492,13 @@ select.input {
      deste elemento no Dia/Chromium/Safari, impedindo os modais de aparecerem.
      O scroll agora é feito pelo próprio conteúdo das páginas ou pelo body. */
 }
+
+/* ── Mobile Global Adjustments ── */
+@media (max-width: 768px) {
+  .app-shell {
+    flex-direction: column;
+  }
+  .page-content {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
