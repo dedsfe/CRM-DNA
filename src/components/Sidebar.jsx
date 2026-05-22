@@ -8,10 +8,8 @@ const NAV = [
   { to: '/',             label: 'Visão Geral',    emoji: '🏠' },
   { to: '/clients',      label: 'Clientes',       emoji: '👥' },
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
-  { to: '/inbox',        label: 'Inbox',          emoji: '📥', badge: true },
   { to: '/meetings',     label: 'Reuniões',       emoji: '🗓️' },
   { to: '/finance',      label: 'Financeiro',     emoji: '💸' },
-  { to: '/trash',        label: 'Lixeira',        emoji: '🗑️' },
 ];
 
 export default function Sidebar() {
@@ -55,15 +53,22 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Configurações at bottom */}
-      <div style={{ marginTop: 'auto' }}>
-        <nav className="sidebar-nav">
+      {/* Configurações e Lixeira no bottom */}
+      <div style={{ marginTop: 'auto', padding: '0 20px', paddingBottom: '20px' }}>
+        <nav className="sidebar-bottom-nav" style={{ display: 'flex', gap: '8px', justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
           <NavLink
             to="/settings"
-            className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
+            title="Ajustes"
+            className={({ isActive }) => `sidebar-icon-item ${isActive ? 'sidebar-item--active' : ''}`}
           >
             <span className="sidebar-item-emoji">⚙️</span>
-            <span className="sidebar-item-label">Configurações</span>
+          </NavLink>
+          <NavLink
+            to="/trash"
+            title="Lixeira"
+            className={({ isActive }) => `sidebar-icon-item ${isActive ? 'sidebar-item--active' : ''}`}
+          >
+            <span className="sidebar-item-emoji">🗑️</span>
           </NavLink>
         </nav>
       </div>
