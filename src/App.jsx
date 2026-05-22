@@ -8,6 +8,7 @@ import Clients from './pages/Clients';
 import Tasks from './pages/Tasks';
 import Inbox from './pages/Inbox';
 import Settings from './pages/Settings';
+import CommandPalette from './components/CommandPalette';
 
 function Shell() {
   const { authed, user } = useAuth();
@@ -30,7 +31,7 @@ function Shell() {
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </div>
-
+          <CommandPalette />
         </div>
       </BrowserRouter>
     </NotificationsProvider>

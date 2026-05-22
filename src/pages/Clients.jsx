@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import {
   fetchClients, fetchTasks, fetchInvoices, insertClient, updateClient, deleteClient,
@@ -461,6 +462,14 @@ export default function Clients() {
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedClient, setDraggedClient] = useState(null);
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const paramId = searchParams.get('id');
+    const paramTab = searchParams.get('tab');
+    if (paramId) setSelectedId(paramId);
+    if (paramTab) setActiveTab(paramTab);
+  }, [searchParams]);
 
   const openTaskComments   = (task)   => setCommentTarget({ type: 'task',   id: task.id,   title: task.title });
   const openClientComments = (client) => setCommentTarget({ type: 'client', id: client.id, title: client.name });
