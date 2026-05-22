@@ -11,6 +11,7 @@ import Meetings from './pages/Meetings';
 import Finance from './pages/Finance';
 import Settings from './pages/Settings';
 import CommandPalette from './components/CommandPalette';
+import TopBar from './components/TopBar';
 
 function Shell() {
   const { authed, user } = useAuth();
@@ -23,6 +24,7 @@ function Shell() {
     <NotificationsProvider>
       <BrowserRouter>
         <div className="app-shell">
+          <TopBar />
           <Sidebar />
           <div className="page-content">
             <Routes>

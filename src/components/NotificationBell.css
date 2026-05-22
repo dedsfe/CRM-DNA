@@ -1,0 +1,227 @@
+/* Notification Bell — wrapper posicionado */
+.nb-wrap {
+  position: relative;
+}
+
+/* O botão do sino */
+.nb-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--neutral-600);
+  background: var(--neutral-100);
+  border: 1.5px solid var(--neutral-200);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.nb-btn:hover {
+  background: var(--neutral-200);
+  color: var(--black);
+}
+
+.nb-btn--active {
+  background: var(--blue-50);
+  border-color: var(--blue-200);
+  color: var(--blue-600);
+}
+
+.nb-btn--active:hover {
+  background: var(--blue-100);
+}
+
+/* Animação do sino quando tem notificações */
+@keyframes bell-ring {
+  0%, 100% { transform: rotate(0deg); }
+  15%       { transform: rotate(15deg); }
+  30%       { transform: rotate(-12deg); }
+  45%       { transform: rotate(10deg); }
+  60%       { transform: rotate(-8deg); }
+  75%       { transform: rotate(5deg); }
+}
+
+.nb-icon--ringing {
+  animation: bell-ring 2s ease 0.5s both;
+  transform-origin: top center;
+}
+
+/* Badge de contagem */
+.nb-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  background: var(--red);
+  color: white;
+  border-radius: var(--r-pill);
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  line-height: 1;
+  animation: pop-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pop-in {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+/* Dropdown Panel */
+.nb-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 340px;
+  background: var(--white);
+  border: 1px solid var(--neutral-100);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-xl);
+  z-index: 900;
+  overflow: hidden;
+  animation: dropdown-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dropdown-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.nb-dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--neutral-100);
+}
+
+.nb-dropdown-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+}
+
+.nb-mark-all {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.nb-mark-all:hover { opacity: 0.7; }
+
+/* Lista */
+.nb-list {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.nb-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 20px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--neutral-50);
+  cursor: pointer;
+  transition: background 0.15s;
+  position: relative;
+}
+
+.nb-item:last-child { border-bottom: none; }
+
+.nb-item:hover { background: var(--neutral-50); }
+
+.nb-item--unread {
+  background: var(--blue-50);
+}
+
+.nb-item--unread:hover { background: var(--blue-100); }
+
+.nb-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--neutral-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.nb-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.nb-text {
+  font-size: 13px;
+  color: var(--dark-gray);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.nb-text strong { color: var(--black); }
+
+.nb-time {
+  font-size: 11px;
+  color: var(--mid-gray);
+  font-weight: 500;
+  margin-top: 3px;
+  display: block;
+}
+
+.nb-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue-500);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* Empty state */
+.nb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: var(--mid-gray);
+  font-size: 13px;
+}
+
+/* Footer */
+.nb-dropdown-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--neutral-100);
+  text-align: center;
+}
+
+.nb-view-all {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.nb-view-all:hover { opacity: 0.7; }

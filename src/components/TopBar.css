@@ -1,0 +1,18 @@
+/* TopBar — flutua no topo direito, independente do layout */
+.topbar {
+  position: fixed;
+  top: 16px;
+  right: 24px;
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none; /* deixa cliques passarem exceto nos filhos */
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: all;
+}

@@ -6,7 +6,6 @@ const NAV = [
   { to: '/',             label: 'Home',           emoji: '🏠' },
   { to: '/clients',      label: 'Clientes',       emoji: '👥' },
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
-  { to: '/inbox',        label: 'Inbox',          emoji: '🔔', badge: true },
   { to: '/meetings',     label: 'Reuniões',       emoji: '🗓️' },
   { to: '/finance',      label: 'Financeiro',     emoji: '💸' },
 ];
