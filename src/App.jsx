@@ -7,7 +7,7 @@ import Home from './pages/Home';
 import Clients from './pages/Clients';
 import Tasks from './pages/Tasks';
 import Inbox from './pages/Inbox';
-import Integrations from './pages/Integrations';
+import Settings from './pages/Settings';
 
 function Shell() {
   const { authed, user } = useAuth();
@@ -27,7 +27,7 @@ function Shell() {
               <Route path="/clients"     element={<Clients />} />
               <Route path="/tasks"       element={<Tasks />} />
               <Route path="/inbox"       element={<Inbox />} />
-              <Route path="/integrations" element={<Integrations />} />
+              <Route path="/settings" element={<Settings />} />
             </Routes>
           </div>
 

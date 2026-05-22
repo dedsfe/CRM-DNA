@@ -1,6 +1,4 @@
 import { NavLink } from 'react-router-dom';
-import { LogOut } from 'lucide-react';
-import { useAuth } from '../lib/auth';
 import { useNotifications } from '../lib/notifications';
 import './Sidebar.css';
 
@@ -9,16 +7,9 @@ const NAV = [
   { to: '/clients',      label: 'Clientes',       emoji: '👥' },
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
   { to: '/inbox',        label: 'Inbox',          emoji: '🔔', badge: true },
-  { to: '/integrations', label: 'Integrações (IA)', emoji: '🤖' },
-];
-
-const TEAM = [
-  { name: 'André',    initial: 'A', avatar: 'sidebar-avatar--blue' },
-  { name: 'Danyelle', initial: 'D', avatar: 'sidebar-avatar--purple' },
 ];
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
   const { unread } = useNotifications();
 
   return (
@@ -51,25 +42,18 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Users */}
-      <div className="sidebar-users">
-        <p className="sidebar-section-label">Equipe</p>
-        {TEAM.map(({ name, initial, avatar }) => (
-          <div key={name} className={`sidebar-user ${user === name ? 'sidebar-user--me' : ''}`}>
-            <div className={`sidebar-avatar ${avatar}`}>{initial}</div>
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{name}</span>
-              <span className="sidebar-user-role">{user === name ? 'Você' : 'Admin'}</span>
-            </div>
-          </div>
-        ))}
+      {/* Configurações at bottom */}
+      <div style={{ marginTop: 'auto' }}>
+        <nav className="sidebar-nav">
+          <NavLink
+            to="/settings"
+            className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
+          >
+            <span className="sidebar-item-emoji">⚙️</span>
+            <span className="sidebar-item-label">Configurações</span>
+          </NavLink>
+        </nav>
       </div>
-
-      {/* Logout */}
-      <button className="btn btn-secondary sidebar-logout" onClick={logout}>
-        <LogOut size={16} />
-        Sair
-      </button>
     </aside>
   );
 }
