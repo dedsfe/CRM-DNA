@@ -151,13 +151,29 @@ export async function insertInvoice({ clientId, description, amount, dueDate }) 
   return toInvoice(data);
 }
 
-export async function markInvoicePaid(id) {
+export async function markInvoicePaid(id, finalAmount = null) {
   const { data, error } = await supabase
     .from('invoices')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
     .eq('id', id)
     .select().single();
   if (error) throw error;
+
+  // Auto-generate transaction
+  try {
+    await insertTransaction({
+      type: 'income',
+      amount: finalAmount !== null ? finalAmount : data.amount,
+      description: `Pgto Fatura: ${data.description}`,
+      category: 'Serviço',
+      date: new Date().toISOString(),
+      clientId: data.client_id,
+      invoiceId: data.id
+    });
+  } catch (err) {
+    console.error('Error auto-generating transaction for invoice:', err);
+  }
+
   return toInvoice(data);
 }
 
@@ -253,6 +269,56 @@ export async function updateIssue(issue) {
 
 export async function deleteIssue(id) {
   const { error } = await supabase.from('issues').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/* ── transactions ── */
+
+const toTransaction = (r) => ({
+  id: r.id,
+  type: r.type,
+  amount: r.amount,
+  description: r.description,
+  category: r.category,
+  date: r.date,
+  clientId: r.client_id,
+  invoiceId: r.invoice_id,
+  createdAt: r.created_at,
+});
+
+const fromTransaction = (t) => ({
+  type: t.type,
+  amount: t.amount,
+  description: t.description,
+  category: t.category,
+  date: t.date,
+  client_id: t.clientId || null,
+  invoice_id: t.invoiceId || null,
+});
+
+export async function fetchTransactions() {
+  const { data, error } = await supabase
+    .from('transactions').select('*').order('date', { ascending: false });
+  if (error) throw error;
+  return data.map(toTransaction);
+}
+
+export async function insertTransaction(tx) {
+  const { data, error } = await supabase
+    .from('transactions').insert(fromTransaction(tx)).select().single();
+  if (error) throw error;
+  return toTransaction(data);
+}
+
+export async function updateTransaction(tx) {
+  const { data, error } = await supabase
+    .from('transactions').update(fromTransaction(tx)).eq('id', tx.id).select().single();
+  if (error) throw error;
+  return toTransaction(data);
+}
+
+export async function deleteTransaction(id) {
+  const { error } = await supabase.from('transactions').delete().eq('id', id);
   if (error) throw error;
 }
 

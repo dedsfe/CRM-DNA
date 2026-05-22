@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import {
-  fetchClients, fetchTasks, fetchInvoices, fetchMeetings, insertClient, updateClient, deleteClient,
+  fetchClients, fetchTasks, fetchInvoices, fetchMeetings, fetchTransactions, insertClient, updateClient, deleteClient,
   insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions,
   insertInvoice, markInvoicePaid, insertMeeting, updateMeeting, deleteMeeting
 } from '../lib/api';
@@ -451,6 +451,7 @@ export default function Clients() {
   const [clients, setClients]   = useState([]);
   const [tasks, setTasks]       = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [meetings, setMeetings] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
@@ -476,8 +477,8 @@ export default function Clients() {
   const openClientComments = (client) => setCommentTarget({ type: 'client', id: client.id, title: client.name });
 
   useEffect(() => {
-    Promise.all([fetchClients(), fetchTasks(), fetchInvoices(), fetchMeetings()])
-      .then(([c, t, i, m]) => { setClients(c); setTasks(t); setInvoices(i); setMeetings(m); })
+    Promise.all([fetchClients(), fetchTasks(), fetchInvoices(), fetchMeetings(), fetchTransactions()])
+      .then(([c, t, i, m, txs]) => { setClients(c); setTasks(t); setInvoices(i); setMeetings(m); setTransactions(txs); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -756,15 +757,6 @@ export default function Clients() {
                   <p className="tasks-empty" style={{ margin: 0 }}>Nenhuma fatura lançada.</p>
                 ) : (
                   invoices.filter(i => i.clientId === selected.id).map(inv => {
-                    const late = inv.status === 'pending' && inv.dueDate < today;
-                    return (
-                      <div key={inv.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: 'white', border: '1px solid var(--light-gray)', borderRadius: 8 }}>
-                        <div>
-                          <p style={{ fontWeight: 600, fontSize: 14 }}>{inv.description}</p>
-                          <p style={{ fontSize: 12, color: 'var(--mid-gray)', marginTop: 4 }}>
-                            Venc: {inv.dueDate}
-                          </p>
-                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                           <span style={{ fontWeight: 800, fontSize: 16, color: late ? 'var(--red)' : 'var(--black)' }}>
                             {Number(inv.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
@@ -773,9 +765,14 @@ export default function Clients() {
                             <span className="badge badge-green">Pago</span>
                           ) : (
                             <button className="btn btn-sm" style={{ background: 'var(--green-text)', color: 'white', border: 'none' }} onClick={() => {
-                              markInvoicePaid(inv.id).then(updated => {
-                                setInvoices(p => p.map(x => x.id === inv.id ? updated : x));
-                              }).catch(e => setError(e.message));
+                              if (window.confirm(`Marcar R$ ${finalAmount.toFixed(2)} como pago? Isso irá gerar uma Entrada automática no seu Extrato!`)) {
+                                markInvoicePaid(inv.id, finalAmount).then(updated => {
+                                  setInvoices(p => p.map(x => x.id === inv.id ? updated : x));
+                                  // Add locally to transactions
+                                  const newTx = { id: Date.now().toString(), type: 'income', amount: finalAmount, description: `Pgto Fatura: ${inv.description}`, category: 'Serviço', date: new Date().toISOString(), clientId: selected.id };
+                                  setTransactions(prev => [newTx, ...prev]);
+                                }).catch(e => setError(e.message));
+                              }
                             }}>
                               Marcar Pago
                             </button>
@@ -784,6 +781,28 @@ export default function Clients() {
                       </div>
                     );
                   })
+                )}
+              </div>
+
+              {/* TRANSACTIONS SECTION */}
+              <div className="tasks-area-header" style={{ marginTop: 32 }}>
+                <h3 className="tasks-area-title">Extrato do Cliente</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+                {transactions.filter(t => t.clientId === selected.id).length === 0 ? (
+                  <p className="tasks-empty" style={{ margin: 0 }}>Nenhuma transação registrada para este cliente.</p>
+                ) : (
+                  transactions.filter(t => t.clientId === selected.id).sort((a,b) => new Date(b.date) - new Date(a.date)).map(tx => (
+                    <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, background: 'var(--white)', border: '1px solid var(--neutral-100)', borderRadius: 8 }}>
+                      <div>
+                        <p style={{ fontWeight: 600 }}>{tx.description}</p>
+                        <p style={{ fontSize: 12, color: 'var(--mid-gray)' }}>{new Date(tx.date).toLocaleDateString()} • {tx.category}</p>
+                      </div>
+                      <div style={{ fontWeight: 600, color: tx.type === 'income' ? 'var(--green-text)' : 'var(--red)' }}>
+                        {tx.type === 'income' ? '+' : '-'} R$ {Number(tx.amount).toFixed(2)}
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
