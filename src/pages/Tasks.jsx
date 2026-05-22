@@ -502,10 +502,10 @@ export default function Tasks() {
       </div>
 
       {/* ── FILTER PILLS ── */}
-      <div className="filter-row" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="filter-row">
         
         {/* Linha 1: Filtros Principais (Pessoas e Etapas) */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+        <div className="filter-main-row">
           <div className="filter-pills">
             {['All', ...USERS].map(u => (
               <button
@@ -536,10 +536,9 @@ export default function Tasks() {
         </div>
 
         {/* Linha 2: Filtros Secundários (Cliente e Data) */}
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <select 
-            className="input" 
-            style={{ width: '220px', padding: '6px 12px', fontSize: '13px' }}
+        <div className="filter-select-row">
+          <select
+            className="input filter-select"
             value={filterClient}
             onChange={e => setFilterClient(e.target.value)}
           >
@@ -549,9 +548,8 @@ export default function Tasks() {
             ))}
           </select>
 
-          <select 
-            className="input" 
-            style={{ width: '180px', padding: '6px 12px', fontSize: '13px' }}
+          <select
+            className="input filter-select filter-select--date"
             value={filterDate}
             onChange={e => setFilterDate(e.target.value)}
           >

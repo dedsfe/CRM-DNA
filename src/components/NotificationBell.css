@@ -225,3 +225,23 @@
 }
 
 .nb-view-all:hover { opacity: 0.7; }
+
+@media (max-width: 768px) {
+  .nb-dropdown {
+    position: fixed;
+    top: calc(58px + env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    width: min(340px, calc(100vw - 24px));
+    max-height: calc(100dvh - var(--mobile-nav-height) - 88px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .nb-list {
+    max-height: none;
+  }
+
+  .nb-item {
+    padding: 14px 16px;
+  }
+}

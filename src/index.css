@@ -110,6 +110,8 @@
   --shadow-md: 0 6px 16px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.04);
   --shadow-lg: 0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
   --shadow-xl: 0 32px 64px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.06);
+
+  --mobile-nav-height: 66px;
 }
 
 /* ─── Reset ─── */
@@ -136,6 +138,8 @@ a:hover { text-decoration: underline; }
 button { font-family: var(--font); cursor: pointer; border: none; background: none; }
 input, select, textarea { font-family: var(--font); }
 img { display: block; max-width: 100%; }
+
+#root { min-height: 100%; }
 
 /* ─── Scrollbar (WebKit) ─── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -491,6 +495,98 @@ select.input {
   /* REMOVIDO: overflow-y: auto — causava bug em que position:fixed ficava preso dentro
      deste elemento no Dia/Chromium/Safari, impedindo os modais de aparecerem.
      O scroll agora é feito pelo próprio conteúdo das páginas ou pelo body. */
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  .app-shell {
+    display: block;
+    min-height: 100dvh;
+  }
+
+  .page-content {
+    width: 100%;
+    padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom));
+  }
+
+  .btn {
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+
+  .btn-sm,
+  .btn-xs {
+    min-height: 40px;
+  }
+
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .input,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92dvh !important;
+    border-radius: var(--r-xl) var(--r-xl) 0 0 !important;
+  }
+
+  .modal-head {
+    padding: var(--s-16) var(--s-20);
+  }
+
+  .modal-body {
+    padding: var(--s-20);
+  }
+
+  .modal-foot {
+    position: sticky;
+    bottom: 0;
+    flex-wrap: wrap;
+    padding: var(--s-12) var(--s-20) calc(var(--s-12) + env(safe-area-inset-bottom));
+    background: var(--white);
+  }
+
+  .modal-foot .btn {
+    flex: 1;
+  }
+
+  .field-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .thread-list {
+    max-height: 46dvh;
+    padding: var(--s-16);
+  }
+
+  .thread-sub,
+  .thread-compose {
+    padding-inline: var(--s-16);
+  }
+
+  .thread-compose-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--s-8);
+  }
 }
 
 /* ── Mobile Global Adjustments ── */

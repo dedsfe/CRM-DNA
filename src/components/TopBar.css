@@ -16,3 +16,10 @@
   gap: 8px;
   pointer-events: all;
 }
+
+@media (max-width: 768px) {
+  .topbar {
+    top: calc(10px + env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+  }
+}

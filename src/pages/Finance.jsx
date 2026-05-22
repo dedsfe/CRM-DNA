@@ -176,7 +176,7 @@ export default function Finance() {
 
   return (
     <div className="page finance-page">
-      <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+      <header className="page-header finance-header">
         <div className="page-header-title">
           <h1>War Room Financeiro</h1>
           <p className="page-subtitle">Seu centro de comando de dados, projeções e saúde do caixa.</p>
@@ -255,7 +255,7 @@ export default function Finance() {
       <div className="bento-grid-charts">
         <div className="chart-card area-span-2">
           <h3>Evolução do Caixa (6 meses)</h3>
-          <div style={{ width: '100%', height: 320, marginTop: 24 }}>
+          <div className="finance-chart-shell">
             <ResponsiveContainer>
               <AreaChart data={last6Months} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -281,7 +281,7 @@ export default function Finance() {
 
         <div className="chart-card">
           <h3>Despesas por Categoria</h3>
-          <div style={{ width: '100%', height: 320, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          <div className="finance-chart-shell finance-chart-shell--pie">
             {pieData.length > 0 ? (
               <ResponsiveContainer>
                 <PieChart>

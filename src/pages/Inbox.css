@@ -102,3 +102,28 @@
   background: var(--blue);
   flex-shrink: 0;
 }
+
+@media (max-width: 768px) {
+  .ib {
+    padding: calc(var(--s-48) + env(safe-area-inset-top)) var(--s-12) var(--s-16);
+    gap: var(--s-20);
+  }
+
+  .ib-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ib-title {
+    font-size: var(--text-xl);
+  }
+
+  .ib-list {
+    border-radius: var(--r-lg);
+  }
+
+  .ib-item {
+    align-items: flex-start;
+    padding: 14px var(--s-16);
+  }
+}

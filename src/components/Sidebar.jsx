@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Home, Users, CheckSquare, Inbox, Video, DollarSign, Settings, Trash2 } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useNotifications } from '../lib/notifications';
 import './Sidebar.css';
 
@@ -12,9 +11,16 @@ const NAV = [
   { to: '/finance',      label: 'Financeiro',     emoji: '💸' },
 ];
 
+const UTILITY_NAV = [
+  { to: '/settings', label: 'Ajustes', emoji: '⚙️' },
+  { to: '/trash',    label: 'Lixeira', emoji: '🗑️' },
+];
+
 export default function Sidebar() {
   const { unread } = useNotifications();
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const isUtilityActive = UTILITY_NAV.some(({ to }) => location.pathname === to);
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''}`}>
@@ -35,7 +41,7 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="sidebar-nav">
+      <nav className="sidebar-nav sidebar-nav--primary">
         <p className="sidebar-section-label">Menu</p>
         {NAV.map(({ to, label, emoji, badge }) => (
           <NavLink
@@ -55,23 +61,38 @@ export default function Sidebar() {
 
       {/* Configurações e Lixeira no bottom */}
       <div className="sidebar-bottom-container">
-        <nav className="sidebar-nav">
-          <NavLink
-            to="/settings"
-            className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
-          >
-            <span className="sidebar-item-emoji">⚙️</span>
-            <span className="sidebar-item-label">Ajustes</span>
-          </NavLink>
-          <NavLink
-            to="/trash"
-            className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
-          >
-            <span className="sidebar-item-emoji">🗑️</span>
-            <span className="sidebar-item-label">Lixeira</span>
-          </NavLink>
+        <nav className="sidebar-nav sidebar-nav--secondary">
+          {UTILITY_NAV.map(({ to, label, emoji }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
+            >
+              <span className="sidebar-item-emoji">{emoji}</span>
+              <span className="sidebar-item-label">{label}</span>
+            </NavLink>
+          ))}
         </nav>
       </div>
+
+      <details className="sidebar-mobile-more">
+        <summary className={`sidebar-item sidebar-mobile-more-trigger ${isUtilityActive ? 'sidebar-item--active' : ''}`}>
+          <span className="sidebar-item-emoji">•••</span>
+          <span className="sidebar-item-label">Mais</span>
+        </summary>
+        <div className="sidebar-mobile-more-menu">
+          {UTILITY_NAV.map(({ to, label, emoji }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
+            >
+              <span className="sidebar-item-emoji">{emoji}</span>
+              <span className="sidebar-item-label">{label}</span>
+            </NavLink>
+          ))}
+        </div>
+      </details>
     </aside>
   );
 }

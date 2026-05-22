@@ -4,20 +4,32 @@
   margin: 0 auto;
 }
 
+.meetings-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--s-16);
+}
+
+.meetings-page .page-header h1 {
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-extrabold);
+  letter-spacing: -0.03em;
+  color: var(--black);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.meetings-page .page-header p {
+  font-size: var(--text-sm);
+  color: var(--mid-gray);
+}
+
 .meetings-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
   margin-top: 24px;
-}
-
-@media (max-width: 768px) {
-  .meetings-page {
-    padding: 16px;
-  }
-  .meetings-layout {
-    grid-template-columns: 1fr;
-  }
 }
 
 .meetings-column {
@@ -138,4 +150,61 @@
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+  .meetings-page {
+    padding: calc(var(--s-48) + env(safe-area-inset-top)) var(--s-12) var(--s-16);
+  }
+
+  .meetings-page .page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .meetings-page .page-header h1 {
+    font-size: var(--text-xl);
+  }
+
+  .meetings-layout {
+    grid-template-columns: 1fr;
+    gap: var(--s-16);
+    margin-top: var(--s-20);
+  }
+
+  .meetings-column {
+    padding: var(--s-16);
+    border-radius: var(--r-lg);
+  }
+
+  .column-title {
+    margin-bottom: var(--s-16);
+  }
+
+  .mtg-card {
+    flex-direction: column;
+    gap: var(--s-12);
+    padding: 14px;
+  }
+
+  .mtg-card-date {
+    min-width: 0;
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+
+  .mtg-card-header {
+    gap: var(--s-8);
+    flex-direction: column;
+  }
+
+  .mtg-card-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .mtg-card-actions .btn {
+    flex: 1;
+  }
 }

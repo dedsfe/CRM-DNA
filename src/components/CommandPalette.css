@@ -156,3 +156,39 @@
   color: var(--neutral-400);
   text-align: right;
 }
+
+@media (max-width: 768px) {
+  .cmd-backdrop {
+    align-items: flex-start;
+    padding: calc(12px + env(safe-area-inset-top)) 12px 0;
+  }
+
+  .cmd-modal {
+    max-width: 100%;
+    max-height: calc(100dvh - var(--mobile-nav-height) - 24px);
+    border-radius: var(--r-lg);
+  }
+
+  .cmd-search-wrap {
+    padding-inline: var(--s-16);
+  }
+
+  .cmd-input {
+    padding: var(--s-16) var(--s-12);
+    font-size: 16px;
+  }
+
+  .cmd-badge,
+  .cmd-footer {
+    display: none;
+  }
+
+  .cmd-results {
+    max-height: none;
+  }
+
+  .cmd-item {
+    min-height: 52px;
+    padding: var(--s-12);
+  }
+}

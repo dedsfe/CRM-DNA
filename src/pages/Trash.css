@@ -48,6 +48,33 @@
   gap: 12px;
 }
 
+@media (max-width: 768px) {
+  .trash-page {
+    padding: calc(var(--s-48) + env(safe-area-inset-top)) var(--s-12) var(--s-16);
+  }
+
+  .trash-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--s-12);
+    padding: var(--s-16);
+  }
+
+  .trash-info {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .trash-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .trash-actions .btn {
+    flex: 1;
+  }
+}
+
 /* ── Mobile Responsiveness ── */
 @media (max-width: 768px) {
   .trash-page {
