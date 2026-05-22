@@ -54,21 +54,21 @@ export default function Sidebar() {
       </nav>
 
       {/* Configurações e Lixeira no bottom */}
-      <div style={{ marginTop: 'auto', padding: '0 20px', paddingBottom: '20px' }}>
-        <nav className="sidebar-bottom-nav" style={{ display: 'flex', gap: '8px', justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+      <div style={{ marginTop: 'auto' }}>
+        <nav className="sidebar-nav">
           <NavLink
             to="/settings"
-            title="Ajustes"
-            className={({ isActive }) => `sidebar-icon-item ${isActive ? 'sidebar-item--active' : ''}`}
+            className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
           >
             <span className="sidebar-item-emoji">⚙️</span>
+            <span className="sidebar-item-label">Ajustes</span>
           </NavLink>
           <NavLink
             to="/trash"
-            title="Lixeira"
-            className={({ isActive }) => `sidebar-icon-item ${isActive ? 'sidebar-item--active' : ''}`}
+            className={({ isActive }) => `sidebar-item ${isActive ? 'sidebar-item--active' : ''}`}
           >
             <span className="sidebar-item-emoji">🗑️</span>
+            <span className="sidebar-item-label">Lixeira</span>
           </NavLink>
         </nav>
       </div>
