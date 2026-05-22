@@ -7,6 +7,7 @@ import Home from './pages/Home';
 import Clients from './pages/Clients';
 import Tasks from './pages/Tasks';
 import Inbox from './pages/Inbox';
+import Meetings from './pages/Meetings';
 import Settings from './pages/Settings';
 import CommandPalette from './components/CommandPalette';
 
@@ -28,7 +29,8 @@ function Shell() {
               <Route path="/clients"     element={<Clients />} />
               <Route path="/tasks"       element={<Tasks />} />
               <Route path="/inbox"       element={<Inbox />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route path="/meetings"    element={<Meetings />} />
+              <Route path="/settings"    element={<Settings />} />
             </Routes>
           </div>
           <CommandPalette />

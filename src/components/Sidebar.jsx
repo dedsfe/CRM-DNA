@@ -7,6 +7,7 @@ const NAV = [
   { to: '/clients',      label: 'Clientes',       emoji: '👥' },
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
   { to: '/inbox',        label: 'Inbox',          emoji: '🔔', badge: true },
+  { to: '/meetings',     label: 'Reuniões',       emoji: '🗓️' },
 ];
 
 export default function Sidebar() {

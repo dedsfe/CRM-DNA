@@ -161,6 +161,55 @@ export async function markInvoicePaid(id) {
   return toInvoice(data);
 }
 
+/* ── meetings ── */
+
+const toMeeting = (r) => ({
+  id: r.id,
+  clientId: r.client_id,
+  title: r.title,
+  scheduledAt: r.scheduled_at,
+  meetLink: r.meet_link ?? '',
+  notes: r.notes ?? '',
+  status: r.status,
+  createdAt: r.created_at,
+});
+
+const fromMeeting = (m) => ({
+  client_id: m.clientId,
+  title: m.title,
+  scheduled_at: m.scheduledAt,
+  meet_link: m.meetLink || null,
+  notes: m.notes || null,
+  status: m.status,
+});
+
+export async function fetchMeetings(clientId = null) {
+  let query = supabase.from('meetings').select('*').order('scheduled_at', { ascending: true });
+  if (clientId) query = query.eq('client_id', clientId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.map(toMeeting);
+}
+
+export async function insertMeeting(meeting) {
+  const { data, error } = await supabase
+    .from('meetings').insert(fromMeeting(meeting)).select().single();
+  if (error) throw error;
+  return toMeeting(data);
+}
+
+export async function updateMeeting(meeting) {
+  const { data, error } = await supabase
+    .from('meetings').update(fromMeeting(meeting)).eq('id', meeting.id).select().single();
+  if (error) throw error;
+  return toMeeting(data);
+}
+
+export async function deleteMeeting(id) {
+  const { error } = await supabase.from('meetings').delete().eq('id', id);
+  if (error) throw error;
+}
+
 /* ── notifications ── */
 
 const toNotif = (r) => ({

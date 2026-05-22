@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import {
-  fetchClients, fetchTasks, fetchInvoices, insertClient, updateClient, deleteClient,
+  fetchClients, fetchTasks, fetchInvoices, fetchMeetings, insertClient, updateClient, deleteClient,
   insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions,
-  insertInvoice, markInvoicePaid
+  insertInvoice, markInvoicePaid, insertMeeting, updateMeeting, deleteMeeting
 } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import Modal from '../components/Modal';
@@ -451,6 +451,7 @@ export default function Clients() {
   const [clients, setClients]   = useState([]);
   const [tasks, setTasks]       = useState([]);
   const [invoices, setInvoices] = useState([]);
+  const [meetings, setMeetings] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
   const [search, setSearch]     = useState('');
@@ -475,8 +476,8 @@ export default function Clients() {
   const openClientComments = (client) => setCommentTarget({ type: 'client', id: client.id, title: client.name });
 
   useEffect(() => {
-    Promise.all([fetchClients(), fetchTasks(), fetchInvoices()])
-      .then(([c, t, i]) => { setClients(c); setTasks(t); setInvoices(i); })
+    Promise.all([fetchClients(), fetchTasks(), fetchInvoices(), fetchMeetings()])
+      .then(([c, t, i, m]) => { setClients(c); setTasks(t); setInvoices(i); setMeetings(m); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -688,6 +689,9 @@ export default function Clients() {
             <button className={`ptab ${activeTab === 'finance' ? 'ptab--active' : ''}`} onClick={() => setActiveTab('finance')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'finance' ? '2px solid var(--blue-500)' : '2px solid transparent', padding: '12px 0', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: activeTab === 'finance' ? 'var(--blue-500)' : 'var(--mid-gray)' }}>
               Financeiro
             </button>
+            <button className={`ptab ${activeTab === 'meetings' ? 'ptab--active' : ''}`} onClick={() => setActiveTab('meetings')} style={{ background: 'none', border: 'none', borderBottom: activeTab === 'meetings' ? '2px solid var(--blue-500)' : '2px solid transparent', padding: '12px 0', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: activeTab === 'meetings' ? 'var(--blue-500)' : 'var(--mid-gray)' }}>
+              Reuniões
+            </button>
           </div>
 
           {activeTab === 'tasks' && (
@@ -776,6 +780,66 @@ export default function Clients() {
                               Marcar Pago
                             </button>
                           )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'meetings' && (
+            <div className="finance-area" style={{ padding: '0 24px 24px' }}>
+              <div className="tasks-area-header">
+                <h3 className="tasks-area-title">Reuniões</h3>
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                  const title = window.prompt("Título da reunião:");
+                  if (!title) return;
+                  const dt = window.prompt("Data e Hora (YYYY-MM-DDTHH:MM):");
+                  if (!dt) return;
+                  const link = window.prompt("Link do Meet (opcional):");
+                  insertMeeting({ clientId: selected.id, title, scheduledAt: new Date(dt).toISOString(), meetLink: link || '', notes: '' })
+                    .then(mtg => setMeetings(p => [...p, mtg]))
+                    .catch(e => setError(e.message));
+                }}>
+                  <Plus size={14} /> Agendar Reunião
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
+                {meetings.filter(m => m.clientId === selected.id).length === 0 ? (
+                  <p className="tasks-empty" style={{ margin: 0 }}>Nenhuma reunião agendada.</p>
+                ) : (
+                  meetings.filter(m => m.clientId === selected.id).sort((a,b) => new Date(b.scheduledAt) - new Date(a.scheduledAt)).map(mtg => {
+                    const dt = new Date(mtg.scheduledAt);
+                    return (
+                      <div key={mtg.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 16, background: 'white', border: '1px solid var(--light-gray)', borderRadius: 8, opacity: mtg.status === 'completed' ? 0.7 : 1 }}>
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: 14 }}>{mtg.title}</p>
+                          <p style={{ fontSize: 12, color: 'var(--mid-gray)', marginTop: 4 }}>
+                            {dt.toLocaleDateString()} às {dt.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                          {mtg.status === 'scheduled' ? (
+                            <button className="btn btn-sm" style={{ background: 'var(--green-text)', color: 'white', border: 'none' }} onClick={() => {
+                              updateMeeting({ ...mtg, status: 'completed' })
+                                .then(updated => setMeetings(p => p.map(x => x.id === mtg.id ? updated : x)))
+                                .catch(e => setError(e.message));
+                            }}>
+                              ✅ Concluir
+                            </button>
+                          ) : (
+                            <span className="badge badge-gray">Concluída</span>
+                          )}
+                          <button className="icon-btn" style={{ color: 'var(--red)' }} onClick={() => {
+                            if(window.confirm('Excluir?')) {
+                              deleteMeeting(mtg.id).then(() => setMeetings(p => p.filter(x => x.id !== mtg.id)));
+                            }
+                          }}>
+                            <Trash2 size={14}/>
+                          </button>
                         </div>
                       </div>
                     );
