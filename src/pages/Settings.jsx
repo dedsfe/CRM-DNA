@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { fetchMcpKeys, createMcpKey, deleteMcpKey } from '../lib/api';
-import { Plus, Trash2, Copy, CheckCircle2, Server, Key, Eye, EyeOff, LogOut } from 'lucide-react';
+import { fetchMcpKeys, createMcpKey, deleteMcpKey, fetchIssues, insertIssue, updateIssue, deleteIssue } from '../lib/api';
+import { Plus, Trash2, Copy, CheckCircle2, Server, Key, Eye, EyeOff, LogOut, Bug, CheckSquare } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import './Settings.css';
 
@@ -14,15 +14,48 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('team');
   
   const [keys, setKeys] = useState([]);
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [newKeyName, setNewKeyName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [revealedIds, setRevealedIds] = useState(new Set());
+  
+  const [issueForm, setIssueForm] = useState({ title: '', priority: 'low' });
 
   useEffect(() => {
     if (activeTab === 'integrations') loadKeys();
+    if (activeTab === 'bugs') loadIssues();
   }, [activeTab]);
+
+  async function loadIssues() {
+    setLoading(true);
+    try {
+      const data = await fetchIssues();
+      setIssues(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCreateIssue(e) {
+    e.preventDefault();
+    if (!issueForm.title.trim()) return;
+    try {
+      const newIssue = await insertIssue({
+        title: issueForm.title,
+        priority: issueForm.priority,
+        status: 'open',
+        author: user
+      });
+      setIssues([newIssue, ...issues]);
+      setIssueForm({ title: '', priority: 'low' });
+    } catch (err) {
+      alert('Erro ao criar issue');
+    }
+  }
 
   async function loadKeys() {
     setLoading(true);
@@ -105,6 +138,12 @@ export default function Settings() {
           onClick={() => setActiveTab('integrations')}
         >
           Integrações (IA)
+        </button>
+        <button 
+          className={`settings-tab ${activeTab === 'bugs' ? 'active' : ''}`}
+          onClick={() => setActiveTab('bugs')}
+        >
+          Bugs & Ideias
         </button>
       </div>
 
@@ -225,6 +264,92 @@ export default function Settings() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {activeTab === 'bugs' && (
+          <div className="bugs-content">
+            <section className="card new-key-card">
+              <h2>Reportar Bug ou Ideia</h2>
+              <form className="new-key-form" onSubmit={handleCreateIssue}>
+                <div className="input-group">
+                  <input
+                    type="text"
+                    placeholder="Ex: Botão de salvar não está funcionando no celular..."
+                    value={issueForm.title}
+                    onChange={e => setIssueForm({...issueForm, title: e.target.value})}
+                    required
+                  />
+                  <select 
+                    style={{ padding: '0 16px', borderRadius: '8px', border: '1px solid var(--neutral-200)', background: 'var(--white)' }}
+                    value={issueForm.priority}
+                    onChange={e => setIssueForm({...issueForm, priority: e.target.value})}
+                  >
+                    <option value="high">🔴 Alta Prioridade</option>
+                    <option value="medium">🟡 Média</option>
+                    <option value="low">🟢 Baixa</option>
+                  </select>
+                  <button type="submit" className="btn btn-primary" disabled={!issueForm.title.trim()}>
+                    <Plus size={16} /> Adicionar
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section className="keys-list-section">
+              <h2>Lista de Pendências</h2>
+              {loading ? (
+                <p>Carregando...</p>
+              ) : issues.length === 0 ? (
+                <div className="empty-state">
+                  <Bug size={48} className="empty-icon" />
+                  <p>Nenhum bug reportado! Que paz.</p>
+                </div>
+              ) : (
+                <div className="issues-list">
+                  {issues
+                    // Sort order: High -> Medium -> Low, then unresolved first
+                    .sort((a, b) => {
+                      const p = { high: 3, medium: 2, low: 1 };
+                      if (a.status === 'resolved' && b.status !== 'resolved') return 1;
+                      if (b.status === 'resolved' && a.status !== 'resolved') return -1;
+                      return p[b.priority] - p[a.priority];
+                    })
+                    .map(issue => (
+                    <div key={issue.id} className={`card issue-card ${issue.status === 'resolved' ? 'issue-card--resolved' : ''}`}>
+                      <div className="issue-main">
+                        <span className={`issue-tag issue-tag--${issue.priority}`}>
+                          {issue.priority === 'high' ? '🔴 Alta' : issue.priority === 'medium' ? '🟡 Média' : '🟢 Baixa'}
+                        </span>
+                        <div className="issue-text">
+                          <p className={`issue-title ${issue.status === 'resolved' ? 'strikethrough' : ''}`}>
+                            {issue.title}
+                          </p>
+                          <p className="issue-meta">Por {issue.author} em {formatDate(issue.createdAt)}</p>
+                        </div>
+                      </div>
+                      <div className="issue-actions">
+                        {issue.status !== 'resolved' ? (
+                          <button className="btn btn-sm" style={{ background: 'var(--green-text)', color: 'white', border: 'none' }} onClick={() => {
+                            updateIssue({ ...issue, status: 'resolved' })
+                              .then(updated => setIssues(p => p.map(x => x.id === issue.id ? updated : x)));
+                          }}>
+                            <CheckSquare size={14} /> Resolver
+                          </button>
+                        ) : (
+                          <span className="badge badge-gray">Resolvido</span>
+                        )}
+                        <button className="icon-btn" style={{ color: 'var(--red)' }} onClick={() => {
+                          if(confirm('Excluir issue?')) deleteIssue(issue.id).then(() => setIssues(p => p.filter(x => x.id !== issue.id)));
+                        }}>
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </section>

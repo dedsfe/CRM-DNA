@@ -210,6 +210,52 @@ export async function deleteMeeting(id) {
   if (error) throw error;
 }
 
+/* ── issues (bugs/features) ── */
+
+const toIssue = (r) => ({
+  id: r.id,
+  title: r.title,
+  description: r.description ?? '',
+  priority: r.priority,
+  status: r.status,
+  author: r.author,
+  createdAt: r.created_at,
+});
+
+const fromIssue = (i) => ({
+  title: i.title,
+  description: i.description || null,
+  priority: i.priority,
+  status: i.status,
+  author: i.author,
+});
+
+export async function fetchIssues() {
+  const { data, error } = await supabase
+    .from('issues').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data.map(toIssue);
+}
+
+export async function insertIssue(issue) {
+  const { data, error } = await supabase
+    .from('issues').insert(fromIssue(issue)).select().single();
+  if (error) throw error;
+  return toIssue(data);
+}
+
+export async function updateIssue(issue) {
+  const { data, error } = await supabase
+    .from('issues').update(fromIssue(issue)).eq('id', issue.id).select().single();
+  if (error) throw error;
+  return toIssue(data);
+}
+
+export async function deleteIssue(id) {
+  const { error } = await supabase.from('issues').delete().eq('id', id);
+  if (error) throw error;
+}
+
 /* ── notifications ── */
 
 const toNotif = (r) => ({
