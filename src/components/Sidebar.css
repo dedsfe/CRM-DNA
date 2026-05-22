@@ -1,7 +1,7 @@
 .sidebar {
   width: 248px;
   min-height: 100vh;
-  background-color: #FAFAFA;
+  background-color: var(--off-white);
   border-right: 1px solid var(--light-gray);
   display: flex;
   flex-direction: column;
@@ -89,13 +89,13 @@
 }
 
 .sidebar-item--active {
-  background: var(--blue-light);
+  background: var(--light-gray);
   color: var(--blue);
+  font-weight: 600;
 }
 
 .sidebar-item--active:hover {
-  background: var(--blue-light);
-  color: var(--blue);
+  background: var(--neutral-200);
 }
 
 .sidebar-item-emoji {

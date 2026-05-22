@@ -159,8 +159,8 @@
 
 .client-card--active {
   border-color: var(--blue) !important;
-  background: var(--blue-light);
-  box-shadow: 0 0 0 3px rgba(36,91,161,.12) !important;
+  background: var(--white);
+  box-shadow: 0 0 0 1px var(--blue) !important;
   transform: none !important;
 }
 
@@ -176,7 +176,7 @@
   flex-shrink: 0;
 }
 
-.client-card--active .cc-emoji { background: var(--white); }
+.client-card--active .cc-emoji { background: var(--blue-light); }
 
 .cc-info {
   display: flex;

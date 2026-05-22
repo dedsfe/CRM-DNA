@@ -5,27 +5,27 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
 
 :root {
-  /* ── Paleta de Azul (primária) ────────────────────────── */
-  --blue-50:  #EEF4FB;  /* fundos muito sutis */
-  --blue-100: #D6E6F5;  /* fundos de destaque leve */
-  --blue-200: #AECDE8;  /* bordas, divisores */
-  --blue-500: #245BA1;  /* cor primária — botões, links */
-  --blue-600: #1F4F8F;  /* hover primário */
-  --blue-700: #183C6D;  /* pressed / active */
+  /* ── Paleta de Azul (iOS) ────────────────────────── */
+  --blue-50:  #F2F8FF;  /* fundos muito sutis */
+  --blue-100: #E5F1FF;  /* fundos de destaque leve */
+  --blue-200: #B3D7FF;  /* bordas, divisores */
+  --blue-500: #007AFF;  /* cor primária — botões, links */
+  --blue-600: #0062CC;  /* hover primário */
+  --blue-700: #004C9E;  /* pressed / active */
 
   /* Aliases semânticos — mantém compatibilidade */
   --blue:       var(--blue-500);
   --blue-hover: var(--blue-600);
   --blue-light: var(--blue-50);
 
-  /* ── Escala de Neutros ────────────────────────────── */
+  /* ── Escala de Neutros (Apple) ────────────────────── */
   --neutral-0:   #FFFFFF;  /* branco puro */
-  --neutral-50:  #F7F8FA;  /* fundo de página / sidebar */
-  --neutral-100: #ECEEF2;  /* bordas, divisores, inputs */
-  --neutral-200: #D8DCE4;  /* bordas mais fortes */
-  --neutral-400: #9EA8B8;  /* placeholder, texto desabilitado */
-  --neutral-600: #4A5568;  /* texto secundário / labels */
-  --neutral-900: #0D1B2E;  /* texto principal */
+  --neutral-50:  #F5F5F7;  /* fundo de página / sidebar */
+  --neutral-100: #E5E5EA;  /* bordas ultra finas, inputs */
+  --neutral-200: #D1D1D6;  /* bordas mais fortes */
+  --neutral-400: #8E8E93;  /* placeholder, texto desabilitado */
+  --neutral-600: #3A3A3C;  /* texto secundário / labels */
+  --neutral-900: #1C1C1E;  /* texto principal */
 
   /* Aliases semânticos */
   --white:      var(--neutral-0);
@@ -35,36 +35,36 @@
   --dark-gray:  var(--neutral-600);
   --black:      var(--neutral-900);
 
-  /* ── Cores Semânticas ─────────────────────────────── */
+  /* ── Cores Semânticas (iOS) ───────────────────────── */
   /* Verde — sucesso, concluído */
-  --green:      #16A34A;
-  --green-bg:   #DCFCE7;
-  --green-text: #14532D;
+  --green:      #34C759;
+  --green-bg:   #E8F8EE;
+  --green-text: #196D2D;
 
   /* Laranja — atenção, pendente */
-  --orange:      #D97706;
-  --orange-bg:   #FEF3C7;
-  --orange-text: #92400E;
+  --orange:      #FF9500;
+  --orange-bg:   #FFF4E5;
+  --orange-text: #8C5200;
 
   /* Vermelho — erro, atrasado */
-  --red:      #DC2626;
-  --red-bg:   #FEE2E2;
-  --red-text: #7F1D1D;
+  --red:      #FF3B30;
+  --red-bg:   #FFEBEA;
+  --red-text: #8C1C16;
 
-  /* Roxo — Danyelle / tag secundária */
-  --purple:      #7C3AED;
-  --purple-bg:   #EDE9FE;
-  --purple-text: #4C1D95;
+  /* Roxo — tag secundária */
+  --purple:      #AF52DE;
+  --purple-bg:   #F7EDFC;
+  --purple-text: #5B217A;
 
   /* Ouro — usado pontualmente */
-  --gold:    #B45309;
-  --gold-bg: #FEF3C7;
+  --gold:    #D4A017;
+  --gold-bg: #FDF7E7;
 
   /* ── Tipografia ──────────────────────────────────── */
   --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 
   /* Escala de tamanhos (base 16px) */
-  --text-xs:   11px;  /* labels, timestamps, badges */
+  --text-xs:   12px;  /* labels, timestamps, badges */
   --text-sm:   13px;  /* corpo auxiliar, descrições */
   --text-base: 15px;  /* corpo principal */
   --text-md:   17px;  /* subtítulos de card */
@@ -95,21 +95,21 @@
   --s-48: 48px;
   --s-64: 64px;
 
-  /* ── Border Radius ───────────────────────────────── */
+  /* ── Border Radius (Squircle-like) ────────────────── */
   --r-xs:   6px;    /* tags minúsculas */
-  --r-sm:   8px;    /* botões sm, chips */
-  --r-md:   12px;   /* inputs, cards internos */
-  --r-lg:   16px;   /* cards principais */
+  --r-sm:   10px;   /* botões sm, chips */
+  --r-md:   14px;   /* inputs, cards internos */
+  --r-lg:   18px;   /* cards principais */
   --r-xl:   24px;   /* modais, paineis */
   --r-2xl:  32px;   /* hero cards */
   --r-pill: 999px;  /* badges, pills */
 
-  /* ── Sombras ────────────────────────────────────── */
-  --shadow-xs: 0 1px 2px rgba(13,27,46,.05);
-  --shadow-sm: 0 2px 6px rgba(13,27,46,.08), 0 1px 2px rgba(13,27,46,.04);
-  --shadow-md: 0 6px 20px rgba(13,27,46,.10), 0 2px 6px rgba(13,27,46,.05);
-  --shadow-lg: 0 16px 40px rgba(13,27,46,.14), 0 4px 12px rgba(13,27,46,.06);
-  --shadow-xl: 0 32px 64px rgba(13,27,46,.18), 0 8px 24px rgba(13,27,46,.08);
+  /* ── Sombras (Sutis Apple) ────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.02);
+  --shadow-sm: 0 2px 6px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.02);
+  --shadow-md: 0 6px 16px rgba(0,0,0,.06), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-xl: 0 32px 64px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.06);
 }
 
 /* ─── Reset ─── */

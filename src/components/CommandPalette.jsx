@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Users, CheckSquare, FileText, ArrowRight } from 'lucide-react';
 import { fetchClients, fetchTasks, fetchInvoices } from '../lib/api';
+import { buildClientPath, buildTaskPath, matchesSearch } from '../lib/navigation';
 import './CommandPalette.css';
 
 export default function CommandPalette() {
@@ -17,13 +18,25 @@ export default function CommandPalette() {
   const inputRef = useRef(null);
   const navigate = useNavigate();
 
+  const openPath = (path) => {
+    setIsOpen(false);
+    navigate(path);
+  };
+
   // Handle global shortcut
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Cmd+K or Ctrl+K
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setIsOpen((prev) => !prev);
+        setIsOpen((prev) => {
+          const next = !prev;
+          if (next) {
+            setQuery('');
+            setSelectedIndex(0);
+          }
+          return next;
+        });
       }
       // Esc to close
       if (e.key === 'Escape') {
@@ -37,8 +50,6 @@ export default function CommandPalette() {
   // Fetch data when palette opens
   useEffect(() => {
     if (isOpen) {
-      setQuery('');
-      setSelectedIndex(0);
       Promise.all([fetchClients(), fetchTasks(), fetchInvoices()])
         .then(([c, t, i]) => {
           setClients(c);
@@ -65,7 +76,9 @@ export default function CommandPalette() {
   
   if (lowerQuery.length > 0) {
     // 1. Clients
-    const filteredClients = clients.filter(c => c.name.toLowerCase().includes(lowerQuery));
+    const filteredClients = clients.filter((client) =>
+      matchesSearch([client.name, client.contact?.email, client.contact?.phone], lowerQuery)
+    );
     filteredClients.forEach(c => {
       results.push({
         id: `client-${c.id}`,
@@ -73,33 +86,34 @@ export default function CommandPalette() {
         label: c.name,
         subtext: c.status === 'active' ? 'Cliente Ativo' : 'Em Negociação',
         icon: <Users size={16} />,
-        action: () => {
-          setIsOpen(false);
-          navigate(`/clients?id=${c.id}`);
-        }
+        action: () => openPath(buildClientPath(c.id)),
       });
     });
 
     // 2. Tasks
-    const filteredTasks = tasks.filter(t => t.title.toLowerCase().includes(lowerQuery));
+    const filteredTasks = tasks.filter((task) => {
+      const client = clients.find((item) => item.id === task.clientId);
+      return matchesSearch([task.title, task.description, client?.name], lowerQuery);
+    });
     filteredTasks.forEach(t => {
-      // Find client name if task is linked
       const c = clients.find(cl => cl.id === t.clientId);
       results.push({
         id: `task-${t.id}`,
         type: 'task',
         label: t.title,
-        subtext: c ? `Para: ${c.name}` : (t.status === 'completed' ? 'Concluída' : 'Pendente'),
+        subtext: c
+          ? `Abrir em ${c.name} • entrega ${t.dueDate || 'sem prazo'}`
+          : (t.status === 'completed' ? 'Concluída' : 'Pendente'),
         icon: <CheckSquare size={16} />,
-        action: () => {
-          setIsOpen(false);
-          navigate(`/tasks`); // Or ideally directly to the task, but for now /tasks
-        }
+        action: () => openPath(buildTaskPath(t.id)),
       });
     });
 
     // 3. Invoices
-    const filteredInvoices = invoices.filter(i => i.description.toLowerCase().includes(lowerQuery));
+    const filteredInvoices = invoices.filter((invoice) => {
+      const client = clients.find((item) => item.id === invoice.clientId);
+      return matchesSearch([invoice.description, client?.name], lowerQuery);
+    });
     filteredInvoices.forEach(i => {
       const c = clients.find(cl => cl.id === i.clientId);
       results.push({
@@ -108,18 +122,15 @@ export default function CommandPalette() {
         label: i.description,
         subtext: `${c ? c.name : 'Desconhecido'} - R$ ${i.amount}`,
         icon: <FileText size={16} />,
-        action: () => {
-          setIsOpen(false);
-          if (c) navigate(`/clients?id=${c.id}&tab=finance`);
-        }
+        action: () => openPath(c ? buildClientPath(c.id, 'finance') : '/finance'),
       });
     });
   } else {
     // Show some default suggestions when query is empty
     results.push(
-      { id: 'nav-home', type: 'nav', label: 'Ir para Dashboard', icon: <ArrowRight size={16}/>, action: () => { setIsOpen(false); navigate('/'); } },
-      { id: 'nav-clients', type: 'nav', label: 'Ver todos os clientes', icon: <Users size={16}/>, action: () => { setIsOpen(false); navigate('/clients'); } },
-      { id: 'nav-tasks', type: 'nav', label: 'Minhas tarefas', icon: <CheckSquare size={16}/>, action: () => { setIsOpen(false); navigate('/tasks'); } }
+      { id: 'nav-home', type: 'nav', label: 'Ir para Dashboard', icon: <ArrowRight size={16}/>, action: () => openPath('/') },
+      { id: 'nav-clients', type: 'nav', label: 'Ver todos os clientes', icon: <Users size={16}/>, action: () => openPath('/clients') },
+      { id: 'nav-tasks', type: 'nav', label: 'Minhas tarefas', icon: <CheckSquare size={16}/>, action: () => openPath('/tasks') }
     );
   }
 

@@ -43,31 +43,22 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  background: var(--white);
+  border: 1px solid var(--light-gray);
+  color: var(--black);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: var(--neutral-200);
 }
 
-.stat-card--blue {
-  background: var(--blue-500);
-  color: var(--white);
-}
-.stat-card--dark {
-  background: var(--neutral-900);
-  color: var(--white);
-}
-.stat-card--light {
-  background: var(--neutral-50);
-  color: var(--neutral-900);
-  border: 1px solid var(--neutral-100);
-}
-.stat-card--green {
-  background: linear-gradient(140deg, var(--green-text) 0%, var(--green) 100%);
-  color: var(--white);
-}
+.stat-card--blue .stat-card-emoji { color: var(--blue); }
+.stat-card--dark .stat-card-emoji { color: var(--black); }
+.stat-card--light .stat-card-emoji { color: var(--mid-gray); }
+.stat-card--green .stat-card-emoji { color: var(--green); }
 
 .stat-card-top {
   display: flex;
