@@ -10,8 +10,11 @@ import Inbox from './pages/Inbox';
 import Meetings from './pages/Meetings';
 import Finance from './pages/Finance';
 import Settings from './pages/Settings';
+import Trash from './pages/Trash';
 import CommandPalette from './components/CommandPalette';
 import TopBar from './components/TopBar';
+
+import { UndoProvider } from './lib/undo';
 
 function Shell() {
   const { authed, user } = useAuth();
@@ -21,26 +24,29 @@ function Shell() {
   }
 
   return (
-    <NotificationsProvider>
-      <BrowserRouter>
-        <div className="app-shell">
-          <TopBar />
-          <Sidebar />
-          <div className="page-content">
-            <Routes>
-              <Route path="/"            element={<Home />} />
-              <Route path="/clients"     element={<Clients />} />
-              <Route path="/tasks"       element={<Tasks />} />
-              <Route path="/inbox"       element={<Inbox />} />
-              <Route path="/meetings"    element={<Meetings />} />
-              <Route path="/finance"     element={<Finance />} />
-              <Route path="/settings"    element={<Settings />} />
-            </Routes>
+    <UndoProvider>
+      <NotificationsProvider>
+        <BrowserRouter>
+          <div className="app-shell">
+            <TopBar />
+            <Sidebar />
+            <div className="page-content">
+              <Routes>
+                <Route path="/"            element={<Home />} />
+                <Route path="/clients"     element={<Clients />} />
+                <Route path="/tasks"       element={<Tasks />} />
+                <Route path="/inbox"       element={<Inbox />} />
+                <Route path="/meetings"    element={<Meetings />} />
+                <Route path="/finance"     element={<Finance />} />
+                <Route path="/settings"    element={<Settings />} />
+                <Route path="/trash"       element={<Trash />} />
+              </Routes>
+            </div>
+            <CommandPalette />
           </div>
-          <CommandPalette />
-        </div>
-      </BrowserRouter>
-    </NotificationsProvider>
+        </BrowserRouter>
+      </NotificationsProvider>
+    </UndoProvider>
   );
 }
 

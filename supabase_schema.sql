@@ -16,7 +16,8 @@ create table if not exists clients (
   conn_instagram text,
   conn_tiktok   text,
   conn_website  text,
-  created_at    timestamptz default now()
+  created_at    timestamptz default now(),
+  deleted_at    timestamptz
 );
 
 -- ── tasks ─────────────────────────────────────────
@@ -30,6 +31,7 @@ create table if not exists tasks (
   priority    text not null default 'medium' check (priority in ('high','medium','low')),
   status      text not null default 'pending' check (status in ('pending','completed')),
   created_at  timestamptz default now(),
+  deleted_at  timestamptz,
   unique (client_id, title)
 );
 

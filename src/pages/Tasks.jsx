@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { useUndo } from '../lib/undo';
 import Modal from '../components/Modal';
 import MentionTextarea from '../components/MentionTextarea';
 import CommentThread from '../components/CommentThread';
@@ -349,6 +350,7 @@ export default function Tasks() {
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const { user } = useAuth();
+  const { notifyDeleted } = useUndo();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const openComments = (task) =>
@@ -359,6 +361,13 @@ export default function Tasks() {
       .then(([c, t]) => { setClients(c); setTasks(t); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  }, []);
+
+  /* Listen for undo restores */
+  useEffect(() => {
+    const onRestore = () => fetchTasks().then(setTasks);
+    window.addEventListener('itemRestored', onRestore);
+    return () => window.removeEventListener('itemRestored', onRestore);
   }, []);
 
   /* Abre a tarefa vinda de um link da caixa de entrada (?task=ID) */
@@ -389,8 +398,12 @@ export default function Tasks() {
     } catch (e) { setError(e.message); }
   };
   const remove = async (id) => {
-    try { await deleteTask(id); setTasks(p => p.filter(t => t.id !== id)); }
-    catch (e) { setError(e.message); }
+    const t = tasks.find(x => x.id === id);
+    try {
+      await deleteTask(id);
+      setTasks(p => p.filter(x => x.id !== id));
+      if (t) notifyDeleted('task', id, t.title);
+    } catch (e) { setError(e.message); }
   };
   const toggle = async (id) => {
     const t = tasks.find(x => x.id === id);

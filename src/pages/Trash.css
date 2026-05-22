@@ -1,0 +1,49 @@
+.trash-page {
+  padding: var(--s-32) var(--s-40);
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-24);
+}
+
+.trash-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.trash-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--light-gray);
+  padding: 16px 20px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.trash-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.trash-title {
+  font-size: 15px;
+  color: var(--black);
+  font-weight: 600;
+}
+
+.trash-date {
+  font-size: 13px;
+  color: var(--mid-gray);
+}
+
+.trash-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

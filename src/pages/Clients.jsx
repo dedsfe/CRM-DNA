@@ -7,6 +7,7 @@ import {
   insertInvoice, markInvoicePaid, insertMeeting, updateMeeting, deleteMeeting
 } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { useUndo } from '../lib/undo';
 import Modal from '../components/Modal';
 import MentionTextarea from '../components/MentionTextarea';
 import CommentThread from '../components/CommentThread';
@@ -464,6 +465,7 @@ export default function Clients() {
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedClient, setDraggedClient] = useState(null);
   const { user } = useAuth();
+  const { notifyDeleted } = useUndo();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -476,11 +478,17 @@ export default function Clients() {
   const openTaskComments   = (task)   => setCommentTarget({ type: 'task',   id: task.id,   title: task.title });
   const openClientComments = (client) => setCommentTarget({ type: 'client', id: client.id, title: client.name });
 
-  useEffect(() => {
+  const fetchData = () => {
     Promise.all([fetchClients(), fetchTasks(), fetchInvoices(), fetchMeetings(), fetchTransactions()])
       .then(([c, t, i, m, txs]) => { setClients(c); setTasks(t); setInvoices(i); setMeetings(m); setTransactions(txs); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchData();
+    window.addEventListener('itemRestored', fetchData);
+    return () => window.removeEventListener('itemRestored', fetchData);
   }, []);
 
   const filtered = clients.filter(c =>
@@ -502,8 +510,12 @@ export default function Clients() {
     catch (e) { setError(e.message); }
   };
   const remove = async (id) => {
-    try { await deleteTask(id); setTasks(p => p.filter(t => t.id !== id)); }
-    catch (e) { setError(e.message); }
+    const t = tasks.find(x => x.id === id);
+    try {
+      await deleteTask(id);
+      setTasks(p => p.filter(x => x.id !== id));
+      if (t) notifyDeleted('task', id, t.title);
+    } catch (e) { setError(e.message); }
   };
   const addTask = async (task) => {
     try {
@@ -536,11 +548,13 @@ export default function Clients() {
   };
 
   const removeClient = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir este cliente e todas as suas tarefas?')) return;
+    const c = clients.find(x => x.id === id);
+    if (!window.confirm('Mover este cliente e suas tarefas para a lixeira?')) return;
     try {
       await deleteClient(id);
-      setClients(p => p.filter(c => c.id !== id));
+      setClients(p => p.filter(x => x.id !== id));
       setSelectedId(null);
+      if (c) notifyDeleted('client', id, c.name);
     } catch (e) { setError(e.message); }
   };
 

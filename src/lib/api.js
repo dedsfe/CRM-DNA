@@ -24,6 +24,7 @@ const toClient = (r) => ({
     tiktok:    r.conn_tiktok ?? '',
     website:   r.conn_website ?? '',
   },
+  deletedAt: r.deleted_at,
 });
 
 const fromClient = (c) => ({
@@ -53,6 +54,7 @@ const toTask = (r) => ({
   assignees:   r.assignees ?? (r.assignee ? [r.assignee] : ['André']),
   priority:    r.priority,
   status:      r.status,
+  deletedAt:   r.deleted_at,
 });
 
 const fromTask = (t) => ({
@@ -69,7 +71,7 @@ const fromTask = (t) => ({
 
 export async function fetchClients() {
   const { data, error } = await supabase
-    .from('clients').select('*').order('created_at');
+    .from('clients').select('*').is('deleted_at', null).order('created_at');
   if (error) throw error;
   return data.map(toClient);
 }
@@ -89,7 +91,7 @@ export async function updateClient(client) {
 }
 
 export async function deleteClient(id) {
-  const { error } = await supabase.from('clients').delete().eq('id', id);
+  const { error } = await supabase.from('clients').update({ deleted_at: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
 }
 
@@ -97,7 +99,7 @@ export async function deleteClient(id) {
 
 export async function fetchTasks() {
   const { data, error } = await supabase
-    .from('tasks').select('*').order('created_at');
+    .from('tasks').select('*').is('deleted_at', null).order('created_at');
   if (error) throw error;
   return data.map(toTask);
 }
@@ -117,7 +119,7 @@ export async function updateTask(task) {
 }
 
 export async function deleteTask(id) {
-  const { error } = await supabase.from('tasks').delete().eq('id', id);
+  const { error } = await supabase.from('tasks').update({ deleted_at: new Date().toISOString() }).eq('id', id);
   if (error) throw error;
 }
 
@@ -477,5 +479,28 @@ export async function createMcpKey(name) {
 
 export async function deleteMcpKey(id) {
   const { error } = await supabase.from('mcp_api_keys').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/* ── TRASH / UNDO ── */
+export async function fetchTrash() {
+  const [cRes, tRes] = await Promise.all([
+    supabase.from('clients').select('*').not('deleted_at', 'is', null),
+    supabase.from('tasks').select('*').not('deleted_at', 'is', null)
+  ]);
+  const clients = (cRes.data || []).map(toClient).map(c => ({ ...c, type: 'client' }));
+  const tasks = (tRes.data || []).map(toTask).map(t => ({ ...t, type: 'task' }));
+  return [...clients, ...tasks].sort((a, b) => new Date(b.deletedAt) - new Date(a.deletedAt));
+}
+
+export async function restoreItem(type, id) {
+  const table = type === 'client' ? 'clients' : 'tasks';
+  const { error } = await supabase.from(table).update({ deleted_at: null }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deletePermanently(type, id) {
+  const table = type === 'client' ? 'clients' : 'tasks';
+  const { error } = await supabase.from(table).delete().eq('id', id);
   if (error) throw error;
 }

@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { Home, Users, CheckSquare, Inbox, Video, DollarSign, Settings, Trash2 } from 'lucide-react';
 import { useNotifications } from '../lib/notifications';
 import './Sidebar.css';
 
 const NAV = [
-  { to: '/',             label: 'Home',           emoji: '🏠' },
+  { to: '/',             label: 'Visão Geral',    emoji: '🏠' },
   { to: '/clients',      label: 'Clientes',       emoji: '👥' },
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
+  { to: '/inbox',        label: 'Inbox',          emoji: '📥', badge: true },
   { to: '/meetings',     label: 'Reuniões',       emoji: '🗓️' },
   { to: '/finance',      label: 'Financeiro',     emoji: '💸' },
+  { to: '/trash',        label: 'Lixeira',        emoji: '🗑️' },
 ];
 
 export default function Sidebar() {
