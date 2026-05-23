@@ -42,7 +42,13 @@
   pointer-events: auto;
 }
 
-/* Barra de Formatação Global (Google Docs style) */
+.whiteboard-actions .btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Barra de Formatação Global */
 .wb-global-toolbar {
   display: flex;
   align-items: center;
@@ -145,7 +151,6 @@
   cursor: pointer;
 }
 
-
 .whiteboard-canvas {
   flex: 1;
   width: 100%;
@@ -172,7 +177,7 @@
   will-change: transform;
 }
 
-/* O Tijolo: Post-it / Bloco */
+/* O Tijolo: Post-it / Bloco Padrão */
 .wb-node {
   position: absolute;
   top: 0;
@@ -186,7 +191,7 @@
   cursor: grab;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .wb-node--active {
@@ -201,6 +206,7 @@
   background: rgba(0,0,0,0.03);
   border-radius: var(--r-sm) var(--r-sm) 0 0;
   border-bottom: 1px solid rgba(0,0,0,0.05);
+  transition: opacity 0.2s;
 }
 
 .wb-node--dragging {
@@ -211,6 +217,44 @@
 
 .wb-node--no-pointer {
   pointer-events: none;
+}
+
+/* --- MODO TEXTO SOLTO (Loose Text) --- */
+.wb-node--text {
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  width: auto;
+  min-width: 100px;
+  min-height: unset;
+}
+
+/* No modo texto livre, esconde a alcinha quando não está ativo/hover */
+.wb-node--text .wb-node-drag-handle {
+  opacity: 0;
+  height: 8px; /* menorzinho */
+  border-radius: 4px;
+  border-bottom: none;
+  background: var(--blue-200);
+  margin-bottom: 4px;
+}
+
+.wb-node--text:hover .wb-node-drag-handle,
+.wb-node--text.wb-node--active .wb-node-drag-handle {
+  opacity: 1;
+}
+
+.wb-node--text:hover {
+  border: 1px dashed var(--neutral-400);
+}
+
+.wb-node--text.wb-node--active {
+  border: 1px dashed var(--blue-500);
+  box-shadow: none;
+}
+
+.wb-node--text .wb-node-editor {
+  padding: 4px; /* Menos padding para não criar espaço invisível grande */
 }
 
 /* TipTap Editor Styles */
@@ -225,10 +269,11 @@
 .ProseMirror {
   outline: none;
   font-family: var(--font);
-  font-size: var(--text-base); /* default 15px se nenhum span de font-size for aplicado */
+  font-size: var(--text-base);
   color: var(--black);
   flex: 1;
   line-height: 1.4;
+  white-space: pre-wrap;
 }
 
 .ProseMirror p {
