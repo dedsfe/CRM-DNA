@@ -2,16 +2,53 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered } from 'lucide-react';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { Highlight } from '@tiptap/extension-highlight';
+import { TextAlign } from '@tiptap/extension-text-align';
+import { 
+  Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
+  List, ListOrdered, 
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Heading1, Heading2, Type, Highlighter, Palette
+} from 'lucide-react';
 import './Whiteboard.css';
 
 // Componente do Menu Global (fica no topo da tela)
 const GlobalMenuBar = ({ editor }) => {
-  // Se não houver nenhum editor selecionado, mostramos a barra mas desabilitada visualmente
   const disabled = !editor;
 
   return (
     <div className={`wb-global-toolbar ${disabled ? 'disabled' : ''}`}>
+      {/* Tamanhos de Texto (Headings) */}
+      <button
+        onClick={() => editor && editor.chain().focus().setParagraph().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('paragraph') ? 'active' : ''}`}
+        title="Texto Normal"
+        disabled={disabled}
+      >
+        <Type size={16} />
+      </button>
+      <button
+        onClick={() => editor && editor.chain().focus().toggleHeading({ level: 1 }).run()}
+        className={`wb-toolbar-btn ${editor?.isActive('heading', { level: 1 }) ? 'active' : ''}`}
+        title="Título 1"
+        disabled={disabled}
+      >
+        <Heading1 size={16} />
+      </button>
+      <button
+        onClick={() => editor && editor.chain().focus().toggleHeading({ level: 2 }).run()}
+        className={`wb-toolbar-btn ${editor?.isActive('heading', { level: 2 }) ? 'active' : ''}`}
+        title="Título 2"
+        disabled={disabled}
+      >
+        <Heading2 size={16} />
+      </button>
+
+      <div className="wb-toolbar-divider" />
+
+      {/* Formatação Básica */}
       <button
         onClick={() => editor && editor.chain().focus().toggleBold().run()}
         className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`}
@@ -44,7 +81,59 @@ const GlobalMenuBar = ({ editor }) => {
       >
         <Strikethrough size={16} />
       </button>
+
       <div className="wb-toolbar-divider" />
+
+      {/* Cores e Marca Texto */}
+      <div className="wb-toolbar-color-picker" title="Cor do Texto">
+        <Palette size={16} />
+        <input
+          type="color"
+          onInput={(e) => editor && editor.chain().focus().setColor(e.target.value).run()}
+          value={editor?.getAttributes('textStyle').color || '#000000'}
+          disabled={disabled}
+        />
+      </div>
+      <button
+        onClick={() => editor && editor.chain().focus().toggleHighlight().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('highlight') ? 'active' : ''}`}
+        title="Marca Texto"
+        disabled={disabled}
+      >
+        <Highlighter size={16} />
+      </button>
+
+      <div className="wb-toolbar-divider" />
+
+      {/* Alinhamento */}
+      <button
+        onClick={() => editor && editor.chain().focus().setTextAlign('left').run()}
+        className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
+        title="Alinhar à Esquerda"
+        disabled={disabled}
+      >
+        <AlignLeft size={16} />
+      </button>
+      <button
+        onClick={() => editor && editor.chain().focus().setTextAlign('center').run()}
+        className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
+        title="Centralizar"
+        disabled={disabled}
+      >
+        <AlignCenter size={16} />
+      </button>
+      <button
+        onClick={() => editor && editor.chain().focus().setTextAlign('right').run()}
+        className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
+        title="Alinhar à Direita"
+        disabled={disabled}
+      >
+        <AlignRight size={16} />
+      </button>
+
+      <div className="wb-toolbar-divider" />
+
+      {/* Listas */}
       <button
         onClick={() => editor && editor.chain().focus().toggleBulletList().run()}
         className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`}
@@ -75,6 +164,10 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
     extensions: [
       StarterKit,
       Underline,
+      TextStyle,
+      Color,
+      Highlight.configure({ multicolor: true }),
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
     ],
     content: node.text || '<p></p>',
     onFocus: ({ editor }) => {
@@ -149,7 +242,7 @@ export default function Whiteboard() {
 
   // Tijolo 1: Estado dos nós
   const [nodes, setNodes] = useState([
-    { id: '1', x: 100, y: 100, text: '<p>Meu primeiro bloco <strong>rico</strong>!</p>' }
+    { id: '1', x: 100, y: 100, text: '<h2>Bem-vindo!</h2><p>Tente <strong>formatar</strong> este texto com o menu no topo.</p>' }
   ]);
 
   const canvasRef = useRef(null);
@@ -220,7 +313,7 @@ export default function Whiteboard() {
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
         
-        {/* Barra de Formatação Global (Google Docs style) */}
+        {/* Barra de Formatação Global */}
         <GlobalMenuBar editor={activeEditor} />
 
         <div className="whiteboard-actions">

@@ -54,6 +54,9 @@
   pointer-events: auto;
   border: 1px solid var(--neutral-200);
   transition: opacity 0.2s;
+  flex-wrap: wrap;
+  max-width: 60%;
+  justify-content: center;
 }
 
 .wb-global-toolbar.disabled {
@@ -71,9 +74,10 @@
   color: var(--neutral-600);
   transition: background 0.15s, color 0.15s;
   background: transparent;
+  cursor: pointer;
 }
 
-.wb-toolbar-btn:hover {
+.wb-toolbar-btn:hover:not(:disabled) {
   background: var(--neutral-100);
   color: var(--black);
 }
@@ -83,12 +87,48 @@
   color: var(--blue-700);
 }
 
+.wb-toolbar-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .wb-toolbar-divider {
   width: 1px;
   height: 20px;
   background: var(--neutral-200);
   margin: 0 4px;
 }
+
+/* Color Picker Customizado */
+.wb-toolbar-color-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-600);
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.wb-toolbar-color-picker:hover {
+  background: var(--neutral-100);
+  color: var(--black);
+}
+
+.wb-toolbar-color-picker input[type="color"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0; /* Esconde o input feio nativo, mostra só o ícone de paleta */
+  cursor: pointer;
+}
+
 
 .whiteboard-canvas {
   flex: 1;
@@ -121,7 +161,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 240px;
+  width: 260px;
   min-height: 120px;
   background: #FFF3B0;
   border: 1px solid rgba(0,0,0,0.1);
@@ -139,7 +179,6 @@
   z-index: 40;
 }
 
-/* Área discreta no topo para facilitar o arrasto */
 .wb-node-drag-handle {
   height: 12px;
   width: 100%;
@@ -176,6 +215,18 @@
   line-height: 1.4;
 }
 
+.ProseMirror h1 {
+  font-size: 1.5em;
+  font-weight: var(--fw-bold);
+  margin-bottom: 0.5em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.25em;
+  font-weight: var(--fw-bold);
+  margin-bottom: 0.5em;
+}
+
 .ProseMirror p {
   margin-bottom: 0.5em;
 }
@@ -187,4 +238,10 @@
 .ProseMirror ol {
   padding-left: 1.2rem;
   margin-bottom: 0.5em;
+}
+
+.ProseMirror mark {
+  background-color: #ffcc00;
+  border-radius: 2px;
+  padding: 0 2px;
 }
