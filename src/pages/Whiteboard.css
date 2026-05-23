@@ -48,6 +48,49 @@
   gap: 6px;
 }
 
+/* Paleta Lateral (Esquerda) */
+.wb-left-palette {
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  z-index: 90;
+  background: var(--white);
+  padding: 8px;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid var(--neutral-200);
+}
+
+.wb-left-palette button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-600);
+  background: transparent;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.wb-left-palette button:hover {
+  background: var(--neutral-100);
+  color: var(--blue-600);
+  border-color: var(--neutral-200);
+}
+
+.wb-palette-divider {
+  height: 1px;
+  background: var(--neutral-200);
+  margin: 4px 0;
+}
+
 /* Barra de Formatação Global */
 .wb-global-toolbar {
   display: flex;
@@ -177,93 +220,131 @@
   will-change: transform;
 }
 
-/* O Tijolo: Post-it / Bloco Padrão */
+/* =========================================================
+   SISTEMA DE NÓS (FORMAS)
+========================================================= */
+
 .wb-node {
   position: absolute;
   top: 0;
   left: 0;
-  width: 260px;
-  min-height: 120px;
-  background: #FFF3B0;
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-md);
   cursor: grab;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-}
-
-.wb-node--active {
-  border-color: var(--blue-500);
-  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2), var(--shadow-lg);
-  z-index: 40;
-}
-
-.wb-node-drag-handle {
-  height: 12px;
-  width: 100%;
-  background: rgba(0,0,0,0.03);
-  border-radius: var(--r-sm) var(--r-sm) 0 0;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  transition: opacity 0.2s;
-}
-
-.wb-node--dragging {
-  cursor: grabbing;
-  box-shadow: var(--shadow-xl);
-  z-index: 50;
+  transition: box-shadow 0.2s ease;
 }
 
 .wb-node--no-pointer {
   pointer-events: none;
 }
 
-/* --- MODO TEXTO SOLTO (Loose Text) --- */
+/* --- Tipo 1: Post-it --- */
+.wb-node--post-it {
+  background: #FFF3B0;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-md);
+}
+.wb-node--post-it .wb-node-drag-handle {
+  height: 12px;
+  width: 100%;
+  background: rgba(0,0,0,0.03);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+/* --- Tipo 2: Retângulo Arredondado --- */
+.wb-node--rounded-rect {
+  background: #ebf8ff;
+  border: 2px solid #3182ce;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Tipo 3: Círculo --- */
+.wb-node--circle {
+  background: #ebf8ff;
+  border: 2px solid #3182ce;
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Tipo 4: Losango (Diamond) --- */
+.wb-node--diamond {
+  /* O container principal fica transparente, o shape background que gira */
+  background: transparent;
+}
+.wb-node--diamond .wb-node-shape-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #ebf8ff;
+  border: 2px solid #3182ce;
+  transform: rotate(45deg) scale(0.7071); /* Scale down by 1/sqrt(2) to fit perfectly inside bounding box */
+  border-radius: 8px;
+  z-index: -1;
+  box-shadow: var(--shadow-sm);
+}
+
+/* --- Tipo 5: Texto Solto --- */
 .wb-node--text {
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
-  width: auto;
-  min-width: 100px;
-  min-height: unset;
 }
-
-/* No modo texto livre, esconde a alcinha quando não está ativo/hover */
-.wb-node--text .wb-node-drag-handle {
-  opacity: 0;
-  height: 8px; /* menorzinho */
+.wb-node--text .wb-node-text-handle {
+  height: 8px;
+  width: 40px;
+  background: var(--neutral-300);
   border-radius: 4px;
-  border-bottom: none;
-  background: var(--blue-200);
-  margin-bottom: 4px;
+  margin: 4px auto 0 auto;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
-
-.wb-node--text:hover .wb-node-drag-handle,
-.wb-node--text.wb-node--active .wb-node-drag-handle {
+.wb-node--text:hover .wb-node-text-handle,
+.wb-node--text.wb-node--active .wb-node-text-handle {
   opacity: 1;
 }
-
 .wb-node--text:hover {
   border: 1px dashed var(--neutral-400);
 }
 
-.wb-node--text.wb-node--active {
-  border: 1px dashed var(--blue-500);
-  box-shadow: none;
+
+/* Estados Ativos Genéricos */
+.wb-node.wb-node--active {
+  z-index: 40;
+}
+/* Focus rings exceto pra diamond/text que têm shapes diferentes */
+.wb-node--post-it.wb-node--active,
+.wb-node--rounded-rect.wb-node--active,
+.wb-node--circle.wb-node--active {
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.4), var(--shadow-lg);
+  border-color: #2b6cb0;
 }
 
-.wb-node--text .wb-node-editor {
-  padding: 4px; /* Menos padding para não criar espaço invisível grande */
+.wb-node--diamond.wb-node--active .wb-node-shape-bg {
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.4), var(--shadow-lg);
+  border-color: #2b6cb0;
 }
+
+.wb-node--text.wb-node--active {
+  border: 1px dashed var(--blue-500);
+}
+
 
 /* TipTap Editor Styles */
 .wb-node-editor {
   flex: 1;
-  padding: 8px 12px 12px 12px;
+  padding: 12px;
   cursor: text;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+/* Aumenta o padding do círculo e do losango para o texto não vazar das bordas visuais */
+.wb-node--circle .wb-node-editor,
+.wb-node--diamond .wb-node-editor {
+  padding: 20%;
 }
 
 .ProseMirror {
@@ -271,26 +352,52 @@
   font-family: var(--font);
   font-size: var(--text-base);
   color: var(--black);
-  flex: 1;
+  width: 100%;
   line-height: 1.4;
   white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.ProseMirror p {
-  margin-bottom: 0.5em;
-}
-.ProseMirror p:last-child {
-  margin-bottom: 0;
+.ProseMirror p { margin-bottom: 0.5em; }
+.ProseMirror p:last-child { margin-bottom: 0; }
+.ProseMirror ul, .ProseMirror ol { padding-left: 1.2rem; margin-bottom: 0.5em; }
+.ProseMirror mark { background-color: #ffcc00; border-radius: 2px; padding: 0 2px; }
+
+
+/* =========================================================
+   SISTEMA DE ALÇAS DE REDIMENSIONAMENTO (RESIZING)
+========================================================= */
+
+.wb-resize-handles {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; /* Deixa passar clique para o container, ativado só nas bolinhas */
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.ProseMirror ul,
-.ProseMirror ol {
-  padding-left: 1.2rem;
-  margin-bottom: 0.5em;
+.wb-node:hover .wb-resize-handles,
+.wb-node--active .wb-resize-handles {
+  opacity: 1;
 }
 
-.ProseMirror mark {
-  background-color: #ffcc00;
-  border-radius: 2px;
-  padding: 0 2px;
+.wb-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--white);
+  border: 1.5px solid var(--blue-600);
+  border-radius: 50%;
+  pointer-events: auto; /* Reativa o pointer event só na bolinha */
 }
+
+/* Posições das bolinhas */
+.wb-resize-top-left { top: -5px; left: -5px; cursor: nwse-resize; }
+.wb-resize-top { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.wb-resize-top-right { top: -5px; right: -5px; cursor: nesw-resize; }
+.wb-resize-right { top: calc(50% - 5px); right: -5px; cursor: ew-resize; }
+.wb-resize-bottom-right { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.wb-resize-bottom { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.wb-resize-bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.wb-resize-left { top: calc(50% - 5px); left: -5px; cursor: ew-resize; }
+
