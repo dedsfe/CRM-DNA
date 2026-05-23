@@ -12,12 +12,11 @@ import {
   List, ListOrdered, 
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
-  Trash2, Undo, Redo, Download, ArrowRight
+  Trash2, Undo, Redo, Download
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import './Whiteboard.css';
 
-// --- Extensão Customizada para Tamanho de Fonte ---
 const FontSize = Extension.create({
   name: 'fontSize',
   addOptions() { return { types: ['textStyle'] } },
@@ -43,9 +42,7 @@ const FontSize = Extension.create({
     }
   },
 });
-// ---------------------------------------------------
 
-// Menu Global Topo
 const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) => {
   const disabled = !editor;
   const currentFontSize = editor?.getAttributes('textStyle')?.fontSize?.replace('px', '') || '15';
@@ -83,10 +80,10 @@ const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) =
   );
 };
 
-// Tijolo 1: O Bloco Renderizável
-const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, onConnectionDrop }) => {
+const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
+  const startGroupPositions = useRef({}); // Para mover vários juntos
 
   const [resizeDir, setResizeDir] = useState(null);
   const startSize = useRef({ w: 0, h: 0, x: 0, y: 0 });
@@ -94,9 +91,7 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
   const isTextMode = node.type === 'text';
 
   const editor = useEditor({
-    extensions: [
-      StarterKit, Underline, TextStyle, FontSize, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['heading', 'paragraph'] })
-    ],
+    extensions: [StarterKit, Underline, TextStyle, FontSize, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['heading', 'paragraph'] })],
     content: node.text || '<p></p>',
     onFocus: ({ editor }) => onEditorFocus(editor, node.id),
     onBlur: ({ editor }) => {
@@ -120,18 +115,37 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
     if (e.button !== 0) return;
     if (e.target.closest('.ProseMirror') || e.target.closest('.wb-resize-handle') || e.target.closest('.wb-connection-anchor')) return; 
     
+    // Se clicou num nó que não estava selecionado sem segurar Shift, limpa e seleciona só ele
+    if (!selectedNodeIds.includes(node.id) && !e.shiftKey) {
+      onEditorFocus(editor, node.id, false); // Seleciona apenas este
+    } else if (e.shiftKey) {
+      onEditorFocus(editor, node.id, true); // Adiciona à seleção
+    }
+
     saveHistory(); 
     setIsDragging(true);
     e.target.setPointerCapture(e.pointerId);
     startPos.current = { x: e.clientX, y: e.clientY };
+    
+    // Prepara as posições iniciais de TODOS os nós selecionados
+    const currentSelected = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id];
+    startGroupPositions.current = currentSelected; // passamos a usar essa ref local apenas para guardar quem se move
   };
 
   const handlePointerMove = (e) => {
     if (!isDragging) return;
     const dx = (e.clientX - startPos.current.x) / cameraZoom;
     const dy = (e.clientY - startPos.current.y) / cameraZoom;
+    
+    // Move este nó e todos os outros selecionados usando updateMultipleNodes
+    // A função pai deve calcular `x = startX + dx` para cada um, ou podemos apenas passar dx/dy?
+    // Passar dx/dy acumulado para o pai resolver!
+    updateMultipleNodes(startGroupPositions.current, dx, dy);
+    
+    // Reset startPos for continuous smooth delta updates? 
+    // No, better to pass dx/dy from the original click for precision, but `updateMultipleNodes` needs to know it's an offset.
+    // Let's use relative incremental updates
     startPos.current = { x: e.clientX, y: e.clientY };
-    updateNode(node.id, { x: node.x + dx, y: node.y + dy });
   };
 
   const handlePointerUp = (e) => {
@@ -183,6 +197,7 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
   // --- Conexão ---
   const handleConnectionPointerDown = (e) => {
     e.stopPropagation();
+    e.target.setPointerCapture(e.pointerId);
     onConnectionStart(node.id, e.clientX, e.clientY);
   };
 
@@ -197,14 +212,16 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onMouseUp={() => onConnectionDrop(node.id)}
-      onClick={() => { if (editor) onEditorFocus(editor, node.id); }}
+      onClick={(e) => { 
+        if (editor) onEditorFocus(editor, node.id, e.shiftKey); 
+      }}
+      data-id={node.id}
     >
       <div className="wb-node-shape-bg" />
       {isTextMode && <div className="wb-node-text-handle" />}
       <EditorContent editor={editor} className="wb-node-editor" />
 
-      {/* Anchors de Conexão (Top, Right, Bottom, Left) */}
+      {/* Anchors de Conexão */}
       <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} title="Puxar seta para cima" />
       <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a direita" />
       <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} title="Puxar seta para baixo" />
@@ -221,13 +238,18 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
 
 export default function Whiteboard() {
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
-  const [isPanning, setIsPanning] = useState(false);
-  const startPan = useRef({ x: 0, y: 0 });
+  
+  // Modos de interação do Canvas
+  const [interactionMode, setInteractionMode] = useState('none'); // 'panning', 'lassoing'
+  const startInteraction = useRef({ x: 0, y: 0 });
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
 
-  const [activeEditor, setActiveEditor] = useState(null);
-  const [activeNodeId, setActiveNodeId] = useState(null);
+  // Seleção Múltipla
+  const [activeEditor, setActiveEditor] = useState(null); // mantido apenas para o TipTap toolbar
+  const [selectedNodeIds, setSelectedNodeIds] = useState([]);
+  const [lassoRect, setLassoRect] = useState(null); // {x, y, w, h} nas coordenadas do canvas
 
-  // --- STATE E HISTÓRICO ---
+  // Estado Base
   const [nodes, setNodes] = useState([
     { id: '1', type: 'post-it', x: 200, y: 150, width: 260, height: 120, text: '<p><strong>Ideia Central</strong></p>' },
     { id: '2', type: 'rounded-rect', x: 600, y: 150, width: 200, height: 100, text: '<p style="text-align: center">Passo 1</p>' }
@@ -239,8 +261,9 @@ export default function Whiteboard() {
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
 
-  // --- STATE DE RASCUNHO DE CONEXÃO ---
-  const [draftConnection, setDraftConnection] = useState(null); // { fromId, mouseX, mouseY }
+  // Draft Connection e Drag-Drop da Paleta
+  const [draftConnection, setDraftConnection] = useState(null); // { fromId, mouseX, mouseY, anchorEl }
+  const [draggedShape, setDraggedShape] = useState(null); // { type, mouseX, mouseY }
 
   const saveHistory = useCallback((currentNodes = nodes, currentConns = connections) => {
     setPast(prev => [...prev, { nodes: currentNodes, conns: currentConns }].slice(-50));
@@ -267,8 +290,13 @@ export default function Whiteboard() {
     setConnections(next.conns);
   }, [past, future, nodes, connections]);
 
+  // Captura do Spacebar
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (e.code === 'Space' && !document.activeElement.closest('.ProseMirror')) {
+        setIsSpaceDown(true);
+      }
+      
       if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
         if (document.activeElement === document.body || document.activeElement === canvasRef.current) { e.preventDefault(); undo(); }
       }
@@ -276,76 +304,104 @@ export default function Whiteboard() {
         if (document.activeElement === document.body || document.activeElement === canvasRef.current) { e.preventDefault(); redo(); }
       }
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (!document.activeElement.closest('.ProseMirror') && activeNodeId) { e.preventDefault(); deleteActiveNode(); }
+        if (!document.activeElement.closest('.ProseMirror') && selectedNodeIds.length > 0) { e.preventDefault(); deleteSelectedNodes(); }
       }
     };
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') setIsSpaceDown(false);
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, activeNodeId, nodes, connections]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [undo, redo, selectedNodeIds, nodes, connections]);
 
-  const deleteActiveNode = () => {
-    if (!activeNodeId) return;
+  const deleteSelectedNodes = () => {
+    if (selectedNodeIds.length === 0) return;
     saveHistory();
-    setNodes(prev => prev.filter(n => n.id !== activeNodeId));
-    setConnections(prev => prev.filter(c => c.from !== activeNodeId && c.to !== activeNodeId));
-    setActiveNodeId(null);
+    setNodes(prev => prev.filter(n => !selectedNodeIds.includes(n.id)));
+    setConnections(prev => prev.filter(c => !selectedNodeIds.includes(c.from) && !selectedNodeIds.includes(c.to)));
+    setSelectedNodeIds([]);
     setActiveEditor(null);
   };
 
   const canvasRef = useRef(null);
 
-  // --- Lógica de Arrastar Canvas ou Conexão Rascunho ---
+  // --- Eventos Globais de Mouse (Canvas) ---
   const handlePointerDown = (e) => {
-    if (e.button !== 0 && e.button !== 1) return;
-    setIsPanning(true);
+    // Botão do Meio (1) ou Botão Direito (2) ou Space = PAN
+    if (e.button === 1 || e.button === 2 || isSpaceDown) {
+      setInteractionMode('panning');
+    } 
+    // Botão Esquerdo = LASSO
+    else if (e.button === 0) {
+      setInteractionMode('lassoing');
+      setSelectedNodeIds([]); // Limpa a seleção ao clicar no fundo
+      setActiveEditor(null);
+      setLassoRect({ 
+        startX: (e.clientX - camera.x) / camera.zoom, 
+        startY: (e.clientY - camera.y) / camera.zoom,
+        x: (e.clientX - camera.x) / camera.zoom,
+        y: (e.clientY - camera.y) / camera.zoom,
+        w: 0, h: 0 
+      });
+    }
     e.target.setPointerCapture(e.pointerId);
-    startPan.current = { x: e.clientX, y: e.clientY };
-    setActiveEditor(null);
-    setActiveNodeId(null);
+    startInteraction.current = { x: e.clientX, y: e.clientY };
   };
 
   const handlePointerMove = (e) => {
-    if (draftConnection) {
-      setDraftConnection(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
-      return;
+    if (interactionMode === 'panning') {
+      const dx = e.clientX - startInteraction.current.x;
+      const dy = e.clientY - startInteraction.current.y;
+      startInteraction.current = { x: e.clientX, y: e.clientY };
+      setCamera((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+    } 
+    else if (interactionMode === 'lassoing') {
+      const currentX = (e.clientX - camera.x) / camera.zoom;
+      const currentY = (e.clientY - camera.y) / camera.zoom;
+      
+      const newLasso = {
+        ...lassoRect,
+        x: Math.min(lassoRect.startX, currentX),
+        y: Math.min(lassoRect.startY, currentY),
+        w: Math.abs(currentX - lassoRect.startX),
+        h: Math.abs(currentY - lassoRect.startY)
+      };
+      setLassoRect(newLasso);
+
+      // Calcular interseção e atualizar seleção
+      const newSelectedIds = nodes.filter(n => {
+        return (
+          n.x < newLasso.x + newLasso.w &&
+          n.x + (n.width || 260) > newLasso.x &&
+          n.y < newLasso.y + newLasso.h &&
+          n.y + (n.height || 120) > newLasso.y
+        );
+      }).map(n => n.id);
+      setSelectedNodeIds(newSelectedIds);
     }
-    if (!isPanning) return;
-    const dx = e.clientX - startPan.current.x;
-    const dy = e.clientY - startPan.current.y;
-    startPan.current = { x: e.clientX, y: e.clientY };
-    setCamera((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
   };
 
   const handlePointerUp = (e) => {
-    if (draftConnection) {
-      setDraftConnection(null); // Abort se soltou no vazio
-    }
-    if (isPanning) {
-      setIsPanning(false);
+    if (interactionMode !== 'none') {
+      setInteractionMode('none');
+      setLassoRect(null);
       e.target.releasePointerCapture(e.pointerId);
     }
   };
 
-  // --- Funções de Conexão (Setas) ---
-  const handleConnectionStart = (fromId, clientX, clientY) => {
-    setDraftConnection({ fromId, mouseX: clientX, mouseY: clientY });
-  };
-
-  const handleConnectionDrop = (toId) => {
-    if (draftConnection && draftConnection.fromId !== toId) {
-      saveHistory();
-      setConnections(prev => [...prev, { id: Date.now().toString(), from: draftConnection.fromId, to: toId }]);
-      setDraftConnection(null);
-    }
-  };
-
+  // --- Zoom ---
   const handleWheel = useCallback((e) => {
+    if (e.ctrlKey || e.metaKey) return; // Zoom normal do navegador ignorado se quisermos, mas aqui usamos wheel.
     e.preventDefault();
     const zoomSensitivity = 0.001;
     const delta = -e.deltaY * zoomSensitivity;
     setCamera((prev) => {
       let newZoom = prev.zoom + delta;
-      newZoom = Math.max(0.2, Math.min(newZoom, 3));
+      newZoom = Math.max(0.1, Math.min(newZoom, 5));
       return { ...prev, zoom: newZoom };
     });
   }, []);
@@ -358,38 +414,119 @@ export default function Whiteboard() {
     }
   }, [handleWheel]);
 
-  const addNode = (type) => {
+  // --- Nós e Conexões ---
+  const addNodeAtPosition = (type, clientX, clientY) => {
     saveHistory();
     const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 } };
     const size = defaultSizes[type] || { w: 200, h: 100 };
+    
+    // Coordenada do Mouse convertida para Coordenada do Mundo (Canvas)
+    const worldX = (clientX - camera.x) / camera.zoom - size.w / 2;
+    const worldY = (clientY - camera.y) / camera.zoom - size.h / 2;
+
     const newNode = {
       id: Date.now().toString(),
       type: type,
-      x: -camera.x / camera.zoom + window.innerWidth / 2 - (size.w / 2),
-      y: -camera.y / camera.zoom + window.innerHeight / 2 - (size.h / 2),
+      x: worldX, y: worldY,
       width: size.w, height: size.h,
       text: '<p style="text-align: center"></p>'
     };
     setNodes((prev) => [...prev, newNode]);
-    setTimeout(() => setActiveNodeId(newNode.id), 100);
+    setSelectedNodeIds([newNode.id]);
   };
 
   const updateNode = (id, newProps) => setNodes((prev) => prev.map(n => n.id === id ? { ...n, ...newProps } : n));
 
-  // --- Exportar para PNG ---
+  const updateMultipleNodes = (idsToMove, dx, dy) => {
+    setNodes(prev => prev.map(n => {
+      if (idsToMove.includes(n.id)) {
+        return { ...n, x: n.x + dx, y: n.y + dy };
+      }
+      return n;
+    }));
+  };
+
+  const handleEditorFocus = (editor, id, isShift) => {
+    setActiveEditor(editor);
+    if (isShift) {
+      setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else {
+      setSelectedNodeIds([id]);
+    }
+  };
+
+  // --- Lógica Rastro da Seta ---
+  const handleConnectionStart = (fromId, clientX, clientY) => {
+    setDraftConnection({ fromId, mouseX: clientX, mouseY: clientY });
+  };
+  
+  // Como o capture está na âncora, usamos um event listener global de window para arrastar e soltar
+  useEffect(() => {
+    if (!draftConnection) return;
+    
+    const onMove = (e) => {
+      setDraftConnection(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
+    };
+    const onUp = (e) => {
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
+      
+      if (targetNodeEl) {
+        const toId = targetNodeEl.getAttribute('data-id');
+        if (toId && toId !== draftConnection.fromId) {
+          saveHistory();
+          setConnections(prev => [...prev, { id: Date.now().toString(), from: draftConnection.fromId, to: toId }]);
+        }
+      }
+      setDraftConnection(null);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+  }, [draftConnection, saveHistory]);
+
+
+  // --- Lógica Drag-and-Drop da Paleta ---
+  useEffect(() => {
+    if (!draggedShape) return;
+    
+    const onMove = (e) => {
+      setDraggedShape(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
+    };
+    const onUp = (e) => {
+      addNodeAtPosition(draggedShape.type, e.clientX, e.clientY);
+      setDraggedShape(null);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+  }, [draggedShape, camera]);
+
+
+  // --- Exportar PNG Corrigido ---
   const handleExport = () => {
     if (canvasRef.current) {
-      const exportElement = canvasRef.current.querySelector('.whiteboard-layer');
-      toPng(exportElement, { backgroundColor: '#f8fafc' }).then((dataUrl) => {
+      // Exportamos o contêiner inteiro em vez de a layer de tamanho zero
+      toPng(canvasRef.current, { backgroundColor: '#f8fafc' }).then((dataUrl) => {
         const link = document.createElement('a');
         link.download = 'crm-dna-whiteboard.png';
         link.href = dataUrl;
         link.click();
+      }).catch(err => {
+        console.error('Erro na exportação:', err);
+        alert('Erro ao exportar a imagem. Tente reduzir o zoom ou o número de elementos visíveis.');
       });
     }
   };
 
-  // --- Renderização de Conexões (SVG) ---
   const renderConnections = () => {
     return connections.map(conn => {
       const fromNode = nodes.find(n => n.id === conn.from);
@@ -408,7 +545,7 @@ export default function Whiteboard() {
       return (
         <g key={conn.id}>
           <path d={`M ${fromX} ${fromY} C ${cp1x} ${fromY}, ${cp2x} ${toY}, ${toX} ${toY}`} className="wb-connection-path" />
-          <polygon points="0,-4 8,0 0,4" transform={`translate(${toX}, ${toY}) rotate(${Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI})`} fill="#64748b" />
+          <polygon points="0,-5 10,0 0,5" transform={`translate(${toX}, ${toY}) rotate(${Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI})`} fill="#64748b" />
         </g>
       );
     });
@@ -422,7 +559,6 @@ export default function Whiteboard() {
     const fromX = fromNode.x + (fromNode.width || 260) / 2;
     const fromY = fromNode.y + (fromNode.height || 120) / 2;
     
-    // Converter mouse (tela) para coordenadas do canvas interno (desfazendo pan e zoom)
     const toX = (draftConnection.mouseX - camera.x) / camera.zoom;
     const toY = (draftConnection.mouseY - camera.y) / camera.zoom;
 
@@ -434,12 +570,11 @@ export default function Whiteboard() {
   };
 
   return (
-    <div className="whiteboard-container">
-      {/* Cabeçalho */}
+    <div className={`whiteboard-container ${isSpaceDown ? 'whiteboard-container--space' : ''}`}>
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
         <GlobalMenuBar 
-          editor={activeEditor} onDelete={deleteActiveNode}
+          editor={activeEditor} onDelete={deleteSelectedNodes}
           canUndo={past.length > 0} canRedo={future.length > 0} onUndo={undo} onRedo={redo}
         />
         <div className="whiteboard-actions">
@@ -447,22 +582,22 @@ export default function Whiteboard() {
         </div>
       </div>
 
-      {/* Paleta Esquerda */}
       <div className="wb-left-palette">
-        <button onClick={() => addNode('text')} title="Texto Solto"><Type size={20} /></button>
-        <button onClick={() => addNode('post-it')} title="Nota (Post-it)"><StickyNote size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
         <div className="wb-palette-divider" />
-        <button onClick={() => addNode('rounded-rect')} title="Retângulo"><Square size={20} /></button>
-        <button onClick={() => addNode('circle')} title="Círculo"><Circle size={20} /></button>
-        <button onClick={() => addNode('diamond')} title="Losango (Decisão)"><Diamond size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
       </div>
 
       <div 
-        className={`whiteboard-canvas ${isPanning ? 'whiteboard-canvas--panning' : ''}`}
+        className={`whiteboard-canvas ${interactionMode === 'panning' ? 'whiteboard-canvas--panning' : ''}`}
         ref={canvasRef}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onContextMenu={(e) => e.preventDefault()} // Impede menu de contexto ao arrastar com botão direito
         tabIndex={0} 
         style={{ '--pan-x': camera.x, '--pan-y': camera.y, '--zoom': camera.zoom }}
       >
@@ -470,7 +605,6 @@ export default function Whiteboard() {
           className="whiteboard-layer"
           style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`, transformOrigin: '0 0' }}
         >
-          {/* Camada SVG de Conexões */}
           <svg className="wb-connections-svg" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
             {renderConnections()}
             {renderDraftConnection()}
@@ -478,15 +612,51 @@ export default function Whiteboard() {
 
           {nodes.map(node => (
             <DraggableNode 
-              key={node.id} node={node} updateNode={updateNode} 
-              isCameraMoving={isPanning || !!draftConnection} cameraZoom={camera.zoom}
-              onEditorFocus={(editor, id) => { setActiveEditor(editor); setActiveNodeId(id); }}
-              isActiveNode={activeNodeId === node.id} saveHistory={() => saveHistory(nodes, connections)}
-              onConnectionStart={handleConnectionStart} onConnectionDrop={handleConnectionDrop}
+              key={node.id} node={node} 
+              updateNode={updateNode} 
+              updateMultipleNodes={updateMultipleNodes}
+              selectedNodeIds={selectedNodeIds}
+              isCameraMoving={interactionMode === 'panning' || !!draftConnection || !!draggedShape} 
+              cameraZoom={camera.zoom}
+              onEditorFocus={handleEditorFocus}
+              isActiveNode={selectedNodeIds.includes(node.id)} 
+              saveHistory={() => saveHistory(nodes, connections)}
+              onConnectionStart={handleConnectionStart}
             />
           ))}
+
+          {/* Renderiza a caixa do Lasso Tool */}
+          {lassoRect && (
+            <div 
+              className="wb-lasso-rect" 
+              style={{
+                left: lassoRect.x, top: lassoRect.y,
+                width: lassoRect.w, height: lassoRect.h
+              }} 
+            />
+          )}
         </div>
       </div>
+
+      {/* Fantasma do bloco sendo arrastado da paleta */}
+      {draggedShape && (
+        <div 
+          className={`wb-node wb-node--${draggedShape.type} wb-drag-ghost`}
+          style={{
+            position: 'fixed',
+            pointerEvents: 'none',
+            left: draggedShape.mouseX,
+            top: draggedShape.mouseY,
+            transform: 'translate(-50%, -50%)',
+            width: draggedShape.type === 'text' ? 200 : 160,
+            height: draggedShape.type === 'text' ? 50 : 100,
+            opacity: 0.7,
+            zIndex: 9999
+          }}
+        >
+          <div className="wb-node-shape-bg" />
+        </div>
+      )}
     </div>
   );
 }
