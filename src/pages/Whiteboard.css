@@ -5,7 +5,7 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  overflow: hidden; /* Oculta a barra de rolagem nativa */
+  overflow: hidden;
   position: relative;
   background-color: var(--neutral-50);
 }
@@ -20,7 +20,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--s-16) var(--s-24);
-  pointer-events: none; /* Deixa clicar "através" do header onde estiver vazio */
+  pointer-events: none;
 }
 
 .whiteboard-header h2 {
@@ -41,7 +41,6 @@
   pointer-events: auto;
 }
 
-/* O Fundo Infinito com Pontinhos */
 .whiteboard-canvas {
   flex: 1;
   width: 100%;
@@ -49,11 +48,8 @@
   position: relative;
   overflow: hidden;
   cursor: grab;
-  touch-action: none; /* Previne scroll de touch nativo no mobile */
-
-  /* A mágica dos pontinhos que acompanham o pan */
+  touch-action: none;
   background-image: radial-gradient(var(--neutral-400) 1px, transparent 1px);
-  /* O espaçamento dos pontinhos multiplica pelo zoom para crescerem e diminuirem */
   background-size: calc(20px * var(--zoom)) calc(20px * var(--zoom));
   background-position: calc(var(--pan-x) * 1px) calc(var(--pan-y) * 1px);
 }
@@ -68,7 +64,7 @@
   left: 0;
   width: 0;
   height: 0;
-  will-change: transform; /* Otimização de performance para pan/zoom suave */
+  will-change: transform;
 }
 
 /* O Tijolo: Post-it / Bloco */
@@ -76,38 +72,101 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 200px;
-  min-height: 100px;
-  background: #FFF3B0; /* Cor amarela de Post-it clássico */
+  width: 240px;
+  min-height: 120px;
+  background: #FFF3B0;
   border: 1px solid rgba(0,0,0,0.1);
-  border-radius: var(--r-xs);
+  border-radius: var(--r-sm);
   box-shadow: var(--shadow-md);
-  cursor: grab;
-  padding: var(--s-12);
+  cursor: grab; /* Indica que a borda pode ser arrastada */
   display: flex;
   flex-direction: column;
   transition: box-shadow 0.2s ease;
 }
 
+/* Área discreta no topo para facilitar o arrasto se o post-it estiver cheio de texto */
+.wb-node-drag-handle {
+  height: 12px;
+  width: 100%;
+  background: rgba(0,0,0,0.03);
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
 .wb-node--dragging {
   cursor: grabbing;
   box-shadow: var(--shadow-xl);
-  z-index: 50; /* Traz para a frente ao arrastar */
+  z-index: 50;
 }
 
 .wb-node--no-pointer {
-  pointer-events: none; /* Desabilita interações no bloco enquanto dá pan na tela */
+  pointer-events: none;
 }
 
-.wb-node-text {
+/* TipTap Editor Styles */
+.wb-node-editor {
   flex: 1;
-  width: 100%;
-  background: transparent;
-  border: none;
+  padding: 8px 12px 12px 12px;
+  cursor: text;
+  display: flex;
+  flex-direction: column;
+}
+
+.ProseMirror {
   outline: none;
-  resize: none;
   font-family: var(--font);
   font-size: var(--text-base);
   color: var(--black);
-  cursor: text;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.ProseMirror p {
+  margin-bottom: 0.5em;
+}
+.ProseMirror p:last-child {
+  margin-bottom: 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.2rem;
+  margin-bottom: 0.5em;
+}
+
+/* TipTap Bubble Menu (Toolbar flutuante) */
+.wb-bubble-menu {
+  display: flex;
+  background: var(--neutral-900);
+  padding: 4px;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  gap: 2px;
+}
+
+.wb-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-200);
+  transition: background 0.15s, color 0.15s;
+}
+
+.wb-toolbar-btn:hover {
+  background: var(--neutral-600);
+  color: var(--white);
+}
+
+.wb-toolbar-btn.active {
+  background: var(--blue-500);
+  color: var(--white);
+}
+
+.wb-toolbar-divider {
+  width: 1px;
+  background: var(--neutral-600);
+  margin: 4px;
 }

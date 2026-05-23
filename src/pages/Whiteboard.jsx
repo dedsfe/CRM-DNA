@@ -1,14 +1,93 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline';
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered } from 'lucide-react';
 import './Whiteboard.css';
 
-// Tijolo 1: O Bloco (Post-it)
+// Componente do Menu Fixo de Formatação (aparece quando focado)
+const MenuBar = ({ editor }) => {
+  if (!editor) return null;
+
+  return (
+    <div className="wb-toolbar">
+      <button
+        onClick={() => editor.chain().focus().toggleBold().run()}
+        className={`wb-toolbar-btn ${editor.isActive('bold') ? 'active' : ''}`}
+        title="Negrito"
+      >
+        <Bold size={16} />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleItalic().run()}
+        className={`wb-toolbar-btn ${editor.isActive('italic') ? 'active' : ''}`}
+        title="Itálico"
+      >
+        <Italic size={16} />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleUnderline().run()}
+        className={`wb-toolbar-btn ${editor.isActive('underline') ? 'active' : ''}`}
+        title="Sublinhado"
+      >
+        <UnderlineIcon size={16} />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleStrike().run()}
+        className={`wb-toolbar-btn ${editor.isActive('strike') ? 'active' : ''}`}
+        title="Tachado"
+      >
+        <Strikethrough size={16} />
+      </button>
+      <div className="wb-toolbar-divider" />
+      <button
+        onClick={() => editor.chain().focus().toggleBulletList().run()}
+        className={`wb-toolbar-btn ${editor.isActive('bulletList') ? 'active' : ''}`}
+        title="Lista"
+      >
+        <List size={16} />
+      </button>
+      <button
+        onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        className={`wb-toolbar-btn ${editor.isActive('orderedList') ? 'active' : ''}`}
+        title="Lista Numerada"
+      >
+        <ListOrdered size={16} />
+      </button>
+    </div>
+  );
+};
+
+// Tijolo 1: O Bloco (Post-it) com TipTap
 const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
 
+  // Configuração do Editor Rich Text
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Underline,
+    ],
+    content: node.text || '<p></p>',
+    onFocus: () => setIsFocused(true),
+    onBlur: ({ editor }) => {
+      // Pequeno delay para permitir clique nos botões da toolbar antes de esconder
+      setTimeout(() => setIsFocused(false), 200);
+      updateNode(node.id, { text: editor.getHTML() });
+    }
+  });
+
   const handlePointerDown = (e) => {
-    e.stopPropagation(); // Previne que o canvas receba o clique
-    if (e.button !== 0) return; // Apenas clique esquerdo
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    
+    // Se estiver clicando diretamente no texto para editar/selecionar, não inicia o arrasto
+    if (e.target.closest('.ProseMirror') || e.target.closest('.wb-toolbar')) {
+      return; 
+    }
+
     setIsDragging(true);
     e.target.setPointerCapture(e.pointerId);
     startPos.current = { x: e.clientX, y: e.clientY };
@@ -20,9 +99,6 @@ const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
     const dy = e.clientY - startPos.current.y;
     startPos.current = { x: e.clientX, y: e.clientY };
 
-    // Atualiza a posição do nó (ajustando pelo zoom da câmera se necessário, mas aqui a div já estará escalada pelo canvas, 
-    // ou mantemos o nó solto do zoom para não distorcer o arrasto. 
-    // Em um canvas absoluto com zoom em CSS transform, o dy e dx devem ser divididos pelo zoom)
     updateNode(node.id, {
       x: node.x + dx,
       y: node.y + dy
@@ -30,8 +106,10 @@ const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
   };
 
   const handlePointerUp = (e) => {
-    setIsDragging(false);
-    e.target.releasePointerCapture(e.pointerId);
+    if (isDragging) {
+      setIsDragging(false);
+      e.target.releasePointerCapture(e.pointerId);
+    }
   };
 
   return (
@@ -44,13 +122,9 @@ const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
     >
-      <textarea
-        className="wb-node-text"
-        defaultValue={node.text}
-        onPointerDown={(e) => e.stopPropagation()} // Permite clicar no texto sem arrastar imediatamente
-        onBlur={(e) => updateNode(node.id, { text: e.target.value })}
-        placeholder="Escreva algo..."
-      />
+      <div className="wb-node-drag-handle" title="Arraste por aqui ou pelas bordas" />
+      {editor && isFocused && <MenuBar editor={editor} />}
+      <EditorContent editor={editor} className="wb-node-editor" />
     </div>
   );
 };
@@ -63,14 +137,13 @@ export default function Whiteboard() {
 
   // Tijolo 1: Estado dos nós
   const [nodes, setNodes] = useState([
-    { id: '1', x: 100, y: 100, text: 'Meu primeiro bloco!' }
+    { id: '1', x: 100, y: 100, text: '<p>Meu primeiro bloco <strong>rico</strong>!</p>' }
   ]);
 
   const canvasRef = useRef(null);
 
   // Manipulação de Arrastar o Canvas (Pan)
   const handlePointerDown = (e) => {
-    // Middle click ou left click no fundo
     if (e.button !== 0 && e.button !== 1) return;
     setIsPanning(true);
     e.target.setPointerCapture(e.pointerId);
@@ -86,8 +159,10 @@ export default function Whiteboard() {
   };
 
   const handlePointerUp = (e) => {
-    setIsPanning(false);
-    e.target.releasePointerCapture(e.pointerId);
+    if (isPanning) {
+      setIsPanning(false);
+      e.target.releasePointerCapture(e.pointerId);
+    }
   };
 
   // Manipulação do Zoom (Wheel)
@@ -97,16 +172,11 @@ export default function Whiteboard() {
     const delta = -e.deltaY * zoomSensitivity;
     setCamera((prev) => {
       let newZoom = prev.zoom + delta;
-      // Limites de zoom
       newZoom = Math.max(0.2, Math.min(newZoom, 3));
-      
-      // Ajuste para dar zoom onde o mouse está (Complexo para Tijolo 0, faremos zoom no centro por agora)
-      // Para manter simples, só ajustamos a escala.
       return { ...prev, zoom: newZoom };
     });
   }, []);
 
-  // Anexar evento de wheel não-passivo
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas) {
@@ -118,10 +188,9 @@ export default function Whiteboard() {
   const addNode = () => {
     const newNode = {
       id: Date.now().toString(),
-      // Cria no centro da tela (ignorando o pan por agora para simplicidade)
       x: -camera.x / camera.zoom + window.innerWidth / 2 - 100,
       y: -camera.y / camera.zoom + window.innerHeight / 2 - 50,
-      text: ''
+      text: '<p></p>'
     };
     setNodes((prev) => [...prev, newNode]);
   };
@@ -132,7 +201,6 @@ export default function Whiteboard() {
 
   return (
     <div className="whiteboard-container">
-      {/* Topbar do Whiteboard */}
       <div className="whiteboard-header">
         <h2>Canvas</h2>
         <div className="whiteboard-actions">
@@ -145,7 +213,6 @@ export default function Whiteboard() {
         </div>
       </div>
 
-      {/* A "Lente" da Câmera (onde o CSS de pan e zoom acontece) */}
       <div 
         className={`whiteboard-canvas ${isPanning ? 'whiteboard-canvas--panning' : ''}`}
         ref={canvasRef}
@@ -158,7 +225,6 @@ export default function Whiteboard() {
           '--zoom': camera.zoom
         }}
       >
-        {/* Camada que contém todos os nós e escala junto com o pan/zoom */}
         <div 
           className="whiteboard-layer"
           style={{
