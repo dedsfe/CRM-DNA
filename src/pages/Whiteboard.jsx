@@ -201,18 +201,14 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
       onClick={() => { if (editor) onEditorFocus(editor, node.id); }}
     >
       <div className="wb-node-shape-bg" />
-      {!isTextMode && <div className="wb-node-drag-handle" title="Arraste por aqui" />}
       {isTextMode && <div className="wb-node-text-handle" />}
       <EditorContent editor={editor} className="wb-node-editor" />
 
-      {/* Anchor de Conexão (Para puxar seta) */}
-      <div 
-        className="wb-connection-anchor" 
-        onPointerDown={handleConnectionPointerDown}
-        title="Arraste para conectar com outro bloco"
-      >
-        <ArrowRight size={12} />
-      </div>
+      {/* Anchors de Conexão (Top, Right, Bottom, Left) */}
+      <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} title="Puxar seta para cima" />
+      <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a direita" />
+      <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} title="Puxar seta para baixo" />
+      <div className="wb-connection-anchor wb-anchor-left" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a esquerda" />
 
       <div className="wb-resize-handles">
         {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
