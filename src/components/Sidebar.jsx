@@ -10,6 +10,7 @@ const NAV = [
   { to: '/tasks',        label: 'Tarefas',        emoji: '✅' },
   { to: '/meetings',     label: 'Reuniões',       emoji: '🗓️' },
   { to: '/finance',      label: 'Financeiro',     short: 'Finanças', emoji: '💸' },
+  { to: '/whiteboard',   label: 'Quadro Branco',  short: 'Canvas',   emoji: '🎨' },
 ];
 
 const UTILITY_NAV = [
