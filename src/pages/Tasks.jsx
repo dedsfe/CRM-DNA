@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useDeferredValue, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions } from '../lib/api';
@@ -7,7 +7,7 @@ import { useUndo } from '../lib/undo';
 import Modal from '../components/Modal';
 import MentionTextarea from '../components/MentionTextarea';
 import CommentThread from '../components/CommentThread';
-import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare, ArrowRight, ChevronDown } from 'lucide-react';
+import { Plus, CheckCircle2, Circle, Trash2, X, AlertTriangle, MessageSquare, ArrowRight, ChevronDown, Search } from 'lucide-react';
 import { useIsMobile } from '../lib/useIsMobile';
 import './Tasks.css';
 
@@ -51,6 +51,8 @@ const priorityConfig = {
 const userEmoji = (u) => (u === 'André' ? '🧑' : '👩');
 const toggleInArray = (arr, val) =>
   arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+const includesQuery = (value, query) =>
+  String(value ?? '').toLowerCase().includes(query);
 
 /* ─── Campos compartilhados do formulário de tarefa ─── */
 function TaskFields({ form, set, clients }) {
@@ -346,11 +348,12 @@ export default function Tasks() {
   const [tasks, setTasks]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
+  const [search, setSearch]     = useState('');
   const [filterUser, setFilter] = useState('All');
   const [filterStage, setStage] = useState('All');
   const [filterClient, setFilterClient] = useState('All');
   const [filterDate, setFilterDate] = useState('All');
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useState(true);
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
   const [commentTarget, setCommentTarget] = useState(null);
@@ -359,9 +362,28 @@ export default function Tasks() {
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
   const [searchParams, setSearchParams] = useSearchParams();
+  const deferredSearch = useDeferredValue(search);
+  const normalizedSearch = deferredSearch.trim().toLowerCase();
+  const taskIdFromQuery = searchParams.get('task');
+  const taskFromQuery = taskIdFromQuery
+    ? tasks.find((task) => task.id === taskIdFromQuery) ?? null
+    : null;
+  const editingTask = editing ?? taskFromQuery;
 
   const openComments = (task) =>
     setCommentTarget({ type: 'task', id: task.id, title: task.title });
+  const openEditing = (task) => {
+    if (taskIdFromQuery) {
+      setSearchParams({}, { replace: true });
+    }
+    setEditing(task);
+  };
+  const closeEditing = () => {
+    setEditing(null);
+    if (taskIdFromQuery) {
+      setSearchParams({}, { replace: true });
+    }
+  };
 
   useEffect(() => {
     Promise.all([fetchClients(), fetchTasks()])
@@ -376,17 +398,6 @@ export default function Tasks() {
     window.addEventListener('itemRestored', onRestore);
     return () => window.removeEventListener('itemRestored', onRestore);
   }, []);
-
-  /* Abre a tarefa vinda de um link da caixa de entrada (?task=ID) */
-  useEffect(() => {
-    const id = searchParams.get('task');
-    if (!id || tasks.length === 0) return;
-    const t = tasks.find(x => x.id === id);
-    if (t) {
-      setEditing(t);
-      setSearchParams({}, { replace: true });
-    }
-  }, [tasks, searchParams, setSearchParams]);
 
   const add = async (task) => {
     try {
@@ -463,13 +474,50 @@ export default function Tasks() {
     });
   }
 
+  if (normalizedSearch) {
+    byFilter = byFilter.filter((task) => {
+      const client = clients.find((item) => item.id === task.clientId);
+      return [
+        task.title,
+        task.description,
+        task.dueDate,
+        client?.name,
+        ...task.assignees,
+      ].some((value) => includesQuery(value, normalizedSearch));
+    });
+  }
+
   const pendingTasks = byFilter.filter(t => t.status === 'pending')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const inProgressTasks = byFilter.filter(t => t.status === 'in_progress')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const completedTasks = byFilter.filter(t => t.status === 'completed')
+  const completedTasksAll = byFilter.filter(t => t.status === 'completed')
     .sort((a, b) => b.dueDate.localeCompare(a.dueDate));
+  const completedTasks = showDone ? completedTasksAll : [];
   const overdue = [...pendingTasks, ...inProgressTasks].filter(t => isOverdue(t.dueDate));
+  const hiddenCompletedCount = showDone ? 0 : completedTasksAll.length;
+  const visibleTaskCount = pendingTasks.length + inProgressTasks.length + completedTasks.length;
+  const activeFilterCount = [
+    normalizedSearch !== '',
+    filterUser !== 'All',
+    filterStage !== 'All',
+    filterClient !== 'All',
+    filterDate !== 'All',
+    !showDone,
+  ].filter(Boolean).length;
+  const hasActiveFilters = activeFilterCount > 0;
+  const taskSummary = hasActiveFilters
+    ? `${visibleTaskCount} tarefa${visibleTaskCount === 1 ? '' : 's'} visíveis${activeFilterCount > 0 ? ` • ${activeFilterCount} filtro${activeFilterCount === 1 ? '' : 's'} ativo${activeFilterCount === 1 ? '' : 's'}` : ''}`
+    : 'Visão global de todas as entregas';
+  const hasVisibleTasks = visibleTaskCount > 0;
+  const resetFilters = () => {
+    setSearch('');
+    setFilter('All');
+    setStage('All');
+    setFilterClient('All');
+    setFilterDate('All');
+    setShowDone(true);
+  };
 
   return (
     <div className="tp">
@@ -478,7 +526,7 @@ export default function Tasks() {
       <div className="tp-header">
         <div>
           <h1 className="tp-title">✅ Tarefas</h1>
-          <p className="tp-sub">Visão global de todas as entregas</p>
+          <p className="tp-sub">{taskSummary}</p>
         </div>
       </div>
 
@@ -488,6 +536,42 @@ export default function Tasks() {
         <div className="db-loading">Carregando tarefas…</div>
       ) : (
       <>
+      <div className="task-toolbar">
+        <div className="search-wrap task-search-wrap">
+          <Search size={15} className="search-ico" />
+          <input
+            className="search-input task-search-input"
+            placeholder="Buscar tarefa, cliente ou responsável…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button
+              className="task-search-clear"
+              onClick={() => setSearch('')}
+              aria-label="Limpar busca"
+              title="Limpar busca"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="task-toolbar-actions">
+          <button
+            className={`filter-pill ${showDone ? 'filter-pill--active' : ''}`}
+            onClick={() => setShowDone((current) => !current)}
+          >
+            ✅ {showDone ? 'Ocultar concluídas' : `Mostrar concluídas${completedTasksAll.length > 0 ? ` (${completedTasksAll.length})` : ''}`}
+          </button>
+          {hasActiveFilters && (
+            <button className="btn btn-secondary btn-sm" onClick={resetFilters}>
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* ── SUMMARY BAR ── */}
       <div className="summary-bar">
         <div className="summary-item summary-item--orange">
@@ -503,7 +587,7 @@ export default function Tasks() {
           <span className="summary-l">⚠️ Atrasadas</span>
         </div>
         <div className="summary-item summary-item--green">
-          <span className="summary-n">{completedTasks.length}</span>
+          <span className="summary-n">{completedTasksAll.length}</span>
           <span className="summary-l">✅ Concluídas</span>
         </div>
       </div>
@@ -569,14 +653,54 @@ export default function Tasks() {
       </div>
 
       {/* ── KANBAN COLUMNS ── */}
-      <div className="kanban kanban--three">
+      {!hasVisibleTasks ? (
+        <div className="tasks-empty-state">
+          <span className="tasks-empty-state-icon">{hiddenCompletedCount > 0 ? '✅' : hasActiveFilters ? '🔎' : '🗂️'}</span>
+          <h2 className="tasks-empty-state-title">
+            {hiddenCompletedCount > 0
+              ? 'Só restaram tarefas concluídas'
+              : hasActiveFilters
+                ? 'Nenhuma tarefa combina com os filtros'
+                : 'Nenhuma tarefa cadastrada ainda'}
+          </h2>
+          <p className="tasks-empty-state-text">
+            {hiddenCompletedCount > 0
+              ? `Existem ${hiddenCompletedCount} tarefa${hiddenCompletedCount === 1 ? '' : 's'} concluída${hiddenCompletedCount === 1 ? '' : 's'} escondida${hiddenCompletedCount === 1 ? '' : 's'} pelo modo de foco.`
+              : hasActiveFilters
+                ? 'Ajuste a busca, revise os filtros ou volte a mostrar concluídas para recuperar contexto.'
+                : 'Crie a primeira tarefa para começar a organizar as entregas do time.'}
+          </p>
+          <div className="tasks-empty-state-actions">
+            {hiddenCompletedCount > 0 && (
+              <button className="btn btn-primary btn-sm" onClick={() => setShowDone(true)}>
+                Mostrar concluídas
+              </button>
+            )}
+            {hasActiveFilters && (
+              <button className="btn btn-secondary btn-sm" onClick={resetFilters}>
+                Limpar filtros
+              </button>
+            )}
+            {!hasActiveFilters && hiddenCompletedCount === 0 && (
+              <button
+                className="btn btn-primary btn-sm"
+                onClick={() => setAddingStage('pending')}
+                disabled={clients.length === 0}
+              >
+                <Plus size={14} /> Nova tarefa
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+      <div className={`kanban ${showDone ? 'kanban--three' : ''}`}>
         <KanbanColumn
           variant="blue" emoji="⏳" stageLabel="Tarefas" title="A Fazer"
           status="pending" tasks={pendingTasks} clients={clients}
           adding={addingStage === 'pending'}
           onStartAdd={() => setAddingStage('pending')}
           onCancelAdd={() => setAddingStage(null)}
-          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={openEditing}
           onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
           isMobile={isMobile}
@@ -588,34 +712,37 @@ export default function Tasks() {
           adding={addingStage === 'in_progress'}
           onStartAdd={() => setAddingStage('in_progress')}
           onCancelAdd={() => setAddingStage(null)}
-          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
+          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={openEditing}
           onComment={openComments} onAdvance={advance}
           draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
           wipLimit={WIP_LIMIT}
           isMobile={isMobile}
         />
 
-        <KanbanColumn
-          variant="green" emoji="✅" stageLabel="Tarefas" title="Feito"
-          status="completed" tasks={completedTasks} clients={clients}
-          adding={false}
-          onStartAdd={null}
-          onCancelAdd={() => setAddingStage(null)}
-          onAdd={add} onToggle={toggle} onDelete={remove} onEdit={setEditing}
-          onComment={openComments} onAdvance={advance}
-          draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
-          isMobile={isMobile}
-        />
+        {showDone && (
+          <KanbanColumn
+            variant="green" emoji="✅" stageLabel="Tarefas" title="Feito"
+            status="completed" tasks={completedTasks} clients={clients}
+            adding={false}
+            onStartAdd={null}
+            onCancelAdd={() => setAddingStage(null)}
+            onAdd={add} onToggle={toggle} onDelete={remove} onEdit={openEditing}
+            onComment={openComments} onAdvance={advance}
+            draggedTask={draggedTask} setDraggedTask={setDraggedTask} onDropTask={update}
+            isMobile={isMobile}
+          />
+        )}
       </div>
+      )}
       </>
       )}
 
       {/* ── MODAL DE EDIÇÃO ── */}
-      {editing && (
+      {editingTask && (
         <TaskEditModal
-          task={editing}
+          task={editingTask}
           clients={clients}
-          onClose={() => setEditing(null)}
+          onClose={closeEditing}
           onSave={update}
           onDelete={remove}
         />

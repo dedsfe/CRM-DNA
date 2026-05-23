@@ -71,6 +71,85 @@
   letter-spacing: 0.02em;
 }
 
+/* ── TASK TOOLBAR ── */
+.task-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-12);
+  flex-wrap: wrap;
+}
+
+.task-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-8);
+  flex-wrap: wrap;
+}
+
+.task-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: min(100%, 360px);
+}
+
+.search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-ico {
+  position: absolute;
+  left: 11px;
+  color: var(--mid-gray);
+  pointer-events: none;
+}
+
+.search-input {
+  padding: 8px 14px 8px 32px;
+  background: var(--off-white);
+  border: 1.5px solid transparent;
+  border-radius: var(--r-pill);
+  font-size: 14px;
+  font-family: var(--font);
+  color: var(--black);
+  outline: none;
+  transition: border-color .18s, background .18s, width .3s;
+}
+
+.search-input:focus {
+  background: var(--white);
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(36,91,161,.12);
+}
+
+.search-input::placeholder { color: var(--mid-gray); }
+
+.task-search-input {
+  width: min(100%, 360px);
+  padding-right: 40px;
+}
+
+.task-search-clear {
+  position: absolute;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-pill);
+  color: var(--mid-gray);
+  transition: background .15s, color .15s;
+}
+
+.task-search-clear:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+}
+
 /* ── FILTER PILLS ── */
 .filter-row {
   display: flex;
@@ -126,6 +205,42 @@
   background: var(--white);
   color: var(--black);
   box-shadow: var(--shadow-xs);
+}
+
+/* ── FILTERED EMPTY STATE ── */
+.tasks-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--s-12);
+  padding: var(--s-40) var(--s-24);
+  border: 1px dashed var(--neutral-200);
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, #FAFAFA 0%, var(--white) 100%);
+}
+
+.tasks-empty-state-icon {
+  font-size: 40px;
+}
+
+.tasks-empty-state-title {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
+  color: var(--neutral-900);
+}
+
+.tasks-empty-state-text {
+  max-width: 520px;
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+}
+
+.tasks-empty-state-actions {
+  display: flex;
+  gap: var(--s-8);
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 /* ── KANBAN ── */
@@ -642,6 +757,18 @@
   .filter-main-row,
   .filter-select-row {
     flex-direction: column;
+  }
+
+  .task-toolbar,
+  .task-toolbar-actions {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .task-search-wrap,
+  .task-search-input {
+    width: 100%;
+    min-width: 0;
   }
 
   .filter-pills {
