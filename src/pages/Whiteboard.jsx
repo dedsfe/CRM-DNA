@@ -11,7 +11,8 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
   List, ListOrdered, 
   AlignLeft, AlignCenter, AlignRight,
-  Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond
+  Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
+  Trash2, Undo, Redo
 } from 'lucide-react';
 import './Whiteboard.css';
 
@@ -43,14 +44,21 @@ const FontSize = Extension.create({
 });
 // ---------------------------------------------------
 
-// Menu Global Topo (Formatação de Texto)
-const GlobalMenuBar = ({ editor }) => {
+// Menu Global Topo (Formatação de Texto e Ações de Nó)
+const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) => {
   const disabled = !editor;
   const currentFontSize = editor?.getAttributes('textStyle')?.fontSize?.replace('px', '') || '15';
   const fontSizes = [10, 12, 14, 15, 16, 18, 20, 24, 30, 36, 48, 64, 72];
 
   return (
-    <div className={`wb-global-toolbar ${disabled ? 'disabled' : ''}`}>
+    <div className={`wb-global-toolbar`}>
+      {/* Undo / Redo Global */}
+      <button onClick={onUndo} className="wb-toolbar-btn" title="Desfazer (Ctrl+Z)" disabled={!canUndo}><Undo size={16} /></button>
+      <button onClick={onRedo} className="wb-toolbar-btn" title="Refazer (Ctrl+Y)" disabled={!canRedo}><Redo size={16} /></button>
+      
+      <div className="wb-toolbar-divider" />
+
+      {/* Editor Toolbars */}
       <select 
         className="wb-toolbar-select"
         disabled={disabled}
@@ -66,7 +74,7 @@ const GlobalMenuBar = ({ editor }) => {
       <button onClick={() => editor && editor.chain().focus().toggleUnderline().run()} className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`} title="Sublinhado" disabled={disabled}><UnderlineIcon size={16} /></button>
       <button onClick={() => editor && editor.chain().focus().toggleStrike().run()} className={`wb-toolbar-btn ${editor?.isActive('strike') ? 'active' : ''}`} title="Tachado" disabled={disabled}><Strikethrough size={16} /></button>
       <div className="wb-toolbar-divider" />
-      <div className="wb-toolbar-color-picker" title="Cor do Texto">
+      <div className="wb-toolbar-color-picker" title="Cor do Texto" style={{ opacity: disabled ? 0.5 : 1 }}>
         <Palette size={16} />
         <input type="color" onInput={(e) => editor && editor.chain().focus().setColor(e.target.value).run()} value={editor?.getAttributes('textStyle').color || '#000000'} disabled={disabled} />
       </div>
@@ -78,12 +86,24 @@ const GlobalMenuBar = ({ editor }) => {
       <div className="wb-toolbar-divider" />
       <button onClick={() => editor && editor.chain().focus().toggleBulletList().run()} className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`} title="Lista" disabled={disabled}><List size={16} /></button>
       <button onClick={() => editor && editor.chain().focus().toggleOrderedList().run()} className={`wb-toolbar-btn ${editor?.isActive('orderedList') ? 'active' : ''}`} title="Lista Numérica" disabled={disabled}><ListOrdered size={16} /></button>
+
+      {/* Botão de Deletar */}
+      <div className="wb-toolbar-divider" />
+      <button 
+        onClick={onDelete} 
+        className="wb-toolbar-btn" 
+        title="Apagar Bloco (Delete)" 
+        disabled={disabled}
+        style={{ color: disabled ? undefined : 'var(--red-600)' }}
+      >
+        <Trash2 size={16} />
+      </button>
     </div>
   );
 };
 
-// Tijolo 1: O Bloco Renderizável (Formas e Tamanhos)
-const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActiveNode, cameraZoom }) => {
+// Tijolo 1: O Bloco Renderizável
+const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActiveNode, cameraZoom, saveHistory }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
 
@@ -105,14 +125,29 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
     ],
     content: node.text || '<p></p>',
     onFocus: ({ editor }) => onEditorFocus(editor, node.id),
-    onBlur: ({ editor }) => updateNode(node.id, { text: editor.getHTML() })
+    onBlur: ({ editor }) => {
+      const currentHtml = editor.getHTML();
+      if (currentHtml !== node.text) {
+        saveHistory(); // Salva estado antes de comitar a mudança de texto para o histórico geral
+        updateNode(node.id, { text: currentHtml });
+      }
+    }
   });
+
+  // Atualiza o TipTap se o texto do nó mudar via Undo/Redo
+  useEffect(() => {
+    if (editor && node.text !== editor.getHTML()) {
+      editor.commands.setContent(node.text);
+    }
+  }, [node.text, editor]);
 
   // --- Movimentação (Dragging) ---
   const handlePointerDown = (e) => {
     e.stopPropagation();
     if (e.button !== 0) return;
     if (e.target.closest('.ProseMirror') || e.target.closest('.wb-resize-handle')) return; 
+    
+    saveHistory(); // Salva o histórico antes de começar a arrastar
     setIsDragging(true);
     e.target.setPointerCapture(e.pointerId);
     startPos.current = { x: e.clientX, y: e.clientY };
@@ -137,6 +172,8 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
   const handleResizePointerDown = (e, dir) => {
     e.stopPropagation();
     if (e.button !== 0) return;
+    
+    saveHistory(); // Salva histórico antes de redimensionar
     setResizeDir(dir);
     e.target.setPointerCapture(e.pointerId);
     startPos.current = { x: e.clientX, y: e.clientY };
@@ -151,7 +188,6 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
   const handleResizePointerMove = (e) => {
     if (!resizeDir) return;
     
-    // Calcula o deslocamento e compensa o zoom para que o resize acompanhe 1:1 o mouse na tela
     const dx = (e.clientX - startPos.current.x) / cameraZoom;
     const dy = (e.clientY - startPos.current.y) / cameraZoom;
 
@@ -165,7 +201,6 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
     if (resizeDir.includes('left')) { newW -= dx; newX += dx; }
     if (resizeDir.includes('top')) { newH -= dy; newY += dy; }
 
-    // Limites Mínimos
     const minW = isTextMode ? 50 : 100;
     const minH = isTextMode ? 30 : 100;
 
@@ -188,7 +223,6 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
     }
   };
 
-  // Prepara as classes CSS baseadas no Type e ActiveState
   const typeClass = `wb-node--${node.type || 'post-it'}`;
   const activeClass = isActiveNode ? 'wb-node--active' : '';
   const noPointerClass = isCameraMoving ? 'wb-node--no-pointer' : '';
@@ -206,18 +240,11 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
       onPointerUp={handlePointerUp}
       onClick={() => { if (editor) onEditorFocus(editor, node.id); }}
     >
-      {/* Container de fundo para formatos complexos (ex: Diamond usa rotate) */}
       <div className="wb-node-shape-bg" />
-
-      {/* Alça superior para arraste quando não é texto solto */}
       {!isTextMode && <div className="wb-node-drag-handle" title="Arraste por aqui" />}
-      
-      {/* No texto solto, o próprio contorno tracejado atua como área de arraste, mas adicionamos um padzinho no topo */}
       {isTextMode && <div className="wb-node-text-handle" />}
-
       <EditorContent editor={editor} className="wb-node-editor" />
 
-      {/* Alças de Redimensionamento (Aparecem quando ativo ou hover) */}
       <div className="wb-resize-handles">
         {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
           <div 
@@ -241,10 +268,78 @@ export default function Whiteboard() {
   const [activeEditor, setActiveEditor] = useState(null);
   const [activeNodeId, setActiveNodeId] = useState(null);
 
+  // --- STATE E HISTÓRICO ---
   const [nodes, setNodes] = useState([
     { id: '1', type: 'post-it', x: 200, y: 150, width: 260, height: 120, text: '<p><strong>Post-it Original</strong></p><p>Agora redimensionável!</p>' },
     { id: '2', type: 'rounded-rect', x: 500, y: 150, width: 200, height: 100, text: '<p style="text-align: center">Etapa 1</p>' }
   ]);
+  const [past, setPast] = useState([]);
+  const [future, setFuture] = useState([]);
+
+  const saveHistory = useCallback((currentNodes = nodes) => {
+    setPast(prev => [...prev, currentNodes].slice(-50)); // Guarda as últimas 50 ações
+    setFuture([]);
+  }, [nodes]);
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return;
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    setFuture([nodes, ...future]);
+    setPast(newPast);
+    setNodes(previous);
+  }, [past, future, nodes]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    const newFuture = future.slice(1);
+    setPast([...past, nodes]);
+    setFuture(newFuture);
+    setNodes(next);
+  }, [past, future, nodes]);
+
+  // Teclas de Atalho Globais
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Undo: Cmd+Z ou Ctrl+Z
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        // Se o foco está no body (não estamos editando texto ativamente)
+        // Ou se você prefere deixar o TipTap fazer o undo do texto e o Canvas do resto
+        if (document.activeElement === document.body || document.activeElement === canvasRef.current) {
+          e.preventDefault();
+          undo();
+        }
+      }
+      // Redo: Cmd+Shift+Z ou Ctrl+Y
+      if (((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'z') || ((e.metaKey || e.ctrlKey) && e.key === 'y')) {
+        if (document.activeElement === document.body || document.activeElement === canvasRef.current) {
+          e.preventDefault();
+          redo();
+        }
+      }
+
+      // Delete Node
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        // Apenas deletar se não estivermos focados em um input de texto (.ProseMirror)
+        if (!document.activeElement.closest('.ProseMirror') && activeNodeId) {
+          e.preventDefault();
+          deleteActiveNode();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, activeNodeId, nodes]);
+
+  const deleteActiveNode = () => {
+    if (!activeNodeId) return;
+    saveHistory();
+    setNodes(prev => prev.filter(n => n.id !== activeNodeId));
+    setActiveNodeId(null);
+    setActiveEditor(null);
+  };
 
   const canvasRef = useRef(null);
 
@@ -292,6 +387,8 @@ export default function Whiteboard() {
   }, [handleWheel]);
 
   const addNode = (type) => {
+    saveHistory();
+
     const defaultSizes = {
       'text': { w: 200, h: 50 },
       'post-it': { w: 260, h: 120 },
@@ -312,6 +409,9 @@ export default function Whiteboard() {
       text: '<p style="text-align: center"></p>'
     };
     setNodes((prev) => [...prev, newNode]);
+    
+    // Opcional: já focar o novo nó criado
+    setTimeout(() => setActiveNodeId(newNode.id), 100);
   };
 
   const updateNode = (id, newProps) => {
@@ -323,7 +423,14 @@ export default function Whiteboard() {
       {/* Cabeçalho */}
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
-        <GlobalMenuBar editor={activeEditor} />
+        <GlobalMenuBar 
+          editor={activeEditor} 
+          onDelete={deleteActiveNode}
+          canUndo={past.length > 0}
+          canRedo={future.length > 0}
+          onUndo={undo}
+          onRedo={redo}
+        />
         <div className="whiteboard-actions">
           <button className="btn btn-secondary btn-sm" onClick={() => setCamera({ x: 0, y: 0, zoom: 1 })}>
             Recentralizar
@@ -331,7 +438,7 @@ export default function Whiteboard() {
         </div>
       </div>
 
-      {/* Paleta Esquerda (Miro Style) */}
+      {/* Paleta Esquerda */}
       <div className="wb-left-palette">
         <button onClick={() => addNode('text')} title="Texto Solto"><Type size={20} /></button>
         <button onClick={() => addNode('post-it')} title="Nota (Post-it)"><StickyNote size={20} /></button>
@@ -347,6 +454,7 @@ export default function Whiteboard() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        tabIndex={0} /* Permite receber foco para atalhos de teclado globais */
         style={{ '--pan-x': camera.x, '--pan-y': camera.y, '--zoom': camera.zoom }}
       >
         <div 
@@ -362,6 +470,7 @@ export default function Whiteboard() {
               cameraZoom={camera.zoom}
               onEditorFocus={(editor, id) => { setActiveEditor(editor); setActiveNodeId(id); }}
               isActiveNode={activeNodeId === node.id}
+              saveHistory={() => saveHistory(nodes)}
             />
           ))}
         </div>
