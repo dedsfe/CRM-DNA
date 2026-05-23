@@ -110,9 +110,10 @@ export default function Finance() {
   const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
   const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
 
-  // 1. All-time
-  const allTimeIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
-  const allTimeExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
+  // 1. All-time (Somente até a data de hoje)
+  const pastOrTodayTxs = transactions.filter(t => t.date.split('T')[0] <= today);
+  const allTimeIncome = pastOrTodayTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
+  const allTimeExpense = pastOrTodayTxs.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const allTimeBalance = allTimeIncome - allTimeExpense;
 
   // 2. Current Month & Margins
