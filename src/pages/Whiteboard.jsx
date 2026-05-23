@@ -5,52 +5,59 @@ import Underline from '@tiptap/extension-underline';
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, List, ListOrdered } from 'lucide-react';
 import './Whiteboard.css';
 
-// Componente do Menu Fixo de Formatação (aparece quando focado)
-const MenuBar = ({ editor }) => {
-  if (!editor) return null;
+// Componente do Menu Global (fica no topo da tela)
+const GlobalMenuBar = ({ editor }) => {
+  // Se não houver nenhum editor selecionado, mostramos a barra mas desabilitada visualmente
+  const disabled = !editor;
 
   return (
-    <div className="wb-toolbar">
+    <div className={`wb-global-toolbar ${disabled ? 'disabled' : ''}`}>
       <button
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`wb-toolbar-btn ${editor.isActive('bold') ? 'active' : ''}`}
+        onClick={() => editor && editor.chain().focus().toggleBold().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`}
         title="Negrito"
+        disabled={disabled}
       >
         <Bold size={16} />
       </button>
       <button
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`wb-toolbar-btn ${editor.isActive('italic') ? 'active' : ''}`}
+        onClick={() => editor && editor.chain().focus().toggleItalic().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('italic') ? 'active' : ''}`}
         title="Itálico"
+        disabled={disabled}
       >
         <Italic size={16} />
       </button>
       <button
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        className={`wb-toolbar-btn ${editor.isActive('underline') ? 'active' : ''}`}
+        onClick={() => editor && editor.chain().focus().toggleUnderline().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`}
         title="Sublinhado"
+        disabled={disabled}
       >
         <UnderlineIcon size={16} />
       </button>
       <button
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        className={`wb-toolbar-btn ${editor.isActive('strike') ? 'active' : ''}`}
+        onClick={() => editor && editor.chain().focus().toggleStrike().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('strike') ? 'active' : ''}`}
         title="Tachado"
+        disabled={disabled}
       >
         <Strikethrough size={16} />
       </button>
       <div className="wb-toolbar-divider" />
       <button
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`wb-toolbar-btn ${editor.isActive('bulletList') ? 'active' : ''}`}
+        onClick={() => editor && editor.chain().focus().toggleBulletList().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`}
         title="Lista"
+        disabled={disabled}
       >
         <List size={16} />
       </button>
       <button
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`wb-toolbar-btn ${editor.isActive('orderedList') ? 'active' : ''}`}
+        onClick={() => editor && editor.chain().focus().toggleOrderedList().run()}
+        className={`wb-toolbar-btn ${editor?.isActive('orderedList') ? 'active' : ''}`}
         title="Lista Numerada"
+        disabled={disabled}
       >
         <ListOrdered size={16} />
       </button>
@@ -59,9 +66,8 @@ const MenuBar = ({ editor }) => {
 };
 
 // Tijolo 1: O Bloco (Post-it) com TipTap
-const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
+const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActiveNode }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
 
   // Configuração do Editor Rich Text
@@ -71,10 +77,10 @@ const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
       Underline,
     ],
     content: node.text || '<p></p>',
-    onFocus: () => setIsFocused(true),
+    onFocus: ({ editor }) => {
+      onEditorFocus(editor, node.id);
+    },
     onBlur: ({ editor }) => {
-      // Pequeno delay para permitir clique nos botões da toolbar antes de esconder
-      setTimeout(() => setIsFocused(false), 200);
       updateNode(node.id, { text: editor.getHTML() });
     }
   });
@@ -84,7 +90,7 @@ const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
     if (e.button !== 0) return;
     
     // Se estiver clicando diretamente no texto para editar/selecionar, não inicia o arrasto
-    if (e.target.closest('.ProseMirror') || e.target.closest('.wb-toolbar')) {
+    if (e.target.closest('.ProseMirror')) {
       return; 
     }
 
@@ -114,16 +120,18 @@ const DraggableNode = ({ node, updateNode, isCameraMoving }) => {
 
   return (
     <div
-      className={`wb-node ${isDragging ? 'wb-node--dragging' : ''} ${isCameraMoving ? 'wb-node--no-pointer' : ''}`}
+      className={`wb-node ${isDragging ? 'wb-node--dragging' : ''} ${isCameraMoving ? 'wb-node--no-pointer' : ''} ${isActiveNode ? 'wb-node--active' : ''}`}
       style={{
         transform: `translate(${node.x}px, ${node.y}px)`,
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onClick={() => {
+        if (editor) onEditorFocus(editor, node.id);
+      }}
     >
       <div className="wb-node-drag-handle" title="Arraste por aqui ou pelas bordas" />
-      {editor && isFocused && <MenuBar editor={editor} />}
       <EditorContent editor={editor} className="wb-node-editor" />
     </div>
   );
@@ -134,6 +142,10 @@ export default function Whiteboard() {
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   const [isPanning, setIsPanning] = useState(false);
   const startPan = useRef({ x: 0, y: 0 });
+
+  // Estado global do editor focado
+  const [activeEditor, setActiveEditor] = useState(null);
+  const [activeNodeId, setActiveNodeId] = useState(null);
 
   // Tijolo 1: Estado dos nós
   const [nodes, setNodes] = useState([
@@ -148,6 +160,10 @@ export default function Whiteboard() {
     setIsPanning(true);
     e.target.setPointerCapture(e.pointerId);
     startPan.current = { x: e.clientX, y: e.clientY };
+    
+    // Se clicou no fundo do canvas, tira a seleção do editor
+    setActiveEditor(null);
+    setActiveNodeId(null);
   };
 
   const handlePointerMove = (e) => {
@@ -202,7 +218,11 @@ export default function Whiteboard() {
   return (
     <div className="whiteboard-container">
       <div className="whiteboard-header">
-        <h2>Canvas</h2>
+        <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
+        
+        {/* Barra de Formatação Global (Google Docs style) */}
+        <GlobalMenuBar editor={activeEditor} />
+
         <div className="whiteboard-actions">
           <button className="btn btn-primary btn-sm" onClick={addNode}>
             + Adicionar Nota
@@ -238,6 +258,11 @@ export default function Whiteboard() {
               node={node} 
               updateNode={updateNode} 
               isCameraMoving={isPanning}
+              onEditorFocus={(editor, id) => {
+                setActiveEditor(editor);
+                setActiveNodeId(id);
+              }}
+              isActiveNode={activeNodeId === node.id}
             />
           ))}
         </div>

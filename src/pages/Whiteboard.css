@@ -33,12 +33,61 @@
   border-radius: var(--r-md);
   backdrop-filter: blur(10px);
   box-shadow: var(--shadow-sm);
+  margin: 0;
 }
 
 .whiteboard-actions {
   display: flex;
   gap: var(--s-8);
   pointer-events: auto;
+}
+
+/* Barra de Formatação Global (Google Docs style) */
+.wb-global-toolbar {
+  display: flex;
+  align-items: center;
+  background: var(--white);
+  padding: 6px;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  gap: 2px;
+  pointer-events: auto;
+  border: 1px solid var(--neutral-200);
+  transition: opacity 0.2s;
+}
+
+.wb-global-toolbar.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.wb-toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-600);
+  transition: background 0.15s, color 0.15s;
+  background: transparent;
+}
+
+.wb-toolbar-btn:hover {
+  background: var(--neutral-100);
+  color: var(--black);
+}
+
+.wb-toolbar-btn.active {
+  background: var(--blue-100);
+  color: var(--blue-700);
+}
+
+.wb-toolbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--neutral-200);
+  margin: 0 4px;
 }
 
 .whiteboard-canvas {
@@ -78,13 +127,19 @@
   border: 1px solid rgba(0,0,0,0.1);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-md);
-  cursor: grab; /* Indica que a borda pode ser arrastada */
+  cursor: grab;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-/* Área discreta no topo para facilitar o arrasto se o post-it estiver cheio de texto */
+.wb-node--active {
+  border-color: var(--blue-500);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2), var(--shadow-lg);
+  z-index: 40;
+}
+
+/* Área discreta no topo para facilitar o arrasto */
 .wb-node-drag-handle {
   height: 12px;
   width: 100%;
@@ -132,41 +187,4 @@
 .ProseMirror ol {
   padding-left: 1.2rem;
   margin-bottom: 0.5em;
-}
-
-/* TipTap Bubble Menu (Toolbar flutuante) */
-.wb-bubble-menu {
-  display: flex;
-  background: var(--neutral-900);
-  padding: 4px;
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-lg);
-  gap: 2px;
-}
-
-.wb-toolbar-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--r-sm);
-  color: var(--neutral-200);
-  transition: background 0.15s, color 0.15s;
-}
-
-.wb-toolbar-btn:hover {
-  background: var(--neutral-600);
-  color: var(--white);
-}
-
-.wb-toolbar-btn.active {
-  background: var(--blue-500);
-  color: var(--white);
-}
-
-.wb-toolbar-divider {
-  width: 1px;
-  background: var(--neutral-600);
-  margin: 4px;
 }
