@@ -64,6 +64,22 @@
   pointer-events: none;
 }
 
+.wb-toolbar-select {
+  padding: 4px 8px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--r-sm);
+  background: var(--neutral-50);
+  font-family: var(--font);
+  font-size: var(--text-sm);
+  color: var(--neutral-900);
+  cursor: pointer;
+  outline: none;
+  min-width: 50px;
+}
+.wb-toolbar-select:hover:not(:disabled) {
+  border-color: var(--neutral-400);
+}
+
 .wb-toolbar-btn {
   display: flex;
   align-items: center;
@@ -125,7 +141,7 @@
   left: 0;
   width: 100%;
   height: 100%;
-  opacity: 0; /* Esconde o input feio nativo, mostra só o ícone de paleta */
+  opacity: 0; 
   cursor: pointer;
 }
 
@@ -209,22 +225,10 @@
 .ProseMirror {
   outline: none;
   font-family: var(--font);
-  font-size: var(--text-base);
+  font-size: var(--text-base); /* default 15px se nenhum span de font-size for aplicado */
   color: var(--black);
   flex: 1;
   line-height: 1.4;
-}
-
-.ProseMirror h1 {
-  font-size: 1.5em;
-  font-weight: var(--fw-bold);
-  margin-bottom: 0.5em;
-}
-
-.ProseMirror h2 {
-  font-size: 1.25em;
-  font-weight: var(--fw-bold);
-  margin-bottom: 0.5em;
 }
 
 .ProseMirror p {

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { Extension } from '@tiptap/core';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -10,41 +11,85 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, 
   List, ListOrdered, 
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  Heading1, Heading2, Type, Highlighter, Palette
+  Highlighter, Palette
 } from 'lucide-react';
 import './Whiteboard.css';
+
+// --- Extensão Customizada para Tamanho de Fonte (Estilo Excel/Word) ---
+const FontSize = Extension.create({
+  name: 'fontSize',
+  addOptions() {
+    return {
+      types: ['textStyle'],
+    }
+  },
+  addGlobalAttributes() {
+    return [
+      {
+        types: this.options.types,
+        attributes: {
+          fontSize: {
+            default: null,
+            parseHTML: element => element.style.fontSize.replace(/['"]+/g, ''),
+            renderHTML: attributes => {
+              if (!attributes.fontSize) {
+                return {}
+              }
+              return {
+                style: `font-size: ${attributes.fontSize}`,
+              }
+            },
+          },
+        },
+      },
+    ]
+  },
+  addCommands() {
+    return {
+      setFontSize: fontSize => ({ chain }) => {
+        return chain()
+          .setMark('textStyle', { fontSize })
+          .run()
+      },
+      unsetFontSize: () => ({ chain }) => {
+        return chain()
+          .setMark('textStyle', { fontSize: null })
+          .removeEmptyTextStyle()
+          .run()
+      },
+    }
+  },
+});
+// --------------------------------------------------------------------
 
 // Componente do Menu Global (fica no topo da tela)
 const GlobalMenuBar = ({ editor }) => {
   const disabled = !editor;
 
+  // Pegar o tamanho de fonte atual, ou usar padrão (15px) se não houver um definido
+  const currentFontSize = editor?.getAttributes('textStyle')?.fontSize?.replace('px', '') || '15';
+
+  const fontSizes = [10, 12, 14, 15, 16, 18, 20, 24, 30, 36, 48, 64, 72];
+
   return (
     <div className={`wb-global-toolbar ${disabled ? 'disabled' : ''}`}>
-      {/* Tamanhos de Texto (Headings) */}
-      <button
-        onClick={() => editor && editor.chain().focus().setParagraph().run()}
-        className={`wb-toolbar-btn ${editor?.isActive('paragraph') ? 'active' : ''}`}
-        title="Texto Normal"
+      
+      {/* Seletor de Tamanho de Fonte */}
+      <select 
+        className="wb-toolbar-select"
         disabled={disabled}
+        value={currentFontSize}
+        onChange={(e) => {
+          if (editor) {
+            editor.chain().focus().setFontSize(`${e.target.value}px`).run();
+          }
+        }}
+        title="Tamanho da Fonte"
       >
-        <Type size={16} />
-      </button>
-      <button
-        onClick={() => editor && editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        className={`wb-toolbar-btn ${editor?.isActive('heading', { level: 1 }) ? 'active' : ''}`}
-        title="Título 1"
-        disabled={disabled}
-      >
-        <Heading1 size={16} />
-      </button>
-      <button
-        onClick={() => editor && editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={`wb-toolbar-btn ${editor?.isActive('heading', { level: 2 }) ? 'active' : ''}`}
-        title="Título 2"
-        disabled={disabled}
-      >
-        <Heading2 size={16} />
-      </button>
+        {fontSizes.map(size => (
+          <option key={size} value={size}>{size}</option>
+        ))}
+      </select>
 
       <div className="wb-toolbar-divider" />
 
@@ -165,6 +210,7 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
       StarterKit,
       Underline,
       TextStyle,
+      FontSize,
       Color,
       Highlight.configure({ multicolor: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -182,7 +228,6 @@ const DraggableNode = ({ node, updateNode, isCameraMoving, onEditorFocus, isActi
     e.stopPropagation();
     if (e.button !== 0) return;
     
-    // Se estiver clicando diretamente no texto para editar/selecionar, não inicia o arrasto
     if (e.target.closest('.ProseMirror')) {
       return; 
     }
@@ -242,12 +287,11 @@ export default function Whiteboard() {
 
   // Tijolo 1: Estado dos nós
   const [nodes, setNodes] = useState([
-    { id: '1', x: 100, y: 100, text: '<h2>Bem-vindo!</h2><p>Tente <strong>formatar</strong> este texto com o menu no topo.</p>' }
+    { id: '1', x: 100, y: 100, text: '<p><span style="font-size: 24px"><strong>Ideia Genial!</strong></span></p><p>Podemos formatar do jeito que quisermos agora.</p>' }
   ]);
 
   const canvasRef = useRef(null);
 
-  // Manipulação de Arrastar o Canvas (Pan)
   const handlePointerDown = (e) => {
     if (e.button !== 0 && e.button !== 1) return;
     setIsPanning(true);
@@ -274,7 +318,6 @@ export default function Whiteboard() {
     }
   };
 
-  // Manipulação do Zoom (Wheel)
   const handleWheel = useCallback((e) => {
     e.preventDefault();
     const zoomSensitivity = 0.001;
