@@ -232,6 +232,7 @@
   display: flex;
   flex-direction: column;
   transition: box-shadow 0.2s ease;
+  z-index: 10;
 }
 
 .wb-node--no-pointer {
@@ -271,7 +272,6 @@
 
 /* --- Tipo 4: Losango (Diamond) --- */
 .wb-node--diamond {
-  /* O container principal fica transparente, o shape background que gira */
   background: transparent;
 }
 .wb-node--diamond .wb-node-shape-bg {
@@ -279,7 +279,7 @@
   top: 0; left: 0; right: 0; bottom: 0;
   background: #ebf8ff;
   border: 2px solid #3182ce;
-  transform: rotate(45deg) scale(0.7071); /* Scale down by 1/sqrt(2) to fit perfectly inside bounding box */
+  transform: rotate(45deg) scale(0.7071); 
   border-radius: 8px;
   z-index: -1;
   box-shadow: var(--shadow-sm);
@@ -313,7 +313,7 @@
 .wb-node.wb-node--active {
   z-index: 40;
 }
-/* Focus rings exceto pra diamond/text que têm shapes diferentes */
+
 .wb-node--post-it.wb-node--active,
 .wb-node--rounded-rect.wb-node--active,
 .wb-node--circle.wb-node--active {
@@ -341,7 +341,6 @@
   justify-content: center;
 }
 
-/* Aumenta o padding do círculo e do losango para o texto não vazar das bordas visuais */
 .wb-node--circle .wb-node-editor,
 .wb-node--diamond .wb-node-editor {
   padding: 20%;
@@ -365,13 +364,13 @@
 
 
 /* =========================================================
-   SISTEMA DE ALÇAS DE REDIMENSIONAMENTO (RESIZING)
+   SISTEMA DE ALÇAS DE REDIMENSIONAMENTO
 ========================================================= */
 
 .wb-resize-handles {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  pointer-events: none; /* Deixa passar clique para o container, ativado só nas bolinhas */
+  pointer-events: none; 
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -388,10 +387,9 @@
   background: var(--white);
   border: 1.5px solid var(--blue-600);
   border-radius: 50%;
-  pointer-events: auto; /* Reativa o pointer event só na bolinha */
+  pointer-events: auto; 
 }
 
-/* Posições das bolinhas */
 .wb-resize-top-left { top: -5px; left: -5px; cursor: nwse-resize; }
 .wb-resize-top { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
 .wb-resize-top-right { top: -5px; right: -5px; cursor: nesw-resize; }
@@ -401,3 +399,58 @@
 .wb-resize-bottom-left { bottom: -5px; left: -5px; cursor: nesw-resize; }
 .wb-resize-left { top: calc(50% - 5px); left: -5px; cursor: ew-resize; }
 
+/* =========================================================
+   SISTEMA DE CONEXÕES (SETAS)
+========================================================= */
+
+.wb-connection-anchor {
+  position: absolute;
+  top: 50%;
+  right: -24px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  background: var(--white);
+  border: 2px solid var(--blue-500);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--blue-600);
+  cursor: crosshair;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, right 0.2s;
+  box-shadow: var(--shadow-sm);
+  z-index: 60;
+}
+
+.wb-node:hover .wb-connection-anchor,
+.wb-node--active .wb-connection-anchor {
+  opacity: 1;
+  pointer-events: auto;
+  right: -12px;
+}
+
+.wb-connection-anchor:hover {
+  background: var(--blue-50);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.wb-connection-path {
+  fill: none;
+  stroke: #64748b; /* slate-500 */
+  stroke-width: 2.5px;
+  stroke-linecap: round;
+  transition: stroke 0.2s;
+}
+
+.wb-connection-path:hover {
+  stroke: var(--blue-500);
+  stroke-width: 3.5px;
+}
+
+.wb-connection-path.draft {
+  stroke-dasharray: 6;
+  stroke: var(--blue-400);
+}
