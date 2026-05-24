@@ -18,7 +18,8 @@ import {
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
   Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare,
   ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus, Play,
-  Globe, Megaphone, Rss, MessageCircle, Share2, Smartphone, Grid, Magnet, HelpCircle
+  Globe, Megaphone, Rss, MessageCircle, Share2, Smartphone, Grid, Magnet, HelpCircle,
+  Plus, Minus, Maximize2
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
@@ -1151,6 +1152,7 @@ export default function Whiteboard() {
   const { user } = useAuth();
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
   
   const [interactionMode, setInteractionMode] = useState('select');
   const [isPanning, setIsPanning] = useState(false);
@@ -1224,10 +1226,17 @@ export default function Whiteboard() {
   useEffect(() => {
     if (loading || !id) return;
     const timer = setTimeout(async () => {
-      await supabase.from('whiteboards').update({ 
+      setSaveStatus('saving');
+      const { error } = await supabase.from('whiteboards').update({
         data: { nodes, connections },
         updated_at: new Date().toISOString()
       }).eq('id', id);
+      if (error) {
+        setSaveStatus('error');
+      } else {
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus(prev => (prev === 'saved' ? 'idle' : prev)), 2100);
+      }
     }, 1500);
     return () => clearTimeout(timer);
   }, [nodes, connections, id, loading]);
@@ -1382,6 +1391,63 @@ export default function Whiteboard() {
     }
   }, []);
 
+  const canvasRef = useRef(null);
+
+  // --- Programmatic Zoom (botões + atalhos) ---
+  // Mesmo princípio do wheel: pivô em coords do canvas; ajusta camera.x/y
+  // para que o ponto sob o pivô não se mova após mudar o zoom.
+  const zoomTo = useCallback((targetZoom, pivotX, pivotY) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const px = pivotX ?? rect.width / 2;
+    const py = pivotY ?? rect.height / 2;
+
+    setCamera(prev => {
+      const newZoom = Math.max(0.1, Math.min(targetZoom, 5));
+      const cx = (px - prev.x) / prev.zoom;
+      const cy = (py - prev.y) / prev.zoom;
+      return {
+        x: px - cx * newZoom,
+        y: py - cy * newZoom,
+        zoom: newZoom
+      };
+    });
+  }, []);
+
+  const zoomIn = useCallback(() => zoomTo(camera.zoom * 1.25), [zoomTo, camera.zoom]);
+  const zoomOut = useCallback(() => zoomTo(camera.zoom / 1.25), [zoomTo, camera.zoom]);
+  const resetZoom = useCallback(() => zoomTo(1), [zoomTo]);
+
+  const fitToContent = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || nodes.length === 0) return;
+    const rect = canvas.getBoundingClientRect();
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    nodes.forEach(n => {
+      const { w, h } = getNodeSize(n);
+      if (n.x < minX) minX = n.x;
+      if (n.y < minY) minY = n.y;
+      if (n.x + w > maxX) maxX = n.x + w;
+      if (n.y + h > maxY) maxY = n.y + h;
+    });
+
+    const padding = 80;
+    const contentW = (maxX - minX) + padding * 2;
+    const contentH = (maxY - minY) + padding * 2;
+    const newZoom = Math.max(0.1, Math.min(rect.width / contentW, rect.height / contentH, 1.5));
+
+    const centerWorldX = (minX + maxX) / 2;
+    const centerWorldY = (minY + maxY) / 2;
+
+    setCamera({
+      x: rect.width / 2 - centerWorldX * newZoom,
+      y: rect.height / 2 - centerWorldY * newZoom,
+      zoom: newZoom
+    });
+  }, [nodes]);
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.code === 'Space' && !document.activeElement.closest('.ProseMirror')) {
@@ -1397,6 +1463,18 @@ export default function Whiteboard() {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (!document.activeElement.closest('.ProseMirror') && selectedNodeIds.length > 0) { e.preventDefault(); deleteSelectedNodes(); }
       }
+
+      // --- Zoom shortcuts ---
+      const isTypingTarget = document.activeElement?.closest?.('.ProseMirror') ||
+                             document.activeElement?.tagName === 'INPUT' ||
+                             document.activeElement?.tagName === 'TEXTAREA';
+      if (!isTypingTarget) {
+        if ((e.metaKey || e.ctrlKey) && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoomIn(); }
+        if ((e.metaKey || e.ctrlKey) && e.key === '-') { e.preventDefault(); zoomOut(); }
+        if (e.shiftKey && e.key === '0') { e.preventDefault(); resetZoom(); }
+        if (e.shiftKey && e.key === '1') { e.preventDefault(); fitToContent(); }
+        if (e.key === '?' || (e.shiftKey && e.key === '/')) { e.preventDefault(); setShowShortcuts(true); }
+      }
     };
     const handleKeyUp = (e) => {
       if (e.code === 'Space') setIsSpaceDown(false);
@@ -1407,7 +1485,7 @@ export default function Whiteboard() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [undo, redo, selectedNodeIds, selectedConnectionIds, nodes, connections]);
+  }, [undo, redo, selectedNodeIds, selectedConnectionIds, nodes, connections, zoomIn, zoomOut, resetZoom, fitToContent]);
 
   const deleteSelectedNodes = useCallback(() => {
     if (selectedNodeIds.length === 0 && selectedConnectionIds.length === 0) return;
@@ -1433,8 +1511,6 @@ export default function Whiteboard() {
     setDraggedWaypointId(id);
     saveHistory(nodes, connections); // save before drag
   }, [nodes, connections, saveHistory]);
-
-  const canvasRef = useRef(null);
 
   const handlePointerDown = (e) => {
     if (interactionMode === 'pan' || e.button === 1 || isSpaceDown) {
@@ -1818,6 +1894,13 @@ export default function Whiteboard() {
             <ChevronLeft size={16} />
           </button>
           <h2>Canvas</h2>
+          {saveStatus !== 'idle' && (
+            <div className={`wb-save-indicator wb-save-indicator--${saveStatus}`}>
+              {saveStatus === 'saving' && (<><span className="wb-save-spinner" /> Salvando…</>)}
+              {saveStatus === 'saved'  && (<><CheckCircle size={12} /> Salvo</>)}
+              {saveStatus === 'error'  && (<>⚠ Erro ao salvar</>)}
+            </div>
+          )}
         </div>
         
         {(selectedNodeIds.length > 0 || selectedConnectionIds.length > 0) && interactionMode !== 'drawing' && (
@@ -2038,17 +2121,36 @@ export default function Whiteboard() {
         >
           <Grid size={18} />
         </button>
-        <button 
-          onClick={() => setSnapToGrid(!snapToGrid)} 
-          className={`wb-bottom-btn ${snapToGrid ? 'active' : ''}`} 
+        <button
+          onClick={() => setSnapToGrid(!snapToGrid)}
+          className={`wb-bottom-btn ${snapToGrid ? 'active' : ''}`}
           title="Atrair para Grade (Snap)"
         >
           <Magnet size={18} />
         </button>
         <div className="wb-bottom-divider" />
-        <button 
-          onClick={() => setShowShortcuts(true)} 
-          className="wb-bottom-btn" 
+        <div className="wb-zoom-cluster">
+          <button onClick={zoomOut} className="wb-bottom-btn wb-zoom-btn" title="Diminuir Zoom (Ctrl + -)">
+            <Minus size={16} />
+          </button>
+          <button onClick={resetZoom} className="wb-zoom-display" title="Redefinir Zoom para 100% (Shift + 0)">
+            {Math.round(camera.zoom * 100)}%
+          </button>
+          <button onClick={zoomIn} className="wb-bottom-btn wb-zoom-btn" title="Aumentar Zoom (Ctrl + =)">
+            <Plus size={16} />
+          </button>
+        </div>
+        <button
+          onClick={fitToContent}
+          className="wb-bottom-btn"
+          title="Encaixar Conteúdo na Tela (Shift + 1)"
+        >
+          <Maximize2 size={18} />
+        </button>
+        <div className="wb-bottom-divider" />
+        <button
+          onClick={() => setShowShortcuts(true)}
+          className="wb-bottom-btn"
           title="Atalhos de Teclado (?)"
         >
           <HelpCircle size={18} />
@@ -2148,6 +2250,11 @@ export default function Whiteboard() {
               <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + Z</span><span className="wb-shortcut-desc">Desfazer ação</span></div>
               <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + Y / Shift + Z</span><span className="wb-shortcut-desc">Refazer ação</span></div>
               <div className="wb-shortcut-row"><span className="wb-shortcut-key">Roda do Mouse / Pinça</span><span className="wb-shortcut-desc">Zoom In / Out</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + =</span><span className="wb-shortcut-desc">Zoom In</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + -</span><span className="wb-shortcut-desc">Zoom Out</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Shift + 0</span><span className="wb-shortcut-desc">Redefinir Zoom para 100%</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Shift + 1</span><span className="wb-shortcut-desc">Encaixar Conteúdo na Tela</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">?</span><span className="wb-shortcut-desc">Abrir este painel de atalhos</span></div>
             </div>
           </div>
         </div>
