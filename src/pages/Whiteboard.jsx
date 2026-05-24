@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth';
 import './Whiteboard.css';
 
 const FontSize = Extension.create({
@@ -469,6 +470,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
 export default function Whiteboard() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   const [loading, setLoading] = useState(true);
   
