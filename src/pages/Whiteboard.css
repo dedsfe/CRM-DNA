@@ -220,14 +220,6 @@
 }
 
 /* --- Mentions --- */
-.mention {
-  background-color: var(--blue-100);
-  color: var(--blue-700);
-  border-radius: 4px;
-  padding: 0.1rem 0.3rem;
-  font-weight: 600;
-  box-decoration-break: clone;
-}
 
 .mention-list {
   background: white;

@@ -4,7 +4,7 @@ import { Extension } from '@tiptap/core';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
-import mentionSuggestion from '../lib/mentionSuggestion';
+import { getMentionSuggestion } from '../lib/mentionSuggestion';
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -274,7 +274,7 @@ const Connection = ({ conn, nodes }) => {
 };
 
 
-const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart }) => {
+const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, user }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
   const startGroupPositions = useRef({}); 
@@ -294,9 +294,9 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       FontSize,
       Mention.configure({
         HTMLAttributes: {
-          class: 'mention',
+          class: 'mention-tag',
         },
-        suggestion: mentionSuggestion,
+        suggestion: getMentionSuggestion(user),
       }),
     ],
     content: node.text || '<p></p>',
@@ -1094,7 +1094,8 @@ export default function Whiteboard() {
 
           {nodes.map(node => (
             <DraggableNode 
-              key={node.id} node={node} 
+              key={node.id} 
+              node={node} 
               updateNode={updateNode} 
               updateMultipleNodes={updateMultipleNodes}
               selectedNodeIds={selectedNodeIds}
@@ -1105,6 +1106,7 @@ export default function Whiteboard() {
               isActiveNode={selectedNodeIds.includes(node.id)} 
               saveHistory={() => saveHistory(nodes, connections)}
               onConnectionStart={handleConnectionStart}
+              user={user}
             />
           ))}
 

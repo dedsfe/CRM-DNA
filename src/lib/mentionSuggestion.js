@@ -1,10 +1,12 @@
 import { ReactRenderer } from '@tiptap/react';
 import tippy from 'tippy.js';
 import MentionList from '../components/MentionList';
+import { USERS } from '../mockData';
 
-export default {
+export const getMentionSuggestion = (currentUser) => ({
   items: ({ query }) => {
-    return ['Andre', 'Dany']
+    return USERS
+      .filter(item => item !== currentUser)
       .filter(item => item.toLowerCase().startsWith(query.toLowerCase()))
       .slice(0, 5);
   },
@@ -62,4 +64,4 @@ export default {
       },
     };
   },
-};
+});
