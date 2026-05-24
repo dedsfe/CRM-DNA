@@ -191,30 +191,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     }
   };
 
-  // --- Conexão Física Direta na Âncora ---
   const handleConnectionPointerDown = (e) => {
     e.stopPropagation();
-    isConnectingRef.current = true;
-    e.target.setPointerCapture(e.pointerId);
+    e.preventDefault(); 
     onConnectionStart(node.id, e.clientX, e.clientY);
-  };
-
-  const handleConnectionPointerMove = (e) => {
-    if (isConnectingRef.current) {
-      e.stopPropagation();
-      onConnectionMove(e.clientX, e.clientY);
-    }
-  };
-
-  const handleConnectionPointerUp = (e) => {
-    if (isConnectingRef.current) {
-      isConnectingRef.current = false;
-      e.stopPropagation();
-      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) {
-        e.target.releasePointerCapture(e.pointerId);
-      }
-      onConnectionEnd(e.clientX, e.clientY);
-    }
   };
 
   const typeClass = `wb-node--${node.type || 'post-it'}`;
@@ -236,10 +216,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       <EditorContent editor={editor} className="wb-node-editor" />
 
       {/* Anchors de Conexão com Eventos Físicos Locais */}
-      <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para cima" />
-      <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para a direita" />
-      <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para baixo" />
-      <div className="wb-connection-anchor wb-anchor-left" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para a esquerda" />
+      <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} title="Puxar seta para cima" />
+      <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a direita" />
+      <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} title="Puxar seta para baixo" />
+      <div className="wb-connection-anchor wb-anchor-left" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a esquerda" />
 
       <div className="wb-resize-handles">
         {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
@@ -366,30 +346,43 @@ export default function Whiteboard() {
   };
 
   // --- Lógica Rastro da Seta (Gravidade) ---
-  const handleConnectionStart = (fromId, clientX, clientY) => {
-    setDraftConnection({ fromId, mouseX: clientX, mouseY: clientY });
-  };
-  
-  const handleConnectionMove = (clientX, clientY) => {
-    setDraftConnection(prev => prev ? { ...prev, mouseX: clientX, mouseY: clientY } : null);
-  };
+  const draftRef = useRef(null);
 
-  const handleConnectionEnd = (clientX, clientY) => {
-    if (!draftConnection) return;
-    
-    // Resolve o nó alvo sob o ponteiro
-    const elements = document.elementsFromPoint(clientX, clientY);
-    const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
-    
-    if (targetNodeEl) {
-      const toId = targetNodeEl.getAttribute('data-id');
-      if (toId && toId !== draftConnection.fromId) {
-        saveHistory();
-        setConnections(prev => [...prev, { id: Date.now().toString(), from: draftConnection.fromId, to: toId }]);
+  const handleConnectionStart = useCallback((fromId, clientX, clientY) => {
+    draftRef.current = { fromId, mouseX: clientX, mouseY: clientY };
+    setDraftConnection(draftRef.current);
+
+    const onMove = (e) => {
+      draftRef.current = { ...draftRef.current, mouseX: e.clientX, mouseY: e.clientY };
+      setDraftConnection(draftRef.current);
+    };
+
+    const onUp = (e) => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      
+      const draft = draftRef.current;
+      if (draft) {
+        const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
+        
+        if (targetNodeEl) {
+          const toId = targetNodeEl.getAttribute('data-id');
+          if (toId && toId !== draft.fromId) {
+            setConnections(prev => {
+              saveHistory(nodes, prev);
+              return [...prev, { id: Date.now().toString(), from: draft.fromId, to: toId }];
+            });
+          }
+        }
       }
-    }
-    setDraftConnection(null);
-  };
+      draftRef.current = null;
+      setDraftConnection(null);
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }, [nodes, saveHistory]);
   
   // --- Eventos Globais do Container ---
   const handleContainerPointerMove = (e) => {
@@ -536,18 +529,21 @@ export default function Whiteboard() {
   };
 
   // Curva Catenária Mágica (Corda com Gravidade)
-  const getGravityPath = (fromX, fromY, toX, toY) => {
+  const getStraightPath = (fromX, fromY, toX, toY) => {
+    const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
+    return { path: `M ${fromX} ${fromY} L ${toX} ${toY}`, angle };
+  };
+
+  const getRopePath = (fromX, fromY, toX, toY) => {
     const dx = Math.abs(toX - fromX);
     const dy = Math.abs(toY - fromY);
     const dist = Math.sqrt(dx * dx + dy * dy);
     
-    // Calcula a barriga da corda baseada na distância
-    const sag = Math.min(dist * 0.35, 200) + 15; 
+    // Tensão realista da corda (mais exagerada quando puxando)
+    const sag = Math.min(dist * 0.45, 300) + 20; 
     
     const cpX = (fromX + toX) / 2;
     const cpY = Math.max(fromY, toY) + sag;
-
-    // A ponta da seta precisa apontar na direção da tangente final da curva
     const angle = Math.atan2(toY - cpY, toX - cpX) * 180 / Math.PI;
 
     return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
@@ -564,7 +560,8 @@ export default function Whiteboard() {
       const toX = toNode.x + (toNode.width || 260) / 2;
       const toY = toNode.y + (toNode.height || 120) / 2;
 
-      const { path, angle } = getGravityPath(fromX, fromY, toX, toY);
+      // Conexão fixa é reta e dura
+      const { path, angle } = getStraightPath(fromX, fromY, toX, toY);
 
       return (
         <g key={conn.id}>
@@ -587,12 +584,13 @@ export default function Whiteboard() {
     const toX = (draftConnection.mouseX - rect.left - camera.x) / camera.zoom;
     const toY = (draftConnection.mouseY - rect.top - camera.y) / camera.zoom;
 
-    const { path, angle } = getGravityPath(fromX, fromY, toX, toY);
+    // Conexão solta (puxando) é uma corda com gravidade
+    const { path, angle } = getRopePath(fromX, fromY, toX, toY);
 
     return (
       <g>
         <path d={path} className="wb-connection-path draft" />
-        <polygon points="0,-6 12,0 0,6" transform={`translate(${toX}, ${toY}) rotate(${angle})`} fill="var(--blue-400)" className="wb-connection-arrowhead draft" />
+        <polygon points="0,-8 16,0 0,8" transform={`translate(${toX}, ${toY}) rotate(${angle})`} fill="#60a5fa" className="wb-connection-arrowhead draft" />
       </g>
     );
   };
@@ -653,8 +651,6 @@ export default function Whiteboard() {
               isActiveNode={selectedNodeIds.includes(node.id)} 
               saveHistory={() => saveHistory(nodes, connections)}
               onConnectionStart={handleConnectionStart}
-              onConnectionMove={handleConnectionMove}
-              onConnectionEnd={handleConnectionEnd}
             />
           ))}
 
