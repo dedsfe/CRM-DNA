@@ -545,6 +545,30 @@ export default function Whiteboard() {
     return () => clearTimeout(timer);
   }, [nodes, connections, id, loading]);
 
+  // --- Drag Shape from Palette Effect ---
+  useEffect(() => {
+    if (!draggedShape) return;
+    
+    const onMove = (e) => {
+      setDraggedShape(prev => prev ? { ...prev, mouseX: e.clientX, mouseY: e.clientY } : null);
+    };
+    
+    const onUp = (e) => {
+      const currentDrag = draggedShapeRef.current;
+      if (currentDrag) {
+        addNodeAtPosition(currentDrag.type, e.clientX, e.clientY);
+        setDraggedShape(null);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [draggedShape, addNodeAtPosition]);
+
   // --- Atalhos de Teclado (Ctrl+C / Ctrl+V) ---
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -629,7 +653,9 @@ export default function Whiteboard() {
   }, [nodes, connections, saveHistory]);
 
   const [draftConnection, setDraftConnection] = useState(null); 
-  const [draggedShape, setDraggedShape] = useState(null); 
+  const [draggedShape, setDraggedShape] = useState(null);
+  const draggedShapeRef = useRef(null);
+  draggedShapeRef.current = draggedShape; 
 
   const updateNode = useCallback((id, newProps) => {
     setNodes((prev) => prev.map(n => n.id === id ? { ...n, ...newProps } : n));
@@ -789,11 +815,6 @@ export default function Whiteboard() {
       setCamera(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
       return;
     }
-
-    if (draggedShape) {
-      setDraggedShape(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
-      return;
-    }
     
     if (interactionMode === 'drawing' && currentDrawPath) {
       const rect = canvasRef.current.getBoundingClientRect();
@@ -833,13 +854,6 @@ export default function Whiteboard() {
   const handleContainerPointerUp = (e) => {
     if (isPanning) {
       setIsPanning(false);
-      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
-      return;
-    }
-
-    if (draggedShape) {
-      addNodeAtPosition(draggedShape.type, e.clientX, e.clientY);
-      setDraggedShape(null);
       if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
       return;
     }
@@ -1019,13 +1033,13 @@ export default function Whiteboard() {
       </div>
 
       <div className="wb-left-palette">
-        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
         <div className="wb-palette-divider" />
-        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
       </div>
 
       {/* Toolbar Inferior de Ferramentas de Interação */}
