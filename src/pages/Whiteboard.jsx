@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Extension } from '@tiptap/core';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Mention from '@tiptap/extension-mention';
+import mentionSuggestion from '../lib/mentionSuggestion';
 import Underline from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
@@ -13,9 +16,10 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
-  Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy
+  Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { supabase } from '../lib/supabase';
 import './Whiteboard.css';
 
 const FontSize = Extension.create({
@@ -280,7 +284,20 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
   const isTextMode = node.type === 'text';
 
   const editor = useEditor({
-    extensions: [StarterKit, Underline, TextStyle, FontSize, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['heading', 'paragraph'] })],
+    extensions: [
+      StarterKit.configure({ heading: false }),
+      Highlight.configure({ multicolor: true }),
+      TextStyle,
+      Color,
+      TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      FontSize,
+      Mention.configure({
+        HTMLAttributes: {
+          class: 'mention',
+        },
+        suggestion: mentionSuggestion,
+      }),
+    ],
     content: node.text || '<p></p>',
     onFocus: ({ editor }) => {},
     onBlur: ({ editor }) => {
@@ -417,6 +434,14 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
         }} />
       )}
       {isTextMode && <div className="wb-node-text-handle" />}
+      
+      {node.type === 'comment' && (
+        <div className="wb-comment-header">
+          <span className="wb-comment-author">{node.author || 'Andre'}</span>
+          <span className="wb-comment-date">{new Date(node.createdAt || Date.now()).toLocaleDateString()}</span>
+        </div>
+      )}
+
       {node.type !== 'drawing' && <EditorContent editor={editor} className="wb-node-editor" />}
 
       {/* Anchors de Conexão (Só mostra se não estiver trancado e não for texto) */}
@@ -442,7 +467,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
 };
 
 export default function Whiteboard() {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
+  const [loading, setLoading] = useState(true);
   
   const [interactionMode, setInteractionMode] = useState('select');
   const [isPanning, setIsPanning] = useState(false);
@@ -487,6 +515,36 @@ export default function Whiteboard() {
     setConnections(next.conns);
   }, [past, future, nodes, connections]);
 
+  // --- Carregamento e Auto-Save Supabase ---
+  useEffect(() => {
+    if (!id) return;
+    const loadBoard = async () => {
+      const { data, error } = await supabase.from('whiteboards').select('*').eq('id', id).single();
+      if (error || !data) {
+        console.error(error);
+        navigate('/whiteboard');
+      } else {
+        if (data.data) {
+          setNodes(data.data.nodes || []);
+          setConnections(data.data.connections || []);
+        }
+      }
+      setLoading(false);
+    };
+    loadBoard();
+  }, [id, navigate]);
+
+  useEffect(() => {
+    if (loading || !id) return;
+    const timer = setTimeout(async () => {
+      await supabase.from('whiteboards').update({ 
+        data: { nodes, connections },
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [nodes, connections, id, loading]);
+
   // --- Atalhos de Teclado (Ctrl+C / Ctrl+V) ---
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -529,18 +587,30 @@ export default function Whiteboard() {
   const bringToFront = useCallback((ids) => {
     saveHistory(nodes, connections);
     setNodes(prev => {
-      const selected = prev.filter(n => ids.includes(n.id));
-      const unselected = prev.filter(n => !ids.includes(n.id));
-      return [...unselected, ...selected];
+      const newNodes = [...prev];
+      for (let i = newNodes.length - 2; i >= 0; i--) {
+        if (ids.includes(newNodes[i].id) && !ids.includes(newNodes[i + 1].id)) {
+          const temp = newNodes[i];
+          newNodes[i] = newNodes[i + 1];
+          newNodes[i + 1] = temp;
+        }
+      }
+      return newNodes;
     });
   }, [nodes, connections, saveHistory]);
 
   const sendToBack = useCallback((ids) => {
     saveHistory(nodes, connections);
     setNodes(prev => {
-      const selected = prev.filter(n => ids.includes(n.id));
-      const unselected = prev.filter(n => !ids.includes(n.id));
-      return [...selected, ...unselected];
+      const newNodes = [...prev];
+      for (let i = 1; i < newNodes.length; i++) {
+        if (ids.includes(newNodes[i].id) && !ids.includes(newNodes[i - 1].id)) {
+          const temp = newNodes[i];
+          newNodes[i] = newNodes[i - 1];
+          newNodes[i - 1] = temp;
+        }
+      }
+      return newNodes;
     });
   }, [nodes, connections, saveHistory]);
 
@@ -838,7 +908,7 @@ export default function Whiteboard() {
 
   const addNodeAtPosition = (type, clientX, clientY) => {
     saveHistory();
-    const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 } };
+    const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 } };
     const size = defaultSizes[type] || { w: 200, h: 100 };
     
     const rect = canvasRef.current.getBoundingClientRect();
@@ -894,6 +964,8 @@ export default function Whiteboard() {
     );
   };
 
+  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>Carregando Quadro...</div>;
+
   return (
     <div 
       className={`whiteboard-container ${isSpaceDown ? 'whiteboard-container--space' : ''}`}
@@ -901,7 +973,12 @@ export default function Whiteboard() {
       onPointerUp={handleContainerPointerUp}
     >
       <div className="whiteboard-header">
-        <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'auto' }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => navigate('/whiteboard')} title="Voltar aos Projetos">
+            <ChevronLeft size={16} />
+          </button>
+          <h2>Canvas</h2>
+        </div>
         
         {(selectedNodeIds.length > 0 && interactionMode !== 'drawing') && (
           <GlobalToolbar 
@@ -942,6 +1019,7 @@ export default function Whiteboard() {
       <div className="wb-left-palette">
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
         <div className="wb-palette-divider" />
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>

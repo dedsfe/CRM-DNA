@@ -11,6 +11,7 @@ import Meetings from './pages/Meetings';
 import Finance from './pages/Finance';
 import Settings from './pages/Settings';
 import Trash from './pages/Trash';
+import WhiteboardsList from './pages/WhiteboardsList';
 import Whiteboard from './pages/Whiteboard';
 import CommandPalette from './components/CommandPalette';
 import TopBar from './components/TopBar';
@@ -39,7 +40,8 @@ function Shell() {
                 <Route path="/inbox"       element={<Inbox />} />
                 <Route path="/meetings"    element={<Meetings />} />
                 <Route path="/finance"     element={<Finance />} />
-                <Route path="/whiteboard"  element={<Whiteboard />} />
+                <Route path="/whiteboard"  element={<WhiteboardsList />} />
+                <Route path="/whiteboard/:id" element={<Whiteboard />} />
                 <Route path="/settings"    element={<Settings />} />
                 <Route path="/trash"       element={<Trash />} />
               </Routes>
