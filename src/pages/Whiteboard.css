@@ -58,13 +58,13 @@
 .whiteboard-container--space .whiteboard-canvas { cursor: grab !important; }
 .whiteboard-layer { position: absolute; top: 0; left: 0; width: 0; height: 0; will-change: transform; }
 
-.wb-node { position: absolute; top: 0; left: 0; cursor: grab; display: flex; flex-direction: column; transition: box-shadow 0.2s ease; z-index: 10; }
+.wb-node { position: absolute; top: 0; left: 0; cursor: grab; display: flex; flex-direction: column; transition: box-shadow 0.2s ease; z-index: 10; border: 2px solid transparent; border-radius: var(--r-sm); }
 .wb-node:active { cursor: grabbing; }
 .wb-node--no-pointer { pointer-events: none; }
 .wb-drag-ghost { z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important; }
 
 /* Tipos */
-.wb-node--post-it { background: #FFF3B0; border: 1px solid rgba(0,0,0,0.1); border-radius: var(--r-sm); box-shadow: var(--shadow-md); }
+.wb-node--post-it { background: #FFF3B0; box-shadow: var(--shadow-md); }
 .wb-node--rounded-rect { background: #ebf8ff; border: 2px solid #3182ce; border-radius: var(--r-md); box-shadow: var(--shadow-sm); }
 .wb-node--circle { background: #ebf8ff; border: 2px solid #3182ce; border-radius: 50%; box-shadow: var(--shadow-sm); }
 .wb-node--diamond { background: transparent; }
@@ -74,10 +74,21 @@
 .wb-node--text:hover .wb-node-text-handle, .wb-node--text.wb-node--active .wb-node-text-handle { opacity: 1; }
 .wb-node--text:hover { border: 1px dashed var(--neutral-400); }
 
-/* Estados Ativos Genéricos */
+/* Estados Ativos Genéricos (Feedback Visual Refinado) */
 .wb-node.wb-node--active { z-index: 40; }
-.wb-node--post-it.wb-node--active, .wb-node--rounded-rect.wb-node--active, .wb-node--circle.wb-node--active { box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.4), var(--shadow-lg); border-color: #2b6cb0; }
-.wb-node--diamond.wb-node--active .wb-node-shape-bg { box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.4), var(--shadow-lg); border-color: #2b6cb0; }
+
+.wb-node--post-it.wb-node--active { 
+  border: 2px solid var(--blue-500); 
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); 
+}
+.wb-node--rounded-rect.wb-node--active, .wb-node--circle.wb-node--active { 
+  border-color: var(--blue-600); 
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); 
+}
+.wb-node--diamond.wb-node--active .wb-node-shape-bg { 
+  border-color: var(--blue-600); 
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15); 
+}
 .wb-node--text.wb-node--active { border: 1px dashed var(--blue-500); }
 
 /* TipTap Editor Styles */
