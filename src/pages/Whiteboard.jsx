@@ -18,7 +18,7 @@ import {
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
   Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare,
   ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus, Play,
-  Globe, Megaphone, Rss, Youtube, MessageCircle, Share2, Smartphone
+  Globe, Megaphone, Rss, MessageCircle, Share2, Smartphone
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
