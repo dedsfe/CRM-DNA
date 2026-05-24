@@ -545,29 +545,7 @@ export default function Whiteboard() {
     return () => clearTimeout(timer);
   }, [nodes, connections, id, loading]);
 
-  // --- Drag Shape from Palette Effect ---
-  useEffect(() => {
-    if (!draggedShape) return;
-    
-    const onMove = (e) => {
-      setDraggedShape(prev => prev ? { ...prev, mouseX: e.clientX, mouseY: e.clientY } : null);
-    };
-    
-    const onUp = (e) => {
-      const currentDrag = draggedShapeRef.current;
-      if (currentDrag) {
-        addNodeAtPosition(currentDrag.type, e.clientX, e.clientY);
-        setDraggedShape(null);
-      }
-    };
 
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-  }, [draggedShape, addNodeAtPosition]);
 
   // --- Atalhos de Teclado (Ctrl+C / Ctrl+V) ---
   useEffect(() => {
@@ -920,7 +898,7 @@ export default function Whiteboard() {
     }
   }, [handleWheel]);
 
-  const addNodeAtPosition = (type, clientX, clientY) => {
+  const addNodeAtPosition = useCallback((type, clientX, clientY) => {
     saveHistory();
     const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 } };
     const size = defaultSizes[type] || { w: 200, h: 100 };
@@ -943,7 +921,31 @@ export default function Whiteboard() {
     };
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeIds([newNode.id]);
-  };
+  }, [camera, saveHistory, setNodes, setSelectedNodeIds, user]);
+
+  // --- Drag Shape from Palette Effect ---
+  useEffect(() => {
+    if (!draggedShape) return;
+    
+    const onMove = (e) => {
+      setDraggedShape(prev => prev ? { ...prev, mouseX: e.clientX, mouseY: e.clientY } : null);
+    };
+    
+    const onUp = (e) => {
+      const currentDrag = draggedShapeRef.current;
+      if (currentDrag) {
+        addNodeAtPosition(currentDrag.type, e.clientX, e.clientY);
+        setDraggedShape(null);
+      }
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+  }, [draggedShape, addNodeAtPosition]);
 
   const handleExport = () => {
     if (canvasRef.current) {
