@@ -1151,6 +1151,7 @@ export default function Whiteboard() {
   const [currentDrawPath, setCurrentDrawPath] = useState(null);
   const [penSettings, setPenSettings] = useState({ color: '#ef4444', width: 4 });
   const [paletteSearch, setPaletteSearch] = useState('');
+  const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
 
   const [nodes, setNodes] = useState([]);
   const [connections, setConnections] = useState([]);
@@ -1794,7 +1795,20 @@ export default function Whiteboard() {
         </div>
       </div>
 
-      <div className="wb-left-palette">
+      <div className={`wb-left-palette ${isPaletteCollapsed ? 'wb-left-palette--collapsed' : ''}`}>
+        <div className="wb-palette-header" style={{ pointerEvents: 'auto' }}>
+          {!isPaletteCollapsed && <span className="wb-palette-header-title">Elementos</span>}
+          <button 
+            className="wb-palette-toggle-btn" 
+            onClick={() => setIsPaletteCollapsed(!isPaletteCollapsed)}
+            title={isPaletteCollapsed ? "Expandir" : "Recolher"}
+            style={{ outline: 'none' }}
+          >
+            {isPaletteCollapsed ? '❯' : '❮'}
+          </button>
+        </div>
+        <div className="wb-palette-divider" />
+
         <div className="wb-palette-search-container" style={{ pointerEvents: 'auto' }}>
           <span className="wb-palette-search-icon"><Search size={14} /></span>
           <input 
