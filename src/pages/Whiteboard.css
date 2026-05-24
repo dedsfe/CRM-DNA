@@ -35,7 +35,21 @@
 .wb-left-palette button:hover { background: var(--neutral-100); color: var(--blue-600); border-color: var(--neutral-200); }
 .wb-palette-divider { height: 1px; background: var(--neutral-200); margin: 4px 0; }
 
-.wb-global-toolbar { display: flex; align-items: center; background: var(--white); padding: 6px; border-radius: var(--r-md); box-shadow: var(--shadow-md); gap: 2px; pointer-events: auto; border: 1px solid var(--neutral-200); transition: opacity 0.2s; flex-wrap: wrap; max-width: 60%; justify-content: center; }
+.wb-global-toolbar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  pointer-events: auto;
+  z-index: 100;
+  border: 1px solid var(--neutral-200); transition: opacity 0.2s; flex-wrap: wrap; max-width: 60%; justify-content: center; }
 .wb-global-toolbar.disabled { opacity: 0.5; pointer-events: none; }
 .wb-toolbar-select { padding: 4px 8px; border: 1px solid var(--neutral-200); border-radius: var(--r-sm); background: var(--neutral-50); font-family: var(--font); font-size: var(--text-sm); color: var(--neutral-900); cursor: pointer; outline: none; min-width: 50px; }
 .wb-toolbar-select:hover:not(:disabled) { border-color: var(--neutral-400); }

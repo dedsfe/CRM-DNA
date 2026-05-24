@@ -47,7 +47,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
   if (interactionMode === 'drawing') {
     return (
       <div className="wb-global-toolbar">
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--neutral-600)', padding: '0 8px' }}>Configurações do Pincel:</span>
         <div className="wb-toolbar-color-picker" title="Cor da Tinta" style={{ '--current-color': penSettings.color }}>
           <Palette size={16} />
           <input type="color" value={penSettings.color} onChange={(e) => setPenSettings(p => ({ ...p, color: e.target.value }))} />
@@ -65,13 +64,15 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
 
   if (selectedNodes.length === 0) return null;
 
-  const activeNode = selectedNodes.length === 1 ? selectedNodes[0] : null;
+  // Usa o primeiro nó selecionado como referência para as cores atuais, 
+  // mas aplica em todos.
+  const activeNode = selectedNodes[0];
   const disabled = !editor;
 
   const setNodeStyle = (key, value) => {
-    if (activeNode) {
-      updateNode(activeNode.id, { [key]: value });
-    }
+    selectedNodes.forEach(node => {
+      updateNode(node.id, { [key]: value });
+    });
   };
 
   const isDrawing = activeNode?.type === 'drawing';
