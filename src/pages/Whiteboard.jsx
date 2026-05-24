@@ -1010,6 +1010,11 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     onConnectionStart(node.id, anchor, e.clientX, e.clientY);
   };
 
+  const funnelKey = (node.funnelType && FUNNEL_NODES[node.funnelType]) 
+    ? node.funnelType 
+    : (node.type && FUNNEL_NODES[node.type] ? node.type : null);
+  const isFunnelNode = !!funnelKey;
+
   const typeClass = `wb-node--${node.type || 'post-it'}`;
   const activeClass = isActiveNode ? 'wb-node--active' : '';
   const noPointerClass = isCameraMoving ? 'wb-node--no-pointer' : '';
@@ -1035,10 +1040,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
         <svg width="100%" height="100%" viewBox={`0 0 ${node.width} ${node.height}`} preserveAspectRatio="none" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
           <path d={node.pathData} fill="none" stroke={node.borderColor || '#ef4444'} strokeWidth={node.borderWidth || 4} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
-      ) : node.funnelType && FUNNEL_NODES[node.funnelType] ? (
+      ) : isFunnelNode ? (
         /* Funnelytics-style illustration directly */
         <div className="wb-funnel-illustration" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {FUNNEL_NODES[node.funnelType].icon(node.width || 80)}
+          {FUNNEL_NODES[funnelKey].icon(node.width || 80)}
         </div>
       ) : (
         <div className="wb-node-shape-bg" style={{
@@ -1057,11 +1062,11 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
         </div>
       )}
 
-      {node.type !== 'drawing' && !(node.funnelType && FUNNEL_NODES[node.funnelType]) && (
+      {node.type !== 'drawing' && !isFunnelNode && (
         <EditorContent editor={editor} className="wb-node-editor" />
       )}
 
-      {node.funnelType && FUNNEL_NODES[node.funnelType] && (
+      {isFunnelNode && (
         <div className="wb-funnel-label-container" onPointerDown={(e) => e.stopPropagation()}>
           <EditorContent editor={editor} className="wb-node-editor funnel-label-editor" />
         </div>
