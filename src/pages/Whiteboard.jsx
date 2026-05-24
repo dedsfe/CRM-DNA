@@ -80,7 +80,7 @@ const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) =
   );
 };
 
-const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart }) => {
+const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
   const startGroupPositions = useRef({}); 
@@ -209,10 +209,11 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
   const typeClass = `wb-node--${node.type || 'post-it'}`;
   const activeClass = isActiveNode ? 'wb-node--active' : '';
   const noPointerClass = isCameraMoving ? 'wb-node--no-pointer' : '';
+  const draftingClass = isDrafting ? 'wb-node--drafting' : '';
 
   return (
     <div
-      className={`wb-node ${typeClass} ${activeClass} ${noPointerClass}`}
+      className={`wb-node ${typeClass} ${activeClass} ${noPointerClass} ${draftingClass}`}
       style={{ transform: `translate(${node.x}px, ${node.y}px)`, width: node.width || 260, height: node.height || 120 }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -665,7 +666,8 @@ export default function Whiteboard() {
               updateNode={updateNode} 
               updateMultipleNodes={updateMultipleNodes}
               selectedNodeIds={selectedNodeIds}
-              isCameraMoving={interactionMode === 'panning' || !!draftConnection || !!draggedShape} 
+              isCameraMoving={interactionMode === 'panning' || !!draggedShape} 
+              isDrafting={draftConnection?.fromId === node.id}
               cameraZoom={camera.zoom}
               onEditorFocus={handleEditorFocus}
               isActiveNode={selectedNodeIds.includes(node.id)} 
