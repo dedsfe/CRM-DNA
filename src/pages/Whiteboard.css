@@ -27,14 +27,86 @@
 .whiteboard-actions .btn { display: flex; align-items: center; gap: 6px; }
 
 .wb-left-palette {
-  position: absolute; top: 50%; left: 16px; transform: translateY(-50%); z-index: 90;
-  background: var(--white); padding: 8px; border-radius: var(--r-md); box-shadow: var(--shadow-lg);
-  display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--neutral-200);
-  width: 200px;
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  z-index: 90;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 12px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  width: 240px;
+  max-height: 85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: all 0.3s ease;
 }
-.wb-left-palette button { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--r-sm); color: var(--neutral-600); background: transparent; transition: all 0.2s; border: 1px solid transparent; cursor: grab; }
-.wb-left-palette button:hover { background: var(--neutral-100); color: var(--blue-600); border-color: var(--neutral-200); }
-.wb-palette-divider { height: 1px; background: var(--neutral-200); margin: 4px 0; }
+
+/* Specific buttons inside the left palette (none now since we use wb-traffic-palette-btn, but preserved for standard icons if needed) */
+.wb-left-palette-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-sm);
+  color: var(--neutral-600);
+  background: transparent;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: grab;
+}
+.wb-left-palette-btn:hover {
+  background: var(--neutral-100);
+  color: var(--blue-600);
+  border-color: var(--neutral-200);
+}
+
+/* Palette Search styles */
+.wb-palette-search-container {
+  position: relative;
+  width: 100%;
+}
+.wb-palette-search {
+  width: 100%;
+  padding: 8px 12px 8px 30px;
+  border-radius: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-family: var(--font);
+  color: var(--neutral-900);
+  outline: none;
+  transition: all 0.2s ease;
+}
+.wb-palette-search:focus {
+  border-color: #3b82f6;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.wb-palette-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.wb-palette-divider {
+  height: 1px;
+  background: rgba(226, 232, 240, 0.8);
+  margin: 4px 0;
+}
 
 .wb-global-toolbar {
   position: absolute;
@@ -341,64 +413,72 @@ details[open] > summary.wb-palette-title::after {
    🚀 FUNNELYTICS-STYLE FUNNEL CARD NODES
    ============================================================ */
 
-.wb-funnel-card {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1.5px solid #e2e8f0;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  overflow: hidden;
-  z-index: -1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 0px transparent;
-  transition: box-shadow 0.2s, border-color 0.2s;
-}
-
-.wb-node--active .wb-funnel-card {
-  border-color: var(--funnel-accent, #3b82f6);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--funnel-accent, #3b82f6) 20%, transparent);
-}
-
-.wb-funnel-accent {
-  width: 5px;
-  min-width: 5px;
-  background: var(--funnel-accent, #3b82f6);
-  flex-shrink: 0;
-}
-
-.wb-funnel-body {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  padding: 0 16px;
-  min-width: 0;
-}
-
-.wb-funnel-icon {
-  flex-shrink: 0;
+.wb-funnel-illustration {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #f8fafc;
-  border: 1px solid #f1f5f9;
+  background: transparent;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
-.wb-funnel-label {
+.wb-node--active .wb-funnel-illustration {
+  transform: scale(1.05);
+  filter: drop-shadow(0 4px 15px rgba(59, 130, 246, 0.3));
+}
+
+.wb-funnel-label-container {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 160px;
+  text-align: center;
+  margin-top: 8px;
+  pointer-events: auto;
+  z-index: 20;
+}
+
+.funnel-label-editor {
   font-family: var(--font, 'Inter', system-ui, sans-serif);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
+  color: #475569;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.funnel-label-editor:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.wb-node--active .funnel-label-editor,
+.funnel-label-editor:focus-within {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   color: #1e293b;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
+}
+
+.funnel-label-editor .ProseMirror {
+  outline: none;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.funnel-label-editor p {
+  margin: 0;
+  padding: 0;
+  line-height: 1.3;
 }
 
 /* ============================================================
