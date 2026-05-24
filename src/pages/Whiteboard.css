@@ -63,6 +63,14 @@
 .wb-node--no-pointer { pointer-events: none; }
 .wb-drag-ghost { z-index: 9999; box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important; }
 
+.wb-node-shape-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: inherit;
+  z-index: -1;
+  box-sizing: border-box;
+}
+
 /* Tipos */
 .wb-node--post-it { background: #FFF3B0; box-shadow: var(--shadow-md); }
 .wb-node--rounded-rect { background: #ebf8ff; border: 2px solid #3182ce; border-radius: var(--r-md); box-shadow: var(--shadow-sm); }
@@ -126,32 +134,31 @@
 /* Lasso Tool */
 .wb-lasso-rect { position: absolute; background: rgba(49, 130, 206, 0.1); border: 1px solid rgba(49, 130, 206, 0.5); pointer-events: none; z-index: 9000; }
 
-/* Floating Toolbar */
-.wb-floating-toolbar {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  margin-top: -16px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
-  display: flex;
-  padding: 8px 12px;
-  gap: 6px;
-  z-index: 100;
-  pointer-events: auto;
-  align-items: center;
-  animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+/* Global Toolbar e Dropdowns (Estilo Elegante) */
+.wb-toolbar-color-picker {
+  position: relative; display: flex; align-items: center; justify-content: center; 
+  width: 32px; height: 32px; border-radius: var(--r-sm); 
+  color: var(--neutral-600); background: transparent; 
+  cursor: pointer; overflow: hidden; transition: background 0.15s, color 0.15s;
+}
+.wb-toolbar-color-picker:hover { background: var(--neutral-100); color: var(--black); }
+.wb-toolbar-color-picker input[type="color"] { 
+  position: absolute; top: -10px; left: -10px; width: 60px; height: 60px; 
+  opacity: 0; cursor: pointer; 
+}
+.wb-toolbar-color-picker::after {
+  content: ''; position: absolute; bottom: 4px; right: 4px; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--current-color, #ccc);
+  border: 1px solid rgba(0,0,0,0.1);
 }
 
-@keyframes popIn {
-  from { opacity: 0; transform: translate(-50%, -80%) scale(0.9); }
-  to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+.wb-toolbar-select { 
+  appearance: none; -webkit-appearance: none;
+  padding: 6px 24px 6px 12px; 
+  border: 1px solid transparent; border-radius: var(--r-sm); 
+  background: transparent url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2364748b%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E") no-repeat right 6px center;
+  font-family: var(--font); font-size: var(--text-sm); font-weight: 500;
+  color: var(--neutral-700); cursor: pointer; outline: none; transition: all 0.2s;
 }
-
-.wb-toolbar-section { display: flex; gap: 4px; }
-.wb-color-swatch {
-  width: 24px; height: 24px; border-radius: 50%;
-  border: 1px solid #e2e8f0; cursor: pointer;
-  transition: transform 0.15s ease;
-}
-.wb-color-swatch:hover { transform: scale(1.2); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.wb-toolbar-select:hover:not(:disabled) { background-color: var(--neutral-100); }
+.wb-toolbar-select:focus { background-color: var(--white); border-color: var(--blue-500); box-shadow: 0 0 0 2px var(--blue-100); }

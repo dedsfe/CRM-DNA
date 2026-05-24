@@ -43,14 +43,11 @@ const FontSize = Extension.create({
   },
 });
 
-const FloatingToolbar = ({ editor, selectedNodes, updateNode, onDelete, position }) => {
-  if (selectedNodes.length === 0 || !position) return null;
+const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete }) => {
+  if (selectedNodes.length === 0) return null;
 
   const activeNode = selectedNodes.length === 1 ? selectedNodes[0] : null;
   const disabled = !editor;
-
-  const bgColors = ['#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff', '#fecaca', 'transparent'];
-  const borderColors = ['transparent', '#94a3b8', '#1e293b', '#ef4444', '#3b82f6', '#22c55e'];
 
   const setNodeStyle = (key, value) => {
     if (activeNode) {
@@ -59,20 +56,22 @@ const FloatingToolbar = ({ editor, selectedNodes, updateNode, onDelete, position
   };
 
   return (
-    <div className="wb-floating-toolbar" style={{ left: position.x, top: position.y }}>
+    <div className="wb-global-toolbar">
       {/* Estilos de Forma (Background e Borda) */}
       {activeNode && activeNode.type !== 'text' && (
         <>
           <div className="wb-toolbar-section">
-            {bgColors.map(c => (
-              <button key={`bg-${c}`} className="wb-color-swatch" style={{ background: c }} onClick={() => setNodeStyle('bg', c)} title="Cor de Fundo" />
-            ))}
+            <div className="wb-toolbar-color-picker" title="Cor de Fundo" style={{ '--current-color': activeNode.bg || '#ffffff' }}>
+              <Palette size={16} />
+              <input type="color" value={activeNode.bg || '#ffffff'} onChange={(e) => setNodeStyle('bg', e.target.value)} />
+            </div>
           </div>
           <div className="wb-toolbar-divider" />
           <div className="wb-toolbar-section">
-            {borderColors.map(c => (
-              <button key={`bd-${c}`} className="wb-color-swatch" style={{ background: c, border: c === 'transparent' ? '1px dashed #ccc' : 'none' }} onClick={() => setNodeStyle('borderColor', c)} title="Cor da Borda" />
-            ))}
+            <div className="wb-toolbar-color-picker" title="Cor da Borda" style={{ '--current-color': activeNode.borderColor || '#3b82f6' }}>
+              <Square size={16} />
+              <input type="color" value={activeNode.borderColor || '#3b82f6'} onChange={(e) => setNodeStyle('borderColor', e.target.value)} />
+            </div>
           </div>
           <div className="wb-toolbar-divider" />
           <select className="wb-toolbar-select" value={activeNode.borderStyle || 'solid'} onChange={(e) => setNodeStyle('borderStyle', e.target.value)} title="Estilo da Borda">
@@ -91,16 +90,16 @@ const FloatingToolbar = ({ editor, selectedNodes, updateNode, onDelete, position
       )}
 
       {/* Estilos de Texto */}
-      <button onClick={() => editor && editor.chain().focus().toggleBold().run()} className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`} disabled={disabled}><Bold size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().toggleItalic().run()} className={`wb-toolbar-btn ${editor?.isActive('italic') ? 'active' : ''}`} disabled={disabled}><Italic size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().toggleUnderline().run()} className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`} disabled={disabled}><UnderlineIcon size={16} /></button>
+      <button onClick={() => editor && editor.chain().focus().toggleBold().run()} className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`} disabled={disabled} title="Negrito"><Bold size={16} /></button>
+      <button onClick={() => editor && editor.chain().focus().toggleItalic().run()} className={`wb-toolbar-btn ${editor?.isActive('italic') ? 'active' : ''}`} disabled={disabled} title="Itálico"><Italic size={16} /></button>
+      <button onClick={() => editor && editor.chain().focus().toggleUnderline().run()} className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`} disabled={disabled} title="Sublinhado"><UnderlineIcon size={16} /></button>
       <div className="wb-toolbar-divider" />
-      <button onClick={() => editor && editor.chain().focus().setTextAlign('left').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'left' }) ? 'active' : ''}`} disabled={disabled}><AlignLeft size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().setTextAlign('center').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'center' }) ? 'active' : ''}`} disabled={disabled}><AlignCenter size={16} /></button>
+      <button onClick={() => editor && editor.chain().focus().setTextAlign('left').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'left' }) ? 'active' : ''}`} disabled={disabled} title="Alinhar à Esquerda"><AlignLeft size={16} /></button>
+      <button onClick={() => editor && editor.chain().focus().setTextAlign('center').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'center' }) ? 'active' : ''}`} disabled={disabled} title="Centralizar"><AlignCenter size={16} /></button>
       <div className="wb-toolbar-divider" />
-      <button onClick={() => editor && editor.chain().focus().toggleBulletList().run()} className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`} disabled={disabled}><List size={16} /></button>
+      <button onClick={() => editor && editor.chain().focus().toggleBulletList().run()} className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`} disabled={disabled} title="Lista"><List size={16} /></button>
       <div className="wb-toolbar-divider" />
-      <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }}><Trash2 size={16} /></button>
+      <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }} title="Deletar"><Trash2 size={16} /></button>
     </div>
   );
 };
@@ -768,6 +767,17 @@ export default function Whiteboard() {
     >
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
+        
+        {/* Renderiza a GlobalToolbar no centro do Header se houver seleção */}
+        {selectedNodeIds.length > 0 && (
+          <GlobalToolbar 
+            editor={activeEditor} 
+            selectedNodes={nodes.filter(n => selectedNodeIds.includes(n.id))} 
+            updateNode={updateNode} 
+            onDelete={deleteSelectedNodes} 
+          />
+        )}
+
         <div style={{ display: 'flex', gap: 8, pointerEvents: 'auto' }}>
           <button onClick={undo} className="btn btn-secondary btn-sm" disabled={past.length === 0} title="Desfazer"><Undo size={16} /></button>
           <button onClick={redo} className="btn btn-secondary btn-sm" disabled={future.length === 0} title="Refazer"><Redo size={16} /></button>
@@ -835,34 +845,7 @@ export default function Whiteboard() {
           </div>
         </div>
 
-        {(() => {
-          if (selectedNodeIds.length === 0) return null;
-          const sNodes = nodes.filter(n => selectedNodeIds.includes(n.id));
-          if (sNodes.length === 0) return null;
-          
-          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-          sNodes.forEach(n => {
-            minX = Math.min(minX, n.x);
-            minY = Math.min(minY, n.y);
-            maxX = Math.max(maxX, n.x + (n.width || 260));
-            maxY = Math.max(maxY, n.y + (n.height || 120));
-          });
 
-          // Converte para coordenadas da tela (acima da bounding box inteira)
-          const rect = canvasRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
-          const screenX = rect.left + (minX * camera.zoom + camera.x) + ((maxX - minX) * camera.zoom) / 2;
-          const screenY = rect.top + (minY * camera.zoom + camera.y);
-
-          return (
-            <FloatingToolbar 
-              editor={activeEditor} 
-              selectedNodes={sNodes} 
-              updateNode={updateNode} 
-              onDelete={deleteSelectedNodes} 
-              position={{ x: screenX, y: screenY }} 
-            />
-          );
-        })()}
 
       {draggedShape && (
         <div 
