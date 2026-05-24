@@ -116,10 +116,6 @@ const getAnchorPosition = (node, anchor) => {
 };
 
 const Connection = ({ conn, nodes }) => {
-  const fromNode = nodes.find(n => n.id === conn.from);
-  const toNode = nodes.find(n => n.id === conn.to);
-  if (!fromNode || !toNode) return null;
-
   const [snapped, setSnapped] = useState(!conn.isNew);
 
   useEffect(() => {
@@ -132,6 +128,10 @@ const Connection = ({ conn, nodes }) => {
       return () => clearTimeout(timer);
     }
   }, [conn, snapped]);
+
+  const fromNode = nodes.find(n => n.id === conn.from);
+  const toNode = nodes.find(n => n.id === conn.to);
+  if (!fromNode || !toNode) return null;
 
   const fromPos = getAnchorPosition(fromNode, conn.fromAnchor || 'center');
   const toPos = getAnchorPosition(toNode, conn.toAnchor || 'center');
