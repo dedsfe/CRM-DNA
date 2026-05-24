@@ -323,6 +323,28 @@ export default function Whiteboard() {
   const [draftConnection, setDraftConnection] = useState(null); 
   const [draggedShape, setDraggedShape] = useState(null); 
 
+  const updateNode = useCallback((id, newProps) => {
+    setNodes((prev) => prev.map(n => n.id === id ? { ...n, ...newProps } : n));
+  }, []);
+
+  const updateMultipleNodes = useCallback((idsToMove, dx, dy) => {
+    setNodes(prev => prev.map(n => {
+      if (idsToMove.includes(n.id)) {
+        return { ...n, x: n.x + dx, y: n.y + dy };
+      }
+      return n;
+    }));
+  }, []);
+
+  const handleEditorFocus = useCallback((editor, id, isShift, keepGroup = false) => {
+    setActiveEditor(editor);
+    if (isShift) {
+      setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else if (!keepGroup) {
+      setSelectedNodeIds([id]);
+    }
+  }, []);
+
   const saveHistory = useCallback((currentNodes = nodes, currentConns = connections) => {
     setPast(prev => [...prev, { nodes: currentNodes, conns: currentConns }].slice(-50));
     setFuture([]);
