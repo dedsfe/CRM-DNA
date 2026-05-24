@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import {
@@ -384,7 +384,7 @@ function ClientCard({ c, tasks, isActive, onClick, draggedClient, setDraggedClie
   );
 }
 
-function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, selectedId, setSelectedId, draggedClient, setDraggedClient, onDropClient, onComment, isMobile }) {
+function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, selectedId, onSelectClient, draggedClient, setDraggedClient, onDropClient, onComment, isMobile, columnRef }) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -415,7 +415,7 @@ function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, sel
   }
 
   return (
-    <div className={`client-col ${isMobile && collapsed ? 'client-col--collapsed' : ''}`}>
+    <div ref={columnRef} className={`client-col ${isMobile && collapsed ? 'client-col--collapsed' : ''}`}>
       <div className={`client-col-head client-col-head--${variant}`}
            onClick={isMobile ? () => setCollapsed(c => !c) : undefined}>
         <div className="client-col-head-left">
@@ -442,7 +442,7 @@ function ClientKanbanColumn({ status, label, emoji, variant, clients, tasks, sel
                 c={c}
                 tasks={tasks}
                 isActive={selectedId === c.id}
-                onClick={() => setSelectedId(selectedId === c.id ? null : c.id)}
+                onClick={() => onSelectClient(selectedId === c.id ? null : c.id)}
                 draggedClient={draggedClient}
                 setDraggedClient={setDraggedClient}
                 onComment={onComment}
@@ -473,6 +473,9 @@ export default function Clients() {
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedClient, setDraggedClient] = useState(null);
   const isMobile = useIsMobile();
+  const negotiationRef = useRef(null);
+  const activeRef = useRef(null);
+  const profileRef = useRef(null);
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
   const [searchParams] = useSearchParams();
@@ -509,6 +512,44 @@ export default function Clients() {
   const pendingTasks = clientTasks.filter(t => t.status === 'pending');
   const completedTasks = clientTasks.filter(t => t.status === 'completed');
   const pendingCount = pendingTasks.length;
+  const pendingClientEntries = filtered
+    .map(client => ({
+      client,
+      pending: tasks.filter(task => task.clientId === client.id && task.status === 'pending').length,
+    }))
+    .filter(({ pending }) => pending > 0)
+    .sort((a, b) => b.pending - a.pending);
+
+  const scrollToRef = (ref) => {
+    if (!isMobile) return;
+    window.requestAnimationFrame(() => {
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const focusSelectedProfile = () => scrollToRef(profileRef);
+
+  const handleSelectClient = (clientId, nextTab = activeTab) => {
+    setSelectedId(clientId);
+    if (!clientId) return;
+    setActiveTab(nextTab);
+    scrollToRef(profileRef);
+  };
+
+  const handleFocusTab = (tab) => {
+    setActiveTab(tab);
+    focusSelectedProfile();
+  };
+
+  const jumpToClientColumn = (status) => {
+    scrollToRef(status === 'negotiation' ? negotiationRef : activeRef);
+  };
+
+  const focusFirstPendingClient = () => {
+    const nextClient = pendingClientEntries[0]?.client;
+    if (!nextClient) return;
+    handleSelectClient(nextClient.id, 'tasks');
+  };
 
   /* task handlers */
   const toggle = async (id) => {
@@ -597,6 +638,50 @@ export default function Clients() {
 
       {error && <div className="db-error">⚠️ {error}</div>}
 
+      {isMobile && (
+        <section className="clients-mobile-shortcuts" aria-label="Atalhos rápidos dos clientes">
+          <button
+            className="clients-quick-chip"
+            onClick={focusFirstPendingClient}
+            disabled={pendingClientEntries.length === 0}
+          >
+            <span>🔥 Pendências</span>
+            <strong>{pendingClientEntries.length}</strong>
+          </button>
+          <button
+            className="clients-quick-chip"
+            onClick={() => jumpToClientColumn('negotiation')}
+            disabled={filtered.filter(c => c.status === 'negotiation').length === 0}
+          >
+            <span>🎯 Negociação</span>
+            <strong>{filtered.filter(c => c.status === 'negotiation').length}</strong>
+          </button>
+          <button
+            className="clients-quick-chip"
+            onClick={() => jumpToClientColumn('active')}
+            disabled={filtered.filter(c => c.status === 'active').length === 0}
+          >
+            <span>🚀 Ativos</span>
+            <strong>{filtered.filter(c => c.status === 'active').length}</strong>
+          </button>
+        </section>
+      )}
+
+      {isMobile && selected && (
+        <section className="clients-mobile-focus" aria-label="Cliente em foco">
+          <button className="clients-mobile-focus-title" onClick={focusSelectedProfile}>
+            <span className="clients-mobile-focus-label">Cliente em foco</span>
+            <strong>{selected.emoji} {selected.name}</strong>
+          </button>
+          <div className="clients-mobile-focus-actions">
+            <button className={`clients-mobile-tab ${activeTab === 'tasks' ? 'clients-mobile-tab--active' : ''}`} onClick={() => handleFocusTab('tasks')}>Tarefas</button>
+            <button className={`clients-mobile-tab ${activeTab === 'finance' ? 'clients-mobile-tab--active' : ''}`} onClick={() => handleFocusTab('finance')}>Financeiro</button>
+            <button className={`clients-mobile-tab ${activeTab === 'meetings' ? 'clients-mobile-tab--active' : ''}`} onClick={() => handleFocusTab('meetings')}>Reuniões</button>
+            <button className="clients-mobile-tab clients-mobile-tab--close" onClick={() => setSelectedId(null)}>Fechar</button>
+          </div>
+        </section>
+      )}
+
       {loading ? (
         <div className="db-loading">Carregando clientes…</div>
       ) : (
@@ -606,24 +691,24 @@ export default function Clients() {
         <ClientKanbanColumn
           status="negotiation" label="Pré-Aquisição" emoji="🎯" variant="blue"
           clients={filtered.filter(c => c.status === 'negotiation')}
-          tasks={tasks} selectedId={selectedId} setSelectedId={setSelectedId}
+          tasks={tasks} selectedId={selectedId} onSelectClient={handleSelectClient}
           draggedClient={draggedClient} setDraggedClient={setDraggedClient}
           onDropClient={saveClient} onComment={openClientComments}
-          isMobile={isMobile}
+          isMobile={isMobile} columnRef={negotiationRef}
         />
         <ClientKanbanColumn
           status="active" label="Pós-Aquisição" emoji="🚀" variant="green"
           clients={filtered.filter(c => c.status === 'active')}
-          tasks={tasks} selectedId={selectedId} setSelectedId={setSelectedId}
+          tasks={tasks} selectedId={selectedId} onSelectClient={handleSelectClient}
           draggedClient={draggedClient} setDraggedClient={setDraggedClient}
           onDropClient={saveClient} onComment={openClientComments}
-          isMobile={isMobile}
+          isMobile={isMobile} columnRef={activeRef}
         />
       </div>
 
       {/* ── EXPANDED PROFILE ── */}
       {selected && (
-        <div className="profile-panel">
+        <div ref={profileRef} className="profile-panel">
 
           {/* Profile Top Bar */}
           <div className="profile-topbar">

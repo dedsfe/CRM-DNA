@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { USERS } from '../mockData';
 import { fetchClients, fetchTasks, insertTask, updateTask, deleteTask, notifyAssignees, notifyMentions } from '../lib/api';
@@ -356,12 +356,20 @@ export default function Tasks() {
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
   const isMobile = useIsMobile();
+  const kanbanRef = useRef(null);
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const openComments = (task) =>
     setCommentTarget({ type: 'task', id: task.id, title: task.title });
+
+  const scrollKanbanIntoView = () => {
+    if (!isMobile) return;
+    window.requestAnimationFrame(() => {
+      kanbanRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   useEffect(() => {
     Promise.all([fetchClients(), fetchTasks()])
@@ -470,6 +478,34 @@ export default function Tasks() {
   const completedTasks = byFilter.filter(t => t.status === 'completed')
     .sort((a, b) => b.dueDate.localeCompare(a.dueDate));
   const overdue = [...pendingTasks, ...inProgressTasks].filter(t => isOverdue(t.dueDate));
+  const overdueCount = tasks.filter(t => t.status !== 'completed' && isOverdue(t.dueDate)).length;
+  const dueTodayCount = tasks.filter(t => t.status !== 'completed' && t.dueDate === today).length;
+  const dueThisWeekCount = tasks.filter(t => t.status !== 'completed' && t.dueDate >= getStartOfWeek() && t.dueDate <= getEndOfWeek()).length;
+  const myOpenTasksCount = user ? tasks.filter(t => t.status !== 'completed' && t.assignees.includes(user)).length : 0;
+  const hasActiveFilters = filterUser !== 'All' || filterStage !== 'All' || filterClient !== 'All' || filterDate !== 'All';
+
+  const resetFilters = () => {
+    setFilter('All');
+    setStage('All');
+    setFilterClient('All');
+    setFilterDate('All');
+    scrollKanbanIntoView();
+  };
+
+  const applyQuickFilter = (preset) => {
+    setStage('All');
+    setFilterClient('All');
+
+    if (preset === 'mine' && user) {
+      setFilter(user);
+      setFilterDate('All');
+    } else {
+      setFilter('All');
+      setFilterDate(preset);
+    }
+
+    scrollKanbanIntoView();
+  };
 
   return (
     <div className="tp">
@@ -507,6 +543,43 @@ export default function Tasks() {
           <span className="summary-l">✅ Concluídas</span>
         </div>
       </div>
+
+      {isMobile && (
+        <section className="tasks-mobile-shortcuts" aria-label="Atalhos rápidos das tarefas">
+          <button
+            className={`tasks-quick-chip ${filterDate === 'overdue' && filterUser === 'All' ? 'tasks-quick-chip--active' : ''}`}
+            onClick={() => applyQuickFilter('overdue')}
+            disabled={overdueCount === 0}
+          >
+            <span>⚠️ Atrasadas</span>
+            <strong>{overdueCount}</strong>
+          </button>
+          <button
+            className={`tasks-quick-chip ${filterDate === 'today' && filterUser === 'All' ? 'tasks-quick-chip--active' : ''}`}
+            onClick={() => applyQuickFilter('today')}
+            disabled={dueTodayCount === 0}
+          >
+            <span>⏱️ Hoje</span>
+            <strong>{dueTodayCount}</strong>
+          </button>
+          <button
+            className={`tasks-quick-chip ${filterDate === 'week' && filterUser === 'All' ? 'tasks-quick-chip--active' : ''}`}
+            onClick={() => applyQuickFilter('week')}
+            disabled={dueThisWeekCount === 0}
+          >
+            <span>📆 Semana</span>
+            <strong>{dueThisWeekCount}</strong>
+          </button>
+          <button
+            className={`tasks-quick-chip ${user && filterUser === user && filterDate === 'All' ? 'tasks-quick-chip--active' : ''}`}
+            onClick={() => applyQuickFilter('mine')}
+            disabled={!user || myOpenTasksCount === 0}
+          >
+            <span>🧑 Minhas</span>
+            <strong>{myOpenTasksCount}</strong>
+          </button>
+        </section>
+      )}
 
       {/* ── FILTER PILLS ── */}
       <div className="filter-row">
@@ -568,8 +641,22 @@ export default function Tasks() {
         </div>
       </div>
 
+      {byFilter.length === 0 && (
+        <div className="tasks-filter-empty">
+          <div>
+            <strong>Nenhuma tarefa encontrada</strong>
+            <p>Ajuste os filtros ou volte para a visão completa.</p>
+          </div>
+          {hasActiveFilters && (
+            <button className="btn btn-secondary btn-sm" onClick={resetFilters}>
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      )}
+
       {/* ── KANBAN COLUMNS ── */}
-      <div className="kanban kanban--three">
+      <div ref={kanbanRef} className="kanban kanban--three">
         <KanbanColumn
           variant="blue" emoji="⏳" stageLabel="Tarefas" title="A Fazer"
           status="pending" tasks={pendingTasks} clients={clients}

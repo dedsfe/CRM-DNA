@@ -40,6 +40,11 @@
   gap: var(--s-12);
 }
 
+.clients-mobile-shortcuts,
+.clients-mobile-focus {
+  display: none;
+}
+
 /* Search */
 .search-wrap {
   position: relative;
@@ -732,6 +737,102 @@
   .cp {
     padding: calc(var(--s-48) + env(safe-area-inset-top)) var(--s-12) var(--s-16);
     gap: var(--s-20);
+  }
+
+  .clients-mobile-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--s-8);
+  }
+
+  .clients-quick-chip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-8);
+    min-height: 44px;
+    padding: 12px;
+    border: 1px solid var(--neutral-100);
+    border-radius: var(--r-lg);
+    background: var(--white);
+    box-shadow: var(--shadow-xs);
+    color: var(--neutral-600);
+    text-align: left;
+  }
+
+  .clients-quick-chip strong {
+    font-size: var(--text-sm);
+    color: var(--black);
+  }
+
+  .clients-quick-chip:disabled {
+    opacity: 0.5;
+  }
+
+  .clients-mobile-focus {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-12);
+    padding: var(--s-16);
+    border: 1px solid var(--blue-100);
+    border-radius: var(--r-xl);
+    background: linear-gradient(180deg, var(--blue-50) 0%, var(--white) 100%);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .clients-mobile-focus-title {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    color: var(--black);
+    text-align: left;
+  }
+
+  .clients-mobile-focus-title strong {
+    font-size: var(--text-base);
+  }
+
+  .clients-mobile-focus-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--blue-700);
+  }
+
+  .clients-mobile-focus-actions {
+    display: flex;
+    gap: var(--s-8);
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .clients-mobile-focus-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  .clients-mobile-tab {
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    background: var(--white);
+    border: 1px solid var(--neutral-100);
+    color: var(--neutral-600);
+    box-shadow: var(--shadow-xs);
+  }
+
+  .clients-mobile-tab--active {
+    border-color: var(--blue-200);
+    background: var(--blue-50);
+    color: var(--blue-700);
+    font-weight: var(--fw-semibold);
+  }
+
+  .clients-mobile-tab--close {
+    color: var(--red-text);
   }
 
   .client-kanban {
