@@ -17,7 +17,8 @@ import {
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
   Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare,
-  ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus, Play
+  ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus, Play,
+  Globe, Megaphone, Rss, Youtube, MessageCircle, Share2, Smartphone
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
@@ -50,6 +51,115 @@ const FontSize = Extension.create({
   },
 });
 
+// ============================================================
+// 🚀 FUNNEL NODE REGISTRY (Estilo Funnelytics)
+// ============================================================
+const FUNNEL_NODES = {
+  // --- TRAFFIC SOURCES ---
+  'traffic-facebook': {
+    label: 'Facebook Ads',
+    category: 'traffic',
+    brandColor: '#1877F2',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#1877F2">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      </svg>
+    ),
+  },
+  'traffic-instagram': {
+    label: 'Instagram',
+    category: 'traffic',
+    brandColor: '#E4405F',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#E4405F">
+        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
+      </svg>
+    ),
+  },
+  'traffic-google': {
+    label: 'Google Ads',
+    category: 'traffic',
+    brandColor: '#4285F4',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+    ),
+  },
+  'traffic-youtube': {
+    label: 'YouTube',
+    category: 'traffic',
+    brandColor: '#FF0000',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#FF0000">
+        <path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+      </svg>
+    ),
+  },
+  'traffic-tiktok': {
+    label: 'TikTok',
+    category: 'traffic',
+    brandColor: '#000000',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#000000">
+        <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/>
+      </svg>
+    ),
+  },
+  'traffic-email': {
+    label: 'E-mail',
+    category: 'traffic',
+    brandColor: '#6366F1',
+    icon: (size = 24) => <Mail size={size} color="#6366F1" strokeWidth={2} />,
+  },
+  'traffic-whatsapp': {
+    label: 'WhatsApp',
+    category: 'traffic',
+    brandColor: '#25D366',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#25D366">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    ),
+  },
+  'traffic-organic': {
+    label: 'Orgânico (SEO)',
+    category: 'traffic',
+    brandColor: '#16A34A',
+    icon: (size = 24) => <Globe size={size} color="#16A34A" strokeWidth={2} />,
+  },
+  'traffic-linkedin': {
+    label: 'LinkedIn',
+    category: 'traffic',
+    brandColor: '#0A66C2',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#0A66C2">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+      </svg>
+    ),
+  },
+  'traffic-twitter': {
+    label: 'X (Twitter)',
+    category: 'traffic',
+    brandColor: '#000000',
+    icon: (size = 24) => (
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="#000000">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>
+    ),
+  },
+};
+
+// ============================================================
+// Helper: Palette item config for the left sidebar
+// ============================================================
+const TRAFFIC_PALETTE_ITEMS = Object.entries(FUNNEL_NODES)
+  .filter(([, v]) => v.category === 'traffic')
+  .map(([key, v]) => ({ type: key, label: v.label, icon: v.icon, brandColor: v.brandColor }));
+
 const GlobalToolbar = ({ editor, selectedNodes, selectedConnections, updateNode, updateConnection, onDelete, interactionMode, penSettings, setPenSettings, bringToFront, sendToBack, duplicateNodes }) => {
   if (interactionMode === 'drawing') {
     return (
@@ -74,100 +184,83 @@ const GlobalToolbar = ({ editor, selectedNodes, selectedConnections, updateNode,
   if (selectedConnections?.length > 0 && selectedNodes.length === 0) {
     const activeConn = selectedConnections[0];
     return (
-      <div className="wb-global-toolbar">
-        <div className="wb-toolbar-section">
-          <select 
-            className="wb-toolbar-select" 
-            style={{ paddingLeft: 8, paddingRight: 20 }}
-            value={activeConn.lineType || 'bezier'}
-            onChange={(e) => updateConnection(activeConn.id, { lineType: e.target.value })}
-            title="Tipo de Linha"
-          >
-            <option value="bezier">Curva</option>
-            <option value="straight">Reta</option>
-            <option value="orthogonal">Ortogonal</option>
-          </select>
+      <div className="wb-right-properties-panel">
+        <div className="wb-prop-header">
+          <h3>Propriedades da Linha</h3>
+          <button onClick={onDelete} className="wb-prop-trash" title="Deletar Conexão"><Trash2 size={16} /></button>
         </div>
-        <div className="wb-toolbar-divider" />
-        
-        <div className="wb-toolbar-section">
-          <select 
-            className="wb-toolbar-select" 
-            style={{ paddingLeft: 8, paddingRight: 20 }}
-            value={activeConn.strokeType || 'solid'}
-            onChange={(e) => updateConnection(activeConn.id, { strokeType: e.target.value })}
-            title="Padrão"
-          >
-            <option value="solid">━ Sólida</option>
-            <option value="dashed">┅ Tracejada</option>
-            <option value="dotted">… Pontilhada</option>
-          </select>
-        </div>
-        <div className="wb-toolbar-divider" />
 
-        <div className="wb-toolbar-section">
-          <select 
-            className="wb-toolbar-select" 
-            style={{ paddingLeft: 8, paddingRight: 20 }}
-            value={activeConn.arrowType || 'end'}
-            onChange={(e) => updateConnection(activeConn.id, { arrowType: e.target.value })}
-            title="Setas"
-          >
-            <option value="end">→ Final</option>
-            <option value="start">← Início</option>
-            <option value="both">↔ Dupla</option>
-            <option value="none">━ Nenhuma</option>
-          </select>
-        </div>
-        <div className="wb-toolbar-divider" />
-
-        <button 
-          onClick={() => updateConnection(activeConn.id, { isAnimated: !activeConn.isAnimated })} 
-          className={`wb-toolbar-btn ${activeConn.isAnimated ? 'active' : ''}`} 
-          title="Animar Fluxo"
-        >
-          <Play size={16} />
-        </button>
-        <div className="wb-toolbar-divider" />
-        
-        <div className="wb-toolbar-section">
-          <div className="wb-toolbar-color-picker" title="Cor da Conexão" style={{ '--current-color': activeConn.color || '#94a3b8' }}>
-            <Palette size={16} />
-            <input type="color" value={activeConn.color || '#94a3b8'} onChange={(e) => updateConnection(activeConn.id, { color: e.target.value })} />
+        <div className="wb-prop-group">
+          <label>Curvatura</label>
+          <div className="wb-prop-btn-group">
+            <button className={activeConn.lineType === 'bezier' || !activeConn.lineType ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { lineType: 'bezier' })}>Curva</button>
+            <button className={activeConn.lineType === 'straight' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { lineType: 'straight' })}>Reta</button>
+            <button className={activeConn.lineType === 'orthogonal' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { lineType: 'orthogonal' })}>Ortogonal</button>
           </div>
         </div>
-        
-        <div className="wb-toolbar-section">
-          <select 
-            className="wb-toolbar-select" 
-            style={{ paddingLeft: 8, paddingRight: 20 }}
-            value={activeConn.strokeWidth || 2}
-            onChange={(e) => updateConnection(activeConn.id, { strokeWidth: parseInt(e.target.value) })}
-            title="Espessura"
-          >
-            <option value={1}>Fina (1px)</option>
-            <option value={2}>Normal (2px)</option>
-            <option value={4}>Grossa (4px)</option>
-            <option value={8}>Muito Grossa (8px)</option>
-          </select>
+
+        <div className="wb-prop-group">
+          <label>Estilo do Traço</label>
+          <div className="wb-prop-btn-group">
+            <button className={activeConn.strokeType === 'solid' || !activeConn.strokeType ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { strokeType: 'solid' })}>Sólida</button>
+            <button className={activeConn.strokeType === 'dashed' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { strokeType: 'dashed' })}>Tracejada</button>
+            <button className={activeConn.strokeType === 'dotted' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { strokeType: 'dotted' })}>Pontilhada</button>
+          </div>
         </div>
 
-        <div className="wb-toolbar-divider" />
+        <div className="wb-prop-group">
+          <label>Direção (Setas)</label>
+          <div className="wb-prop-btn-group">
+            <button className={activeConn.arrowType === 'none' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { arrowType: 'none' })}>Nenhuma</button>
+            <button className={activeConn.arrowType === 'end' || !activeConn.arrowType ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { arrowType: 'end' })}>Final</button>
+            <button className={activeConn.arrowType === 'start' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { arrowType: 'start' })}>Início</button>
+            <button className={activeConn.arrowType === 'both' ? 'active' : ''} onClick={() => updateConnection(activeConn.id, { arrowType: 'both' })}>Dupla</button>
+          </div>
+        </div>
 
-        {/* Badge */}
-        <div className="wb-toolbar-section">
+        <div className="wb-prop-group-row">
+          <div className="wb-prop-group half">
+            <label>Espessura</label>
+            <select 
+              className="wb-prop-select" 
+              value={activeConn.strokeWidth || 2}
+              onChange={(e) => updateConnection(activeConn.id, { strokeWidth: parseInt(e.target.value) })}
+            >
+              <option value={1}>1px (Fina)</option>
+              <option value={2}>2px (Normal)</option>
+              <option value={4}>4px (Grossa)</option>
+              <option value={6}>6px (Extra)</option>
+            </select>
+          </div>
+          
+          <div className="wb-prop-group half">
+            <label>Cor</label>
+            <div className="wb-prop-color-picker" style={{ '--current-color': activeConn.color || '#94a3b8' }}>
+              <input type="color" value={activeConn.color || '#94a3b8'} onChange={(e) => updateConnection(activeConn.id, { color: e.target.value })} />
+            </div>
+          </div>
+        </div>
+
+        <div className="wb-prop-group">
+          <label>Métrica (Badge)</label>
           <input 
             type="text" 
-            placeholder="Métrica (+20%)" 
+            className="wb-prop-input"
+            placeholder="Ex: +25%, $10k" 
             value={activeConn.badge || ''} 
             onChange={(e) => updateConnection(activeConn.id, { badge: e.target.value })} 
-            style={{ width: '100px', padding: '4px 8px', fontSize: '12px', border: '1px solid var(--neutral-200)', borderRadius: '4px', outline: 'none' }}
-            title="Adicionar Badge de Métrica"
           />
         </div>
 
-        <div className="wb-toolbar-divider" />
-        <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }} title="Deletar Conexão"><Trash2 size={16} /></button>
+        <div className="wb-prop-group" style={{ marginTop: 8 }}>
+          <button 
+            onClick={() => updateConnection(activeConn.id, { isAnimated: !activeConn.isAnimated })} 
+            className={`wb-prop-action-btn ${activeConn.isAnimated ? 'active' : ''}`}
+          >
+            <Play size={16} /> {activeConn.isAnimated ? 'Parar Fluxo' : 'Animar Fluxo'}
+          </button>
+        </div>
+
       </div>
     );
   }
@@ -720,6 +813,17 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
         <svg width="100%" height="100%" viewBox={`0 0 ${node.width} ${node.height}`} preserveAspectRatio="none" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
           <path d={node.pathData} fill="none" stroke={node.borderColor || '#ef4444'} strokeWidth={node.borderWidth || 4} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         </svg>
+      ) : node.funnelType && FUNNEL_NODES[node.funnelType] ? (
+        /* Funnelytics-style Card */
+        <div className="wb-funnel-card" style={{ '--funnel-accent': FUNNEL_NODES[node.funnelType].brandColor }}>
+          <div className="wb-funnel-accent" />
+          <div className="wb-funnel-body">
+            <div className="wb-funnel-icon">
+              {FUNNEL_NODES[node.funnelType].icon(28)}
+            </div>
+            <span className="wb-funnel-label">{FUNNEL_NODES[node.funnelType].label}</span>
+          </div>
+        </div>
       ) : (
         <div className="wb-node-shape-bg" style={{
           backgroundColor: node.bg || def.bg || 'transparent',
@@ -737,7 +841,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
         </div>
       )}
 
-      {node.type !== 'drawing' && <EditorContent editor={editor} className="wb-node-editor" />}
+      {node.type !== 'drawing' && !(node.funnelType && FUNNEL_NODES[node.funnelType]) && <EditorContent editor={editor} className="wb-node-editor" />}
 
       {/* Anchors de Conexão (Só mostra se não estiver trancado e não for texto) */}
       {!node.isLocked && node.type !== 'text' && (
@@ -1237,10 +1341,11 @@ export default function Whiteboard() {
     saveHistory();
     const defaultSizes = { 
       'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 },
-      'traffic-facebook': { w: 160, h: 60 }, 'traffic-google': { w: 160, h: 60 }, 'traffic-email': { w: 160, h: 60 }, 'traffic-instagram': { w: 160, h: 60 },
       'page-optin': { w: 160, h: 60 }, 'page-sales': { w: 160, h: 60 }, 'page-vsl': { w: 160, h: 60 }, 'page-checkout': { w: 160, h: 60 }, 'page-thankyou': { w: 160, h: 60 },
       'action-purchase': { w: 160, h: 60 }, 'action-lead': { w: 160, h: 60 }
     };
+    // Traffic sources get their size from FUNNEL_NODES
+    Object.keys(FUNNEL_NODES).forEach(key => { defaultSizes[key] = { w: 180, h: 72 }; });
     const size = defaultSizes[type] || { w: 200, h: 100 };
     
     const rect = canvasRef.current.getBoundingClientRect();
@@ -1251,13 +1356,14 @@ export default function Whiteboard() {
     const worldY = (yInsideCanvas - camera.y) / camera.zoom - size.h / 2;
 
     const titles = {
-      'traffic-facebook': 'Facebook Ads', 'traffic-google': 'Google Ads', 'traffic-email': 'E-mail', 'traffic-instagram': 'Instagram',
       'page-optin': 'Opt-in Page', 'page-sales': 'Página de Vendas', 'page-vsl': 'VSL', 'page-checkout': 'Checkout', 'page-thankyou': 'Thank You',
       'action-purchase': 'Compra', 'action-lead': 'Lead'
     };
+    // Add all FUNNEL_NODES labels
+    Object.entries(FUNNEL_NODES).forEach(([key, v]) => { titles[key] = v.label; });
     
     const colors = {
-      'traffic': { bg: '#e0f2fe', border: '#0ea5e9' },
+      'traffic': { bg: '#ffffff', border: '#e2e8f0' },
       'page': { bg: '#dcfce7', border: '#22c55e' },
       'action': { bg: '#ffedd5', border: '#f97316' }
     };
@@ -1408,42 +1514,90 @@ export default function Whiteboard() {
       <div className="wb-left-palette">
         <details className="wb-palette-group" open>
           <summary className="wb-palette-title">Básico</summary>
-          <div className="wb-palette-items">
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+          <div className="wb-palette-items wb-palette-items--traffic">
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto">
+              <span className="wb-traffic-palette-icon"><Type size={18} color="#64748b" /></span>
+              <span className="wb-traffic-palette-label">Texto</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)">
+              <span className="wb-traffic-palette-icon" style={{ background: '#FFF3B0' }}><StickyNote size={18} color="#ca8a04" /></span>
+              <span className="wb-traffic-palette-label">Post-it</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário">
+              <span className="wb-traffic-palette-icon"><MessageSquare size={18} color="#64748b" /></span>
+              <span className="wb-traffic-palette-label">Comentário</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo">
+              <span className="wb-traffic-palette-icon"><Square size={18} color="#3182ce" /></span>
+              <span className="wb-traffic-palette-label">Retângulo</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo">
+              <span className="wb-traffic-palette-icon"><Circle size={18} color="#3182ce" /></span>
+              <span className="wb-traffic-palette-label">Círculo</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)">
+              <span className="wb-traffic-palette-icon"><Diamond size={18} color="#3182ce" /></span>
+              <span className="wb-traffic-palette-label">Losango</span>
+            </button>
           </div>
         </details>
         
         <details className="wb-palette-group" open>
           <summary className="wb-palette-title">Tráfego</summary>
-          <div className="wb-palette-items">
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-facebook', mouseX: e.clientX, mouseY: e.clientY }); }} title="Facebook Ads"><ThumbsUp size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-google', mouseX: e.clientX, mouseY: e.clientY }); }} title="Google Ads"><Search size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-email', mouseX: e.clientX, mouseY: e.clientY }); }} title="E-mail"><Mail size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-instagram', mouseX: e.clientX, mouseY: e.clientY }); }} title="Instagram"><Camera size={20} /></button>
+          <div className="wb-palette-items wb-palette-items--traffic">
+            {TRAFFIC_PALETTE_ITEMS.map(item => (
+              <button
+                key={item.type}
+                className="wb-traffic-palette-btn"
+                onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: item.type, mouseX: e.clientX, mouseY: e.clientY }); }}
+                title={item.label}
+              >
+                <span className="wb-traffic-palette-icon" style={{ '--brand': item.brandColor }}>
+                  {item.icon(18)}
+                </span>
+                <span className="wb-traffic-palette-label">{item.label}</span>
+              </button>
+            ))}
           </div>
         </details>
         
         <details className="wb-palette-group" open>
           <summary className="wb-palette-title">Páginas</summary>
-          <div className="wb-palette-items">
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-optin', mouseX: e.clientX, mouseY: e.clientY }); }} title="Opt-in / Landing Page"><LayoutTemplate size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-sales', mouseX: e.clientX, mouseY: e.clientY }); }} title="Página de Vendas"><ShoppingBag size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-vsl', mouseX: e.clientX, mouseY: e.clientY }); }} title="VSL"><Video size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-checkout', mouseX: e.clientX, mouseY: e.clientY }); }} title="Checkout"><CreditCard size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-thankyou', mouseX: e.clientX, mouseY: e.clientY }); }} title="Thank You Page"><CheckCircle size={20} /></button>
+          <div className="wb-palette-items wb-palette-items--traffic">
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-optin', mouseX: e.clientX, mouseY: e.clientY }); }} title="Opt-in / Landing Page">
+              <span className="wb-traffic-palette-icon" style={{ background: '#dcfce7' }}><LayoutTemplate size={18} color="#16a34a" /></span>
+              <span className="wb-traffic-palette-label">Landing Page</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-sales', mouseX: e.clientX, mouseY: e.clientY }); }} title="Página de Vendas">
+              <span className="wb-traffic-palette-icon" style={{ background: '#dcfce7' }}><ShoppingBag size={18} color="#16a34a" /></span>
+              <span className="wb-traffic-palette-label">Pág. de Vendas</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-vsl', mouseX: e.clientX, mouseY: e.clientY }); }} title="VSL">
+              <span className="wb-traffic-palette-icon" style={{ background: '#dcfce7' }}><Video size={18} color="#16a34a" /></span>
+              <span className="wb-traffic-palette-label">VSL</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-checkout', mouseX: e.clientX, mouseY: e.clientY }); }} title="Checkout">
+              <span className="wb-traffic-palette-icon" style={{ background: '#dcfce7' }}><CreditCard size={18} color="#16a34a" /></span>
+              <span className="wb-traffic-palette-label">Checkout</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-thankyou', mouseX: e.clientX, mouseY: e.clientY }); }} title="Thank You Page">
+              <span className="wb-traffic-palette-icon" style={{ background: '#dcfce7' }}><CheckCircle size={18} color="#16a34a" /></span>
+              <span className="wb-traffic-palette-label">Thank You</span>
+            </button>
           </div>
         </details>
         
         <details className="wb-palette-group" open>
           <summary className="wb-palette-title">Ações</summary>
-          <div className="wb-palette-items">
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-purchase', mouseX: e.clientX, mouseY: e.clientY }); }} title="Compra"><BadgeDollarSign size={20} /></button>
-            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-lead', mouseX: e.clientX, mouseY: e.clientY }); }} title="Lead"><UserPlus size={20} /></button>
+          <div className="wb-palette-items wb-palette-items--traffic">
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-purchase', mouseX: e.clientX, mouseY: e.clientY }); }} title="Compra">
+              <span className="wb-traffic-palette-icon" style={{ background: '#ffedd5' }}><BadgeDollarSign size={18} color="#ea580c" /></span>
+              <span className="wb-traffic-palette-label">Compra</span>
+            </button>
+            <button className="wb-traffic-palette-btn" onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-lead', mouseX: e.clientX, mouseY: e.clientY }); }} title="Lead">
+              <span className="wb-traffic-palette-icon" style={{ background: '#ffedd5' }}><UserPlus size={18} color="#ea580c" /></span>
+              <span className="wb-traffic-palette-label">Lead</span>
+            </button>
           </div>
         </details>
       </div>
