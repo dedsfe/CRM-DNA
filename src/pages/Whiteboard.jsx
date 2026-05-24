@@ -579,6 +579,20 @@ export default function Whiteboard() {
     setSelectedNodeIds([newNode.id]);
   };
 
+  const handleExport = () => {
+    if (canvasRef.current) {
+      toPng(canvasRef.current, { backgroundColor: '#f8fafc' }).then((dataUrl) => {
+        const link = document.createElement('a');
+        link.download = 'crm-dna-whiteboard.png';
+        link.href = dataUrl;
+        link.click();
+      }).catch(err => {
+        console.error('Erro na exportação:', err);
+        alert('Erro ao exportar a imagem. Tente reduzir o zoom ou o número de elementos visíveis.');
+      });
+    }
+  };
+
   const renderDraftConnection = () => {
     if (!draftConnection) return null;
     const fromNode = nodes.find(n => n.id === draftConnection.fromId);
