@@ -12,7 +12,7 @@ import {
   List, ListOrdered, 
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
-  Trash2, Undo, Redo, Download
+  Trash2, Undo, Redo, Download, PenTool
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import './Whiteboard.css';
@@ -106,6 +106,20 @@ const FloatingToolbar = ({ editor, selectedNodes, updateNode, onDelete, position
 };
 
 // --- Funções Matemáticas de Física e Ancoragem ---
+const getSmoothSvgPath = (points) => {
+  if (points.length === 0) return '';
+  let path = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length - 1; i++) {
+    const cpX = (points[i].x + points[i + 1].x) / 2;
+    const cpY = (points[i].y + points[i + 1].y) / 2;
+    path += ` Q ${points[i].x} ${points[i].y}, ${cpX} ${cpY}`;
+  }
+  if (points.length > 1) {
+    path += ` L ${points[points.length - 1].x} ${points[points.length - 1].y}`;
+  }
+  return path;
+};
+
 const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
   const dx = Math.abs(toX - fromX);
   const dy = Math.abs(toY - fromY);
@@ -334,14 +348,20 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       onPointerUp={handlePointerUp}
       data-id={node.id}
     >
-      <div className="wb-node-shape-bg" style={{
-        backgroundColor: node.bg || undefined,
-        borderColor: node.borderColor || undefined,
-        borderStyle: node.borderStyle || undefined,
-        borderWidth: node.borderWidth !== undefined ? `${node.borderWidth}px` : undefined,
-      }} />
+      {node.type === 'drawing' ? (
+        <svg width="100%" height="100%" viewBox={`0 0 ${node.width} ${node.height}`} preserveAspectRatio="none" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0 }}>
+          <path d={node.pathData} fill="none" stroke={node.borderColor || '#ef4444'} strokeWidth={node.borderWidth || 4} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        </svg>
+      ) : (
+        <div className="wb-node-shape-bg" style={{
+          backgroundColor: node.bg || undefined,
+          borderColor: node.borderColor || undefined,
+          borderStyle: node.borderStyle || undefined,
+          borderWidth: node.borderWidth !== undefined ? `${node.borderWidth}px` : undefined,
+        }} />
+      )}
       {isTextMode && <div className="wb-node-text-handle" />}
-      <EditorContent editor={editor} className="wb-node-editor" />
+      {node.type !== 'drawing' && <EditorContent editor={editor} className="wb-node-editor" />}
 
       {/* Anchors de Conexão */}
       <div className="wb-connection-anchor wb-anchor-top" data-anchor="top" onPointerDown={(e) => handleConnectionPointerDown(e, 'top')} title="Puxar seta para cima" />
@@ -368,6 +388,7 @@ export default function Whiteboard() {
   const [activeEditor, setActiveEditor] = useState(null); 
   const [selectedNodeIds, setSelectedNodeIds] = useState([]);
   const [lassoRect, setLassoRect] = useState(null); 
+  const [currentDrawPath, setCurrentDrawPath] = useState(null);
 
   const [nodes, setNodes] = useState([
     { id: '1', type: 'post-it', x: 200, y: 150, width: 260, height: 120, text: '<p><strong>Ideia Central</strong></p>' },
@@ -473,23 +494,30 @@ export default function Whiteboard() {
       setInteractionMode('panning');
     } 
     else if (e.button === 0) {
-      setInteractionMode('lassoing');
-      if (!e.shiftKey) {
-        setSelectedNodeIds([]); 
+      if (interactionMode === 'drawing') {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = (e.clientX - rect.left - camera.x) / camera.zoom;
+        const y = (e.clientY - rect.top - camera.y) / camera.zoom;
+        setCurrentDrawPath([{ x, y }]);
+      } else {
+        setInteractionMode('lassoing');
+        if (!e.shiftKey) {
+          setSelectedNodeIds([]); 
+        }
+        setActiveEditor(null);
+        
+        const rect = canvasRef.current.getBoundingClientRect();
+        const xInside = e.clientX - rect.left;
+        const yInside = e.clientY - rect.top;
+        
+        setLassoRect({ 
+          startX: (xInside - camera.x) / camera.zoom, 
+          startY: (yInside - camera.y) / camera.zoom,
+          x: (xInside - camera.x) / camera.zoom,
+          y: (yInside - camera.y) / camera.zoom,
+          w: 0, h: 0 
+        });
       }
-      setActiveEditor(null);
-      
-      const rect = canvasRef.current.getBoundingClientRect();
-      const xInside = e.clientX - rect.left;
-      const yInside = e.clientY - rect.top;
-      
-      setLassoRect({ 
-        startX: (xInside - camera.x) / camera.zoom, 
-        startY: (yInside - camera.y) / camera.zoom,
-        x: (xInside - camera.x) / camera.zoom,
-        y: (yInside - camera.y) / camera.zoom,
-        w: 0, h: 0 
-      });
     }
     e.target.setPointerCapture(e.pointerId);
     startInteraction.current = { x: e.clientX, y: e.clientY };
@@ -561,7 +589,13 @@ export default function Whiteboard() {
       return;
     }
     
-    if (interactionMode === 'panning') {
+    if (interactionMode === 'drawing' && currentDrawPath) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left - camera.x) / camera.zoom;
+      const y = (e.clientY - rect.top - camera.y) / camera.zoom;
+      setCurrentDrawPath(prev => [...prev, { x, y }]);
+    }
+    else if (interactionMode === 'panning') {
       const dx = e.clientX - startInteraction.current.x;
       const dy = e.clientY - startInteraction.current.y;
       startInteraction.current = { x: e.clientX, y: e.clientY };
@@ -600,6 +634,35 @@ export default function Whiteboard() {
     if (draggedShape) {
       addNodeAtPosition(draggedShape.type, e.clientX, e.clientY);
       setDraggedShape(null);
+      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+      return;
+    }
+
+    if (interactionMode === 'drawing' && currentDrawPath) {
+      if (currentDrawPath.length > 2) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        currentDrawPath.forEach(p => {
+          minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+        });
+        
+        const normalizedPoints = currentDrawPath.map(p => ({ x: p.x - minX, y: p.y - minY }));
+        const svgPath = getSmoothSvgPath(normalizedPoints);
+        
+        saveHistory();
+        const newNode = {
+          id: Date.now().toString(),
+          type: 'drawing',
+          x: minX, y: minY,
+          width: Math.max(maxX - minX, 10),
+          height: Math.max(maxY - minY, 10),
+          pathData: svgPath,
+          borderColor: '#ef4444',
+          borderWidth: 4
+        };
+        setNodes(prev => [...prev, newNode]);
+      }
+      setCurrentDrawPath(null);
       if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
       return;
     }
@@ -717,6 +780,7 @@ export default function Whiteboard() {
       <div className="wb-left-palette">
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
+        <button onClick={() => setInteractionMode(prev => prev === 'drawing' ? 'none' : 'drawing')} className={interactionMode === 'drawing' ? 'active' : ''} style={{ color: interactionMode === 'drawing' ? 'var(--blue-600)' : '', background: interactionMode === 'drawing' ? 'var(--blue-100)' : '' }} title="Pincel (Desenho Livre)"><PenTool size={20} /></button>
         <div className="wb-palette-divider" />
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
@@ -738,6 +802,9 @@ export default function Whiteboard() {
           <svg className="wb-connections-svg" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
             {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} />)}
             {renderDraftConnection()}
+            {currentDrawPath && (
+              <path d={getSmoothSvgPath(currentDrawPath)} fill="none" stroke="#ef4444" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+            )}
           </svg>
 
           {nodes.map(node => (
