@@ -382,6 +382,13 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
   const noPointerClass = isCameraMoving ? 'wb-node--no-pointer' : '';
   const draftingClass = isDrafting ? 'wb-node--drafting' : '';
 
+  const def = {
+    'post-it': { bg: '#FFF3B0' },
+    'rounded-rect': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 },
+    'circle': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 },
+    'diamond': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 }
+  }[node.type || 'post-it'] || {};
+
   return (
     <div
       className={`wb-node ${typeClass} ${activeClass} ${noPointerClass} ${draftingClass}`}
