@@ -361,6 +361,20 @@ const getRopePath = (fromX, fromY, toX, toY) => {
   };
 };
 
+const getAnchorPosition = (node, anchor) => {
+  const w = node.width || 260;
+  const h = node.height || 120;
+  const cx = node.x + w / 2;
+  const cy = node.y + h / 2;
+  switch (anchor) {
+    case 'top': return { x: cx, y: node.y };
+    case 'bottom': return { x: cx, y: node.y + h };
+    case 'left': return { x: node.x, y: cy };
+    case 'right': return { x: node.x + w, y: cy };
+    default: return { x: cx, y: cy };
+  }
+};
+
 const getSmartAnchorPosition = (node1, node2) => {
   const w1 = node1.width || 260;
   const h1 = node1.height || 120;
