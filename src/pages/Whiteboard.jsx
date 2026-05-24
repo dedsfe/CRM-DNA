@@ -18,7 +18,7 @@ import {
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
   Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare,
   ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus, Play,
-  Globe, Megaphone, Rss, MessageCircle, Share2, Smartphone
+  Globe, Megaphone, Rss, MessageCircle, Share2, Smartphone, Grid, Magnet, HelpCircle
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
@@ -901,7 +901,7 @@ const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect, onWay
 };
 
 
-const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, user }) => {
+const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, user, snapToGrid, snapSelectedNodes, duplicateNodesAndSelect }) => {
   const funnelKey = (node.funnelType && FUNNEL_NODES[node.funnelType]) 
     ? node.funnelType 
     : (node.type && FUNNEL_NODES[node.type] ? node.type : null);
@@ -954,6 +954,19 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     if (e.target.closest('.ProseMirror') && isActiveNode && !e.shiftKey) return; 
     if (e.target.closest('.wb-resize-handle') || e.target.closest('.wb-connection-anchor')) return; 
     
+    saveHistory(); 
+
+    if (e.altKey && duplicateNodesAndSelect) {
+      // Figma duplicate drag behavior
+      const currentSelected = selectedNodeIds.includes(node.id) ? selectedNodeIds : [node.id];
+      const duplicates = duplicateNodesAndSelect(currentSelected);
+      setIsDragging(true);
+      e.target.setPointerCapture(e.pointerId);
+      startPos.current = { x: e.clientX, y: e.clientY };
+      startGroupPositions.current = duplicates;
+      return;
+    }
+    
     if (e.shiftKey) {
       onEditorFocus(editor, node.id, true); 
     } else if (!selectedNodeIds.includes(node.id)) {
@@ -962,7 +975,6 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       onEditorFocus(editor, node.id, false, true); 
     }
 
-    saveHistory(); 
     setIsDragging(true);
     e.target.setPointerCapture(e.pointerId);
     startPos.current = { x: e.clientX, y: e.clientY };
@@ -986,6 +998,9 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     if (isDragging) {
       setIsDragging(false);
       e.target.releasePointerCapture(e.pointerId);
+      if (snapToGrid && snapSelectedNodes) {
+        snapSelectedNodes();
+      }
     }
   };
 
@@ -1152,6 +1167,9 @@ export default function Whiteboard() {
   const [penSettings, setPenSettings] = useState({ color: '#ef4444', width: 4 });
   const [paletteSearch, setPaletteSearch] = useState('');
   const [isPaletteCollapsed, setIsPaletteCollapsed] = useState(false);
+  const [gridVisible, setGridVisible] = useState(true);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const [nodes, setNodes] = useState([]);
   const [connections, setConnections] = useState([]);
@@ -1298,6 +1316,38 @@ export default function Whiteboard() {
       return [...prev, ...newNodes];
     });
   }, [nodes, connections, saveHistory]);
+
+  const duplicateNodesAndSelect = useCallback((ids) => {
+    saveHistory(nodes, connections);
+    let newIds = [];
+    setNodes(prev => {
+      const selectedToDuplicate = prev.filter(n => ids.includes(n.id));
+      const newNodes = selectedToDuplicate.map(node => {
+        const newId = crypto.randomUUID();
+        newIds.push(newId);
+        return {
+          ...node,
+          id: newId
+        };
+      });
+      return [...prev, ...newNodes];
+    });
+    setSelectedNodeIds(newIds);
+    return newIds;
+  }, [nodes, connections, saveHistory]);
+
+  const snapSelectedNodes = useCallback(() => {
+    setNodes(prev => prev.map(n => {
+      if (selectedNodeIds.includes(n.id)) {
+        return {
+          ...n,
+          x: Math.round(n.x / 20) * 20,
+          y: Math.round(n.y / 20) * 20
+        };
+      }
+      return n;
+    }));
+  }, [selectedNodeIds]);
 
   const [draftConnection, setDraftConnection] = useState(null); 
   const [draggedShape, setDraggedShape] = useState(null);
@@ -1624,7 +1674,7 @@ export default function Whiteboard() {
   const addNodeAtPosition = useCallback((type, clientX, clientY) => {
     saveHistory();
     const defaultSizes = { 
-      'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 },
+      'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'rounded-rect-frame': { w: 300, h: 200 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 },
       'page-optin': { w: 80, h: 80 }, 'page-sales': { w: 80, h: 80 }, 'page-vsl': { w: 80, h: 80 }, 'page-checkout': { w: 80, h: 80 }, 'page-thankyou': { w: 80, h: 80 },
       'action-purchase': { w: 80, h: 80 }, 'action-lead': { w: 80, h: 80 }
     };
@@ -1636,8 +1686,13 @@ export default function Whiteboard() {
     const xInsideCanvas = clientX - rect.left;
     const yInsideCanvas = clientY - rect.top;
 
-    const worldX = (xInsideCanvas - camera.x) / camera.zoom - size.w / 2;
-    const worldY = (yInsideCanvas - camera.y) / camera.zoom - size.h / 2;
+    let worldX = (xInsideCanvas - camera.x) / camera.zoom - size.w / 2;
+    let worldY = (yInsideCanvas - camera.y) / camera.zoom - size.h / 2;
+
+    if (snapToGrid) {
+      worldX = Math.round(worldX / 20) * 20;
+      worldY = Math.round(worldY / 20) * 20;
+    }
 
     const titles = {
       'page-optin': 'Opt-in Page', 'page-sales': 'Página de Vendas', 'page-vsl': 'VSL', 'page-checkout': 'Checkout', 'page-thankyou': 'Thank You',
@@ -1656,9 +1711,17 @@ export default function Whiteboard() {
     let bg = undefined;
     let borderColor = undefined;
     let borderWidth = undefined;
+    let borderStyle = undefined;
     let nodeType = type;
 
-    if (type.startsWith('traffic-') || type.startsWith('page-') || type.startsWith('action-')) {
+    if (type === 'rounded-rect-frame') {
+      textHTML = `<p style="text-align: center; font-size: 14px; font-weight: bold; color: #475569;">ETAPA DO FUNIL</p>`;
+      bg = 'transparent';
+      borderColor = '#94a3b8';
+      borderWidth = 2;
+      borderStyle = 'dashed';
+      nodeType = 'rounded-rect';
+    } else if (type.startsWith('traffic-') || type.startsWith('page-') || type.startsWith('action-')) {
       const category = type.split('-')[0];
       textHTML = `<p style="text-align: center"><strong>${titles[type]}</strong></p>`;
       bg = colors[category].bg;
@@ -1674,13 +1737,13 @@ export default function Whiteboard() {
       x: worldX, y: worldY,
       width: size.w, height: size.h,
       text: textHTML,
-      bg, borderColor, borderWidth,
+      bg, borderColor, borderWidth, borderStyle,
       author: user || 'André',
       createdAt: new Date().toISOString()
     };
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeIds([newNode.id]);
-  }, [camera, saveHistory, setNodes, setSelectedNodeIds, user]);
+  }, [camera, saveHistory, setNodes, setSelectedNodeIds, user, snapToGrid]);
 
   // --- Drag Shape from Palette Effect ---
   useEffect(() => {
@@ -1828,6 +1891,7 @@ export default function Whiteboard() {
             { type: 'post-it', label: 'Post-it', icon: <StickyNote size={18} color="#ca8a04" />, style: { background: '#FFF3B0' }, desc: 'Nota (Post-it)' },
             { type: 'comment', label: 'Comentário', icon: <MessageSquare size={18} color="#64748b" />, desc: 'Comentário' },
             { type: 'rounded-rect', label: 'Retângulo', icon: <Square size={18} color="#3182ce" />, desc: 'Retângulo' },
+            { type: 'rounded-rect-frame', label: 'Etapa do Funil', icon: <Square size={18} color="#94a3b8" style={{ strokeDasharray: '3 3' }} />, desc: 'Moldura para etapas do funil' },
             { type: 'circle', label: 'Círculo', icon: <Circle size={18} color="#3182ce" />, desc: 'Círculo' },
             { type: 'diamond', label: 'Losango', icon: <Diamond size={18} color="#3182ce" />, desc: 'Losango (Decisão)' }
           ].filter(item => item.label.toLowerCase().includes(paletteSearch.toLowerCase().trim()));
@@ -1966,10 +2030,33 @@ export default function Whiteboard() {
         >
           <PenTool size={18} />
         </button>
+        <div className="wb-bottom-divider" />
+        <button 
+          onClick={() => setGridVisible(!gridVisible)} 
+          className={`wb-bottom-btn ${gridVisible ? 'active' : ''}`} 
+          title="Mostrar/Ocultar Grade"
+        >
+          <Grid size={18} />
+        </button>
+        <button 
+          onClick={() => setSnapToGrid(!snapToGrid)} 
+          className={`wb-bottom-btn ${snapToGrid ? 'active' : ''}`} 
+          title="Atrair para Grade (Snap)"
+        >
+          <Magnet size={18} />
+        </button>
+        <div className="wb-bottom-divider" />
+        <button 
+          onClick={() => setShowShortcuts(true)} 
+          className="wb-bottom-btn" 
+          title="Atalhos de Teclado (?)"
+        >
+          <HelpCircle size={18} />
+        </button>
       </div>
 
       <div 
-        className={`whiteboard-canvas ${interactionMode === 'panning' ? 'whiteboard-canvas--panning' : ''}`}
+        className={`whiteboard-canvas ${interactionMode === 'panning' ? 'whiteboard-canvas--panning' : ''} ${!gridVisible ? 'grid-hidden' : ''}`}
         ref={canvasRef}
         onPointerDown={handlePointerDown}
         onContextMenu={(e) => e.preventDefault()}
@@ -2003,6 +2090,9 @@ export default function Whiteboard() {
               saveHistory={() => saveHistory(nodes, connections)}
               onConnectionStart={handleConnectionStart}
               user={user}
+              snapToGrid={snapToGrid}
+              snapSelectedNodes={snapSelectedNodes}
+              duplicateNodesAndSelect={duplicateNodesAndSelect}
             />
           ))}
 
@@ -2036,6 +2126,30 @@ export default function Whiteboard() {
           }}
         >
           <div className="wb-node-shape-bg" />
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Modal */}
+      {showShortcuts && (
+        <div className="wb-shortcuts-backdrop" onClick={() => setShowShortcuts(false)}>
+          <div className="wb-shortcuts-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="wb-shortcuts-header">
+              <h3>Atalhos de Teclado</h3>
+              <button className="wb-shortcuts-close" onClick={() => setShowShortcuts(false)}>×</button>
+            </div>
+            <div className="wb-shortcuts-grid">
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">V</span><span className="wb-shortcut-desc">Ferramenta Selecionar</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Espaço + Arrastar</span><span className="wb-shortcut-desc">Arrastar Tela (Pan)</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">P</span><span className="wb-shortcut-desc">Pincel de Desenho</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Del / Backspace</span><span className="wb-shortcut-desc">Excluir elemento selecionado</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Alt / Option + Arrastar</span><span className="wb-shortcut-desc">Duplicar elemento (Figma-style)</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + C</span><span className="wb-shortcut-desc">Copiar elemento</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + V</span><span className="wb-shortcut-desc">Colar elemento</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + Z</span><span className="wb-shortcut-desc">Desfazer ação</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Ctrl / Cmd + Y / Shift + Z</span><span className="wb-shortcut-desc">Refazer ação</span></div>
+              <div className="wb-shortcut-row"><span className="wb-shortcut-key">Roda do Mouse / Pinça</span><span className="wb-shortcut-desc">Zoom In / Out</span></div>
+            </div>
+          </div>
         </div>
       )}
     </div>
