@@ -80,10 +80,11 @@ const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) =
   );
 };
 
-const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart }) => {
+const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, onConnectionMove, onConnectionEnd }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
   const startGroupPositions = useRef({}); 
+  const isConnectingRef = useRef(false); // Para garantir captura de eventos lisa da corda
 
   const [resizeDir, setResizeDir] = useState(null);
   const startSize = useRef({ w: 0, h: 0, x: 0, y: 0 });
@@ -93,10 +94,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
   const editor = useEditor({
     extensions: [StarterKit, Underline, TextStyle, FontSize, Color, Highlight.configure({ multicolor: true }), TextAlign.configure({ types: ['heading', 'paragraph'] })],
     content: node.text || '<p></p>',
-    onFocus: ({ editor }) => {
-      // Deixe o handlePointerDown cuidar da seleção inicial. 
-      // Se não estivermos arrastando, o clique vai pro editor.
-    },
+    onFocus: ({ editor }) => {},
     onBlur: ({ editor }) => {
       const currentHtml = editor.getHTML();
       if (currentHtml !== node.text) {
@@ -116,20 +114,15 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
   const handlePointerDown = (e) => {
     e.stopPropagation();
     if (e.button !== 0) return;
-    if (e.target.closest('.ProseMirror') && isActiveNode && !e.shiftKey) {
-      // Se já está ativo e clicou no texto, deixa o evento ir pro TipTap
-      return; 
-    }
+    if (e.target.closest('.ProseMirror') && isActiveNode && !e.shiftKey) return; 
     if (e.target.closest('.wb-resize-handle') || e.target.closest('.wb-connection-anchor')) return; 
     
-    // Gerenciamento de Seleção via Shift+Click e Clicks Simples
     if (e.shiftKey) {
-      onEditorFocus(editor, node.id, true); // Adiciona ou remove da seleção
+      onEditorFocus(editor, node.id, true); 
     } else if (!selectedNodeIds.includes(node.id)) {
-      onEditorFocus(editor, node.id, false); // Seleciona apenas este se não estiver no bolo
+      onEditorFocus(editor, node.id, false); 
     } else {
-      // Se já está no bolo, apenas foca nele (mantém os outros selecionados para arrastar)
-      onEditorFocus(editor, node.id, false, true); // O 'true' indica keepGroup
+      onEditorFocus(editor, node.id, false, true); 
     }
 
     saveHistory(); 
@@ -149,7 +142,6 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     const dy = (e.clientY - startPos.current.y) / cameraZoom;
     
     updateMultipleNodes(startGroupPositions.current, dx, dy);
-    
     startPos.current = { x: e.clientX, y: e.clientY };
   };
 
@@ -199,11 +191,30 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     }
   };
 
-  // --- Conexão ---
+  // --- Conexão Física Direta na Âncora ---
   const handleConnectionPointerDown = (e) => {
     e.stopPropagation();
+    isConnectingRef.current = true;
     e.target.setPointerCapture(e.pointerId);
     onConnectionStart(node.id, e.clientX, e.clientY);
+  };
+
+  const handleConnectionPointerMove = (e) => {
+    if (isConnectingRef.current) {
+      e.stopPropagation();
+      onConnectionMove(e.clientX, e.clientY);
+    }
+  };
+
+  const handleConnectionPointerUp = (e) => {
+    if (isConnectingRef.current) {
+      isConnectingRef.current = false;
+      e.stopPropagation();
+      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) {
+        e.target.releasePointerCapture(e.pointerId);
+      }
+      onConnectionEnd(e.clientX, e.clientY);
+    }
   };
 
   const typeClass = `wb-node--${node.type || 'post-it'}`;
@@ -224,11 +235,11 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       {isTextMode && <div className="wb-node-text-handle" />}
       <EditorContent editor={editor} className="wb-node-editor" />
 
-      {/* Anchors de Conexão */}
-      <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} title="Puxar seta para cima" />
-      <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a direita" />
-      <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} title="Puxar seta para baixo" />
-      <div className="wb-connection-anchor wb-anchor-left" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a esquerda" />
+      {/* Anchors de Conexão com Eventos Físicos Locais */}
+      <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para cima" />
+      <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para a direita" />
+      <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para baixo" />
+      <div className="wb-connection-anchor wb-anchor-left" onPointerDown={handleConnectionPointerDown} onPointerMove={handleConnectionPointerMove} onPointerUp={handleConnectionPointerUp} title="Puxar seta para a esquerda" />
 
       <div className="wb-resize-handles">
         {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
@@ -327,7 +338,6 @@ export default function Whiteboard() {
 
   const canvasRef = useRef(null);
 
-  // --- Eventos Globais de Mouse (Canvas) ---
   const handlePointerDown = (e) => {
     if (e.button === 1 || e.button === 2 || isSpaceDown) {
       setInteractionMode('panning');
@@ -355,130 +365,30 @@ export default function Whiteboard() {
     startInteraction.current = { x: e.clientX, y: e.clientY };
   };
 
-  const handlePointerMove = (e) => {
-    if (interactionMode === 'panning') {
-      const dx = e.clientX - startInteraction.current.x;
-      const dy = e.clientY - startInteraction.current.y;
-      startInteraction.current = { x: e.clientX, y: e.clientY };
-      setCamera((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-    } 
-    else if (interactionMode === 'lassoing') {
-      const rect = canvasRef.current.getBoundingClientRect();
-      const xInside = e.clientX - rect.left;
-      const yInside = e.clientY - rect.top;
-      const currentX = (xInside - camera.x) / camera.zoom;
-      const currentY = (yInside - camera.y) / camera.zoom;
-      
-      const newLasso = {
-        ...lassoRect,
-        x: Math.min(lassoRect.startX, currentX),
-        y: Math.min(lassoRect.startY, currentY),
-        w: Math.abs(currentX - lassoRect.startX),
-        h: Math.abs(currentY - lassoRect.startY)
-      };
-      setLassoRect(newLasso);
-
-      // Calcular interseção
-      const newSelectedIds = nodes.filter(n => {
-        return (
-          n.x < newLasso.x + newLasso.w &&
-          n.x + (n.width || 260) > newLasso.x &&
-          n.y < newLasso.y + newLasso.h &&
-          n.y + (n.height || 120) > newLasso.y
-        );
-      }).map(n => n.id);
-      
-      // Preserve os já selecionados se shift estiver pressionado (implementação otimizada)
-      setSelectedNodeIds(prev => Array.from(new Set([...prev, ...newSelectedIds])));
-    }
-  };
-
-  const handlePointerUp = (e) => {
-    if (interactionMode !== 'none') {
-      setInteractionMode('none');
-      setLassoRect(null);
-      e.target.releasePointerCapture(e.pointerId);
-    }
-  };
-
-  // --- Zoom e Pan (Trackpad) ---
-  const handleWheel = useCallback((e) => {
-    e.preventDefault();
-    if (e.ctrlKey || e.metaKey) {
-      // Zoom
-      const zoomSensitivity = 0.005;
-      const delta = -e.deltaY * zoomSensitivity;
-      setCamera((prev) => {
-        let newZoom = prev.zoom + delta;
-        newZoom = Math.max(0.1, Math.min(newZoom, 5));
-        return { ...prev, zoom: newZoom };
-      });
-    } else {
-      // Pan (Trackpad 2 fingers normal scroll)
-      setCamera((prev) => ({
-        ...prev,
-        x: prev.x - e.deltaX,
-        y: prev.y - e.deltaY
-      }));
-    }
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.addEventListener('wheel', handleWheel, { passive: false });
-      return () => canvas.removeEventListener('wheel', handleWheel);
-    }
-  }, [handleWheel]);
-
-  // --- Nós e Conexões ---
-  const addNodeAtPosition = (type, clientX, clientY) => {
-    saveHistory();
-    const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 } };
-    const size = defaultSizes[type] || { w: 200, h: 100 };
-    
-    // Coordenada do Mouse convertida para Coordenada do Mundo (Canvas) compensando boundingRect
-    const rect = canvasRef.current.getBoundingClientRect();
-    const xInsideCanvas = clientX - rect.left;
-    const yInsideCanvas = clientY - rect.top;
-
-    const worldX = (xInsideCanvas - camera.x) / camera.zoom - size.w / 2;
-    const worldY = (yInsideCanvas - camera.y) / camera.zoom - size.h / 2;
-
-    const newNode = {
-      id: Date.now().toString(),
-      type: type,
-      x: worldX, y: worldY,
-      width: size.w, height: size.h,
-      text: '<p style="text-align: center"></p>'
-    };
-    setNodes((prev) => [...prev, newNode]);
-    setSelectedNodeIds([newNode.id]);
-  };
-
-  const updateNode = (id, newProps) => setNodes((prev) => prev.map(n => n.id === id ? { ...n, ...newProps } : n));
-
-  const updateMultipleNodes = (idsToMove, dx, dy) => {
-    setNodes(prev => prev.map(n => {
-      if (idsToMove.includes(n.id)) {
-        return { ...n, x: n.x + dx, y: n.y + dy };
-      }
-      return n;
-    }));
-  };
-
-  const handleEditorFocus = (editor, id, isShift, keepGroup = false) => {
-    setActiveEditor(editor);
-    if (isShift) {
-      setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    } else if (!keepGroup) {
-      setSelectedNodeIds([id]);
-    }
-  };
-
-  // --- Lógica Rastro da Seta e Drag-Drop ---
+  // --- Lógica Rastro da Seta (Gravidade) ---
   const handleConnectionStart = (fromId, clientX, clientY) => {
     setDraftConnection({ fromId, mouseX: clientX, mouseY: clientY });
+  };
+  
+  const handleConnectionMove = (clientX, clientY) => {
+    setDraftConnection(prev => prev ? { ...prev, mouseX: clientX, mouseY: clientY } : null);
+  };
+
+  const handleConnectionEnd = (clientX, clientY) => {
+    if (!draftConnection) return;
+    
+    // Resolve o nó alvo sob o ponteiro
+    const elements = document.elementsFromPoint(clientX, clientY);
+    const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
+    
+    if (targetNodeEl) {
+      const toId = targetNodeEl.getAttribute('data-id');
+      if (toId && toId !== draftConnection.fromId) {
+        saveHistory();
+        setConnections(prev => [...prev, { id: Date.now().toString(), from: draftConnection.fromId, to: toId }]);
+      }
+    }
+    setDraftConnection(null);
   };
   
   // --- Eventos Globais do Container ---
@@ -487,10 +397,7 @@ export default function Whiteboard() {
       setDraggedShape(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
       return;
     }
-    if (draftConnection) {
-      setDraftConnection(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
-      return;
-    }
+    
     if (interactionMode === 'panning') {
       const dx = e.clientX - startInteraction.current.x;
       const dy = e.clientY - startInteraction.current.y;
@@ -535,22 +442,6 @@ export default function Whiteboard() {
       return;
     }
     
-    if (draftConnection) {
-      const elements = document.elementsFromPoint(e.clientX, e.clientY);
-      const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
-      
-      if (targetNodeEl) {
-        const toId = targetNodeEl.getAttribute('data-id');
-        if (toId && toId !== draftConnection.fromId) {
-          saveHistory();
-          setConnections(prev => [...prev, { id: Date.now().toString(), from: draftConnection.fromId, to: toId }]);
-        }
-      }
-      setDraftConnection(null);
-      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
-      return;
-    }
-
     if (interactionMode !== 'none') {
       setInteractionMode('none');
       setLassoRect(null);
@@ -558,7 +449,78 @@ export default function Whiteboard() {
     }
   };
 
-  // --- Exportar PNG Corrigido ---
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      // Zoom
+      const zoomSensitivity = 0.005;
+      const delta = -e.deltaY * zoomSensitivity;
+      setCamera((prev) => {
+        let newZoom = prev.zoom + delta;
+        newZoom = Math.max(0.1, Math.min(newZoom, 5));
+        return { ...prev, zoom: newZoom };
+      });
+    } else {
+      // Pan
+      setCamera((prev) => ({
+        ...prev,
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+      return () => canvas.removeEventListener('wheel', handleWheel);
+    }
+  }, [handleWheel]);
+
+  const addNodeAtPosition = (type, clientX, clientY) => {
+    saveHistory();
+    const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 } };
+    const size = defaultSizes[type] || { w: 200, h: 100 };
+    
+    const rect = canvasRef.current.getBoundingClientRect();
+    const xInsideCanvas = clientX - rect.left;
+    const yInsideCanvas = clientY - rect.top;
+
+    const worldX = (xInsideCanvas - camera.x) / camera.zoom - size.w / 2;
+    const worldY = (yInsideCanvas - camera.y) / camera.zoom - size.h / 2;
+
+    const newNode = {
+      id: Date.now().toString(),
+      type: type,
+      x: worldX, y: worldY,
+      width: size.w, height: size.h,
+      text: '<p style="text-align: center"></p>'
+    };
+    setNodes((prev) => [...prev, newNode]);
+    setSelectedNodeIds([newNode.id]);
+  };
+
+  const updateNode = (id, newProps) => setNodes((prev) => prev.map(n => n.id === id ? { ...n, ...newProps } : n));
+
+  const updateMultipleNodes = (idsToMove, dx, dy) => {
+    setNodes(prev => prev.map(n => {
+      if (idsToMove.includes(n.id)) {
+        return { ...n, x: n.x + dx, y: n.y + dy };
+      }
+      return n;
+    }));
+  };
+
+  const handleEditorFocus = (editor, id, isShift, keepGroup = false) => {
+    setActiveEditor(editor);
+    if (isShift) {
+      setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else if (!keepGroup) {
+      setSelectedNodeIds([id]);
+    }
+  };
+
   const handleExport = () => {
     if (canvasRef.current) {
       toPng(canvasRef.current, { backgroundColor: '#f8fafc' }).then((dataUrl) => {
@@ -573,6 +535,24 @@ export default function Whiteboard() {
     }
   };
 
+  // Curva Catenária Mágica (Corda com Gravidade)
+  const getGravityPath = (fromX, fromY, toX, toY) => {
+    const dx = Math.abs(toX - fromX);
+    const dy = Math.abs(toY - fromY);
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    // Calcula a barriga da corda baseada na distância
+    const sag = Math.min(dist * 0.35, 200) + 15; 
+    
+    const cpX = (fromX + toX) / 2;
+    const cpY = Math.max(fromY, toY) + sag;
+
+    // A ponta da seta precisa apontar na direção da tangente final da curva
+    const angle = Math.atan2(toY - cpY, toX - cpX) * 180 / Math.PI;
+
+    return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
+  };
+
   const renderConnections = () => {
     return connections.map(conn => {
       const fromNode = nodes.find(n => n.id === conn.from);
@@ -584,14 +564,12 @@ export default function Whiteboard() {
       const toX = toNode.x + (toNode.width || 260) / 2;
       const toY = toNode.y + (toNode.height || 120) / 2;
 
-      const dx = Math.abs(toX - fromX);
-      const cp1x = fromX + dx / 2;
-      const cp2x = toX - dx / 2;
+      const { path, angle } = getGravityPath(fromX, fromY, toX, toY);
 
       return (
         <g key={conn.id}>
-          <path d={`M ${fromX} ${fromY} C ${cp1x} ${fromY}, ${cp2x} ${toY}, ${toX} ${toY}`} className="wb-connection-path" />
-          <polygon points="0,-5 10,0 0,5" transform={`translate(${toX}, ${toY}) rotate(${Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI})`} fill="#64748b" />
+          <path d={path} className="wb-connection-path" />
+          <polygon points="0,-6 12,0 0,6" transform={`translate(${toX}, ${toY}) rotate(${angle})`} fill="#64748b" className="wb-connection-arrowhead" />
         </g>
       );
     });
@@ -605,16 +583,18 @@ export default function Whiteboard() {
     const fromX = fromNode.x + (fromNode.width || 260) / 2;
     const fromY = fromNode.y + (fromNode.height || 120) / 2;
     
-    // Compensa a posição do contêiner para desenhar o draft
     const rect = canvasRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
     const toX = (draftConnection.mouseX - rect.left - camera.x) / camera.zoom;
     const toY = (draftConnection.mouseY - rect.top - camera.y) / camera.zoom;
 
-    const dx = Math.abs(toX - fromX);
-    const cp1x = fromX + dx / 2;
-    const cp2x = toX - dx / 2;
+    const { path, angle } = getGravityPath(fromX, fromY, toX, toY);
 
-    return <path d={`M ${fromX} ${fromY} C ${cp1x} ${fromY}, ${cp2x} ${toY}, ${toX} ${toY}`} className="wb-connection-path draft" />;
+    return (
+      <g>
+        <path d={path} className="wb-connection-path draft" />
+        <polygon points="0,-6 12,0 0,6" transform={`translate(${toX}, ${toY}) rotate(${angle})`} fill="var(--blue-400)" className="wb-connection-arrowhead draft" />
+      </g>
+    );
   };
 
   return (
@@ -673,6 +653,8 @@ export default function Whiteboard() {
               isActiveNode={selectedNodeIds.includes(node.id)} 
               saveHistory={() => saveHistory(nodes, connections)}
               onConnectionStart={handleConnectionStart}
+              onConnectionMove={handleConnectionMove}
+              onConnectionEnd={handleConnectionEnd}
             />
           ))}
 
