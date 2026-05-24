@@ -12,7 +12,8 @@ import {
   List, ListOrdered, 
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
-  Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool
+  Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
+  Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import './Whiteboard.css';
@@ -43,7 +44,7 @@ const FontSize = Extension.create({
   },
 });
 
-const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactionMode, penSettings, setPenSettings }) => {
+const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactionMode, penSettings, setPenSettings, bringToFront, sendToBack, duplicateNodes }) => {
   if (interactionMode === 'drawing') {
     return (
       <div className="wb-global-toolbar">
@@ -64,8 +65,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
 
   if (selectedNodes.length === 0) return null;
 
-  // Usa o primeiro nó selecionado como referência para as cores atuais, 
-  // mas aplica em todos.
   const activeNode = selectedNodes[0];
   const disabled = !editor;
 
@@ -139,6 +138,22 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
           <div className="wb-toolbar-divider" />
         </>
       )}
+
+      <button onClick={() => setNodeStyle('isLocked', !activeNode?.isLocked)} className={`wb-toolbar-btn ${activeNode?.isLocked ? 'active' : ''}`} disabled={disabled} title={activeNode?.isLocked ? "Desbloquear" : "Bloquear"}>
+        {activeNode?.isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+      </button>
+
+      <button onClick={() => duplicateNodes(selectedNodes.map(n => n.id))} className="wb-toolbar-btn" disabled={disabled} title="Duplicar">
+        <Copy size={16} />
+      </button>
+
+      <button onClick={() => bringToFront(selectedNodes.map(n => n.id))} className="wb-toolbar-btn" disabled={disabled} title="Trazer para Frente">
+        <ArrowUpToLine size={16} />
+      </button>
+
+      <button onClick={() => sendToBack(selectedNodes.map(n => n.id))} className="wb-toolbar-btn" disabled={disabled} title="Enviar para Trás">
+        <ArrowDownToLine size={16} />
+      </button>
 
       <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }} title="Deletar"><Trash2 size={16} /></button>
     </div>
@@ -285,7 +300,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
 
   const handlePointerDown = (e) => {
     e.stopPropagation();
-    if (e.button !== 0) return;
+    if (e.button !== 0 || node.isLocked) return;
     if (e.target.closest('.ProseMirror') && isActiveNode && !e.shiftKey) return; 
     if (e.target.closest('.wb-resize-handle') || e.target.closest('.wb-connection-anchor')) return; 
     
@@ -326,7 +341,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
 
   const handleResizePointerDown = (e, dir) => {
     e.stopPropagation();
-    if (e.button !== 0) return;
+    if (e.button !== 0 || node.isLocked) return;
     
     saveHistory(); 
     setResizeDir(dir);
@@ -404,16 +419,24 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       {isTextMode && <div className="wb-node-text-handle" />}
       {node.type !== 'drawing' && <EditorContent editor={editor} className="wb-node-editor" />}
 
-      <div className="wb-connection-anchor wb-anchor-top" data-anchor="top" onPointerDown={(e) => handleConnectionPointerDown(e, 'top')} title="Puxar seta para cima" />
-      <div className="wb-connection-anchor wb-anchor-right" data-anchor="right" onPointerDown={(e) => handleConnectionPointerDown(e, 'right')} title="Puxar seta para a direita" />
-      <div className="wb-connection-anchor wb-anchor-bottom" data-anchor="bottom" onPointerDown={(e) => handleConnectionPointerDown(e, 'bottom')} title="Puxar seta para baixo" />
-      <div className="wb-connection-anchor wb-anchor-left" data-anchor="left" onPointerDown={(e) => handleConnectionPointerDown(e, 'left')} title="Puxar seta para a esquerda" />
+      {/* Anchors de Conexão (Só mostra se não estiver trancado e não for texto) */}
+      {!node.isLocked && node.type !== 'text' && (
+        <>
+          <div className="wb-connection-anchor wb-anchor-top" data-anchor="top" onPointerDown={(e) => handleConnectionPointerDown(e, 'top')} title="Puxar seta para cima" />
+          <div className="wb-connection-anchor wb-anchor-right" data-anchor="right" onPointerDown={(e) => handleConnectionPointerDown(e, 'right')} title="Puxar seta para a direita" />
+          <div className="wb-connection-anchor wb-anchor-bottom" data-anchor="bottom" onPointerDown={(e) => handleConnectionPointerDown(e, 'bottom')} title="Puxar seta para baixo" />
+          <div className="wb-connection-anchor wb-anchor-left" data-anchor="left" onPointerDown={(e) => handleConnectionPointerDown(e, 'left')} title="Puxar seta para a esquerda" />
+        </>
+      )}
 
-      <div className="wb-resize-handles">
-        {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
-          <div key={dir} className={`wb-resize-handle wb-resize-${dir}`} onPointerDown={(e) => handleResizePointerDown(e, dir)} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} />
-        ))}
-      </div>
+      {/* Resize Handles */}
+      {isActiveNode && !node.isLocked && node.type !== 'drawing' && (
+        <div className="wb-resize-handles">
+          {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
+            <div key={dir} className={`wb-resize-handle wb-resize-${dir}`} onPointerDown={(e) => handleResizePointerDown(e, dir)} onPointerMove={handleResizePointerMove} onPointerUp={handleResizePointerUp} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -433,16 +456,82 @@ export default function Whiteboard() {
   const [currentDrawPath, setCurrentDrawPath] = useState(null);
   const [penSettings, setPenSettings] = useState({ color: '#ef4444', width: 4 });
 
-  const [nodes, setNodes] = useState([
-    { id: '1', type: 'post-it', x: 200, y: 150, width: 260, height: 120, text: '<p><strong>Ideia Central</strong></p>' },
-    { id: '2', type: 'rounded-rect', x: 600, y: 150, width: 200, height: 100, text: '<p style="text-align: center">Passo 1</p>' }
-  ]);
-  const [connections, setConnections] = useState([
-    { id: 'c1', from: '1', to: '2' }
-  ]);
+  const [nodes, setNodes] = useState([]);
+  const [connections, setConnections] = useState([]);
   
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
+
+  // --- Atalhos de Teclado (Ctrl+C / Ctrl+V) ---
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.target.closest('.ProseMirror') || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      // Ctrl+C
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (selectedNodeIds.length > 0) {
+          const copied = nodes.filter(n => selectedNodeIds.includes(n.id));
+          navigator.clipboard.writeText(JSON.stringify({ type: 'wb-nodes', data: copied }));
+        }
+      }
+      
+      // Ctrl+V
+      if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        navigator.clipboard.readText().then(text => {
+          try {
+            const parsed = JSON.parse(text);
+            if (parsed.type === 'wb-nodes') {
+              saveHistory(nodes, connections);
+              const newNodes = parsed.data.map(n => ({
+                ...n,
+                id: crypto.randomUUID(),
+                x: n.x + 40,
+                y: n.y + 40
+              }));
+              setNodes(prev => [...prev, ...newNodes]);
+              setSelectedNodeIds(newNodes.map(n => n.id));
+            }
+          } catch(err) {}
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nodes, selectedNodeIds, saveHistory, connections]);
+
+  // --- Lógica Rastro da Seta (Gravidade) ---
+  const bringToFront = useCallback((ids) => {
+    saveHistory(nodes, connections);
+    setNodes(prev => {
+      const selected = prev.filter(n => ids.includes(n.id));
+      const unselected = prev.filter(n => !ids.includes(n.id));
+      return [...unselected, ...selected];
+    });
+  }, [nodes, connections, saveHistory]);
+
+  const sendToBack = useCallback((ids) => {
+    saveHistory(nodes, connections);
+    setNodes(prev => {
+      const selected = prev.filter(n => ids.includes(n.id));
+      const unselected = prev.filter(n => !ids.includes(n.id));
+      return [...selected, ...unselected];
+    });
+  }, [nodes, connections, saveHistory]);
+
+  const duplicateNodes = useCallback((ids) => {
+    saveHistory(nodes, connections);
+    setNodes(prev => {
+      const selectedToDuplicate = prev.filter(n => ids.includes(n.id));
+      const newNodes = selectedToDuplicate.map(node => ({
+        ...node,
+        id: crypto.randomUUID(),
+        x: node.x + 20,
+        y: node.y + 20
+      }));
+      return [...prev, ...newNodes];
+    });
+  }, [nodes, connections, saveHistory]);
 
   const [draftConnection, setDraftConnection] = useState(null); 
   const [draggedShape, setDraggedShape] = useState(null); 
@@ -823,6 +912,9 @@ export default function Whiteboard() {
             interactionMode={interactionMode}
             penSettings={penSettings}
             setPenSettings={setPenSettings}
+            bringToFront={bringToFront}
+            sendToBack={sendToBack}
+            duplicateNodes={duplicateNodes}
           />
         )}
         
