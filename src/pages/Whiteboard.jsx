@@ -475,19 +475,66 @@ export default function Whiteboard() {
     }
   };
 
-  // --- Lógica Rastro da Seta ---
+  // --- Lógica Rastro da Seta e Drag-Drop ---
   const handleConnectionStart = (fromId, clientX, clientY) => {
     setDraftConnection({ fromId, mouseX: clientX, mouseY: clientY });
   };
   
-  useEffect(() => {
-    if (!draftConnection) return;
-    
-    const onMove = (e) => {
+  // --- Eventos Globais do Container ---
+  const handleContainerPointerMove = (e) => {
+    if (draggedShape) {
+      setDraggedShape(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
+      return;
+    }
+    if (draftConnection) {
       setDraftConnection(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
-    };
-    const onUp = (e) => {
-      // elementos abaixo do ponteiro ao soltar o click
+      return;
+    }
+    if (interactionMode === 'panning') {
+      const dx = e.clientX - startInteraction.current.x;
+      const dy = e.clientY - startInteraction.current.y;
+      startInteraction.current = { x: e.clientX, y: e.clientY };
+      setCamera((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+    } 
+    else if (interactionMode === 'lassoing') {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const xInside = e.clientX - rect.left;
+      const yInside = e.clientY - rect.top;
+      const currentX = (xInside - camera.x) / camera.zoom;
+      const currentY = (yInside - camera.y) / camera.zoom;
+      
+      const newLasso = {
+        ...lassoRect,
+        x: Math.min(lassoRect.startX, currentX),
+        y: Math.min(lassoRect.startY, currentY),
+        w: Math.abs(currentX - lassoRect.startX),
+        h: Math.abs(currentY - lassoRect.startY)
+      };
+      setLassoRect(newLasso);
+
+      // Calcular interseção
+      const newSelectedIds = nodes.filter(n => {
+        return (
+          n.x < newLasso.x + newLasso.w &&
+          n.x + (n.width || 260) > newLasso.x &&
+          n.y < newLasso.y + newLasso.h &&
+          n.y + (n.height || 120) > newLasso.y
+        );
+      }).map(n => n.id);
+      
+      setSelectedNodeIds(prev => Array.from(new Set([...prev, ...newSelectedIds])));
+    }
+  };
+
+  const handleContainerPointerUp = (e) => {
+    if (draggedShape) {
+      addNodeAtPosition(draggedShape.type, e.clientX, e.clientY);
+      setDraggedShape(null);
+      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+      return;
+    }
+    
+    if (draftConnection) {
       const elements = document.elementsFromPoint(e.clientX, e.clientY);
       const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
       
@@ -499,37 +546,16 @@ export default function Whiteboard() {
         }
       }
       setDraftConnection(null);
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
+      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+      return;
     }
-  }, [draftConnection, saveHistory]);
 
-
-  // --- Lógica Drag-and-Drop da Paleta ---
-  useEffect(() => {
-    if (!draggedShape) return;
-    
-    const onMove = (e) => {
-      setDraggedShape(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
-    };
-    const onUp = (e) => {
-      addNodeAtPosition(draggedShape.type, e.clientX, e.clientY);
-      setDraggedShape(null);
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-    return () => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
+    if (interactionMode !== 'none') {
+      setInteractionMode('none');
+      setLassoRect(null);
+      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
     }
-  }, [draggedShape, camera]);
-
+  };
 
   // --- Exportar PNG Corrigido ---
   const handleExport = () => {
@@ -591,7 +617,11 @@ export default function Whiteboard() {
   };
 
   return (
-    <div className={`whiteboard-container ${isSpaceDown ? 'whiteboard-container--space' : ''}`}>
+    <div 
+      className={`whiteboard-container ${isSpaceDown ? 'whiteboard-container--space' : ''}`}
+      onPointerMove={handleContainerPointerMove}
+      onPointerUp={handleContainerPointerUp}
+    >
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
         <GlobalMenuBar 
@@ -604,20 +634,18 @@ export default function Whiteboard() {
       </div>
 
       <div className="wb-left-palette">
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
         <div className="wb-palette-divider" />
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
+        <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
       </div>
 
       <div 
         className={`whiteboard-canvas ${interactionMode === 'panning' ? 'whiteboard-canvas--panning' : ''}`}
         ref={canvasRef}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
         onContextMenu={(e) => e.preventDefault()}
         tabIndex={0} 
         style={{ '--pan-x': camera.x, '--pan-y': camera.y, '--zoom': camera.zoom }}
