@@ -43,7 +43,26 @@ const FontSize = Extension.create({
   },
 });
 
-const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete }) => {
+const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactionMode, penSettings, setPenSettings }) => {
+  if (interactionMode === 'drawing') {
+    return (
+      <div className="wb-global-toolbar">
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--neutral-600)', padding: '0 8px' }}>Configurações do Pincel:</span>
+        <div className="wb-toolbar-color-picker" title="Cor da Tinta" style={{ '--current-color': penSettings.color }}>
+          <Palette size={16} />
+          <input type="color" value={penSettings.color} onChange={(e) => setPenSettings(p => ({ ...p, color: e.target.value }))} />
+        </div>
+        <div className="wb-toolbar-divider" />
+        <select className="wb-toolbar-select" value={penSettings.width} onChange={(e) => setPenSettings(p => ({ ...p, width: parseInt(e.target.value) }))} title="Grossura do Traço">
+          <option value={2}>Fino (2px)</option>
+          <option value={4}>Médio (4px)</option>
+          <option value={8}>Grosso (8px)</option>
+          <option value={12}>Marcador (12px)</option>
+        </select>
+      </div>
+    );
+  }
+
   if (selectedNodes.length === 0) return null;
 
   const activeNode = selectedNodes.length === 1 ? selectedNodes[0] : null;
@@ -55,50 +74,75 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete }) => {
     }
   };
 
+  const isDrawing = activeNode?.type === 'drawing';
+  const isText = activeNode?.type === 'text';
+  const isShape = !isDrawing && !isText;
+
+  // Defaults baseados no DraggableNode
+  const def = {
+    'post-it': { bg: '#FFF3B0' },
+    'rounded-rect': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 },
+    'circle': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 },
+    'diamond': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 }
+  }[activeNode?.type] || {};
+
   return (
     <div className="wb-global-toolbar">
-      {/* Estilos de Forma (Background e Borda) */}
-      {activeNode && activeNode.type !== 'text' && (
+      {/* Fundo (Apenas para Shapes) */}
+      {isShape && (
         <>
           <div className="wb-toolbar-section">
-            <div className="wb-toolbar-color-picker" title="Cor de Fundo" style={{ '--current-color': activeNode.bg || '#ffffff' }}>
+            <div className="wb-toolbar-color-picker" title="Cor de Fundo" style={{ '--current-color': activeNode.bg || def.bg || '#ffffff' }}>
               <Palette size={16} />
-              <input type="color" value={activeNode.bg || '#ffffff'} onChange={(e) => setNodeStyle('bg', e.target.value)} />
+              <input type="color" value={activeNode.bg || def.bg || '#ffffff'} onChange={(e) => setNodeStyle('bg', e.target.value)} />
             </div>
           </div>
-          <div className="wb-toolbar-divider" />
-          <div className="wb-toolbar-section">
-            <div className="wb-toolbar-color-picker" title="Cor da Borda" style={{ '--current-color': activeNode.borderColor || '#3b82f6' }}>
-              <Square size={16} />
-              <input type="color" value={activeNode.borderColor || '#3b82f6'} onChange={(e) => setNodeStyle('borderColor', e.target.value)} />
-            </div>
-          </div>
-          <div className="wb-toolbar-divider" />
-          <select className="wb-toolbar-select" value={activeNode.borderStyle || 'solid'} onChange={(e) => setNodeStyle('borderStyle', e.target.value)} title="Estilo da Borda">
-            <option value="solid">Sólida</option>
-            <option value="dashed">Tracejada</option>
-            <option value="dotted">Pontilhada</option>
-          </select>
-          <select className="wb-toolbar-select" value={activeNode.borderWidth || 2} onChange={(e) => setNodeStyle('borderWidth', parseInt(e.target.value))} title="Grossura da Borda">
-            <option value={0}>Sem borda</option>
-            <option value={2}>Fina</option>
-            <option value={4}>Média</option>
-            <option value={8}>Grossa</option>
-          </select>
           <div className="wb-toolbar-divider" />
         </>
       )}
 
-      {/* Estilos de Texto */}
-      <button onClick={() => editor && editor.chain().focus().toggleBold().run()} className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`} disabled={disabled} title="Negrito"><Bold size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().toggleItalic().run()} className={`wb-toolbar-btn ${editor?.isActive('italic') ? 'active' : ''}`} disabled={disabled} title="Itálico"><Italic size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().toggleUnderline().run()} className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`} disabled={disabled} title="Sublinhado"><UnderlineIcon size={16} /></button>
-      <div className="wb-toolbar-divider" />
-      <button onClick={() => editor && editor.chain().focus().setTextAlign('left').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'left' }) ? 'active' : ''}`} disabled={disabled} title="Alinhar à Esquerda"><AlignLeft size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().setTextAlign('center').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'center' }) ? 'active' : ''}`} disabled={disabled} title="Centralizar"><AlignCenter size={16} /></button>
-      <div className="wb-toolbar-divider" />
-      <button onClick={() => editor && editor.chain().focus().toggleBulletList().run()} className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`} disabled={disabled} title="Lista"><List size={16} /></button>
-      <div className="wb-toolbar-divider" />
+      {/* Borda ou Cor do Pincel (Shapes e Drawings) */}
+      {(isShape || isDrawing) && (
+        <>
+          <div className="wb-toolbar-section" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="wb-toolbar-color-picker" title={isDrawing ? "Cor do Traço" : "Cor da Borda"} style={{ '--current-color': activeNode.borderColor || def.borderColor || '#3b82f6' }}>
+              <Square size={16} />
+              <input type="color" value={activeNode.borderColor || def.borderColor || '#3b82f6'} onChange={(e) => setNodeStyle('borderColor', e.target.value)} />
+            </div>
+            {!isDrawing && (
+              <select className="wb-toolbar-select" style={{ paddingLeft: 8, paddingRight: 20 }} value={activeNode.borderStyle || 'solid'} onChange={(e) => setNodeStyle('borderStyle', e.target.value)} title="Estilo da Borda">
+                <option value="solid">━ Sólida</option>
+                <option value="dashed">┅ Tracejada</option>
+                <option value="dotted">… Pontilhada</option>
+              </select>
+            )}
+            <select className="wb-toolbar-select" style={{ paddingLeft: 8, paddingRight: 20 }} value={activeNode.borderWidth !== undefined ? activeNode.borderWidth : (def.borderWidth || 0)} onChange={(e) => setNodeStyle('borderWidth', parseInt(e.target.value))} title={isDrawing ? "Grossura do Traço" : "Grossura da Borda"}>
+              {!isDrawing && <option value={0}>0px</option>}
+              <option value={2}>2px</option>
+              <option value={4}>4px</option>
+              <option value={8}>8px</option>
+              {isDrawing && <option value={12}>12px</option>}
+            </select>
+          </div>
+          <div className="wb-toolbar-divider" />
+        </>
+      )}
+
+      {/* Estilos de Texto (Shapes e Text) */}
+      {(isShape || isText) && (
+        <>
+          <button onClick={() => editor && editor.chain().focus().toggleBold().run()} className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`} disabled={disabled} title="Negrito"><Bold size={16} /></button>
+          <button onClick={() => editor && editor.chain().focus().toggleItalic().run()} className={`wb-toolbar-btn ${editor?.isActive('italic') ? 'active' : ''}`} disabled={disabled} title="Itálico"><Italic size={16} /></button>
+          <button onClick={() => editor && editor.chain().focus().toggleUnderline().run()} className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`} disabled={disabled} title="Sublinhado"><UnderlineIcon size={16} /></button>
+          <div className="wb-toolbar-divider" />
+          <button onClick={() => editor && editor.chain().focus().setTextAlign('left').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'left' }) ? 'active' : ''}`} disabled={disabled} title="Alinhar à Esquerda"><AlignLeft size={16} /></button>
+          <button onClick={() => editor && editor.chain().focus().setTextAlign('center').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'center' }) ? 'active' : ''}`} disabled={disabled} title="Centralizar"><AlignCenter size={16} /></button>
+          <div className="wb-toolbar-divider" />
+          <button onClick={() => editor && editor.chain().focus().toggleBulletList().run()} className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`} disabled={disabled} title="Lista"><List size={16} /></button>
+          <div className="wb-toolbar-divider" />
+        </>
+      )}
+
       <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }} title="Deletar"><Trash2 size={16} /></button>
     </div>
   );
@@ -353,10 +397,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
         </svg>
       ) : (
         <div className="wb-node-shape-bg" style={{
-          backgroundColor: node.bg || undefined,
-          borderColor: node.borderColor || undefined,
-          borderStyle: node.borderStyle || undefined,
-          borderWidth: node.borderWidth !== undefined ? `${node.borderWidth}px` : undefined,
+          backgroundColor: node.bg || def.bg || 'transparent',
+          borderColor: node.borderColor || def.borderColor || 'transparent',
+          borderStyle: node.borderStyle || def.borderStyle || 'solid',
+          borderWidth: node.borderWidth !== undefined ? `${node.borderWidth}px` : (def.borderWidth ? `${def.borderWidth}px` : '0px'),
         }} />
       )}
       {isTextMode && <div className="wb-node-text-handle" />}
@@ -388,6 +432,7 @@ export default function Whiteboard() {
   const [selectedNodeIds, setSelectedNodeIds] = useState([]);
   const [lassoRect, setLassoRect] = useState(null); 
   const [currentDrawPath, setCurrentDrawPath] = useState(null);
+  const [penSettings, setPenSettings] = useState({ color: '#ef4444', width: 4 });
 
   const [nodes, setNodes] = useState([
     { id: '1', type: 'post-it', x: 200, y: 150, width: 260, height: 120, text: '<p><strong>Ideia Central</strong></p>' },
@@ -656,8 +701,8 @@ export default function Whiteboard() {
           width: Math.max(maxX - minX, 10),
           height: Math.max(maxY - minY, 10),
           pathData: svgPath,
-          borderColor: '#ef4444',
-          borderWidth: 4
+          borderColor: penSettings.color,
+          borderWidth: penSettings.width
         };
         setNodes(prev => [...prev, newNode]);
       }
@@ -813,7 +858,7 @@ export default function Whiteboard() {
             {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} />)}
             {renderDraftConnection()}
             {currentDrawPath && (
-              <path d={getSmoothSvgPath(currentDrawPath)} fill="none" stroke="#ef4444" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" />
+              <path d={getSmoothSvgPath(currentDrawPath)} fill="none" stroke={penSettings.color} strokeWidth={penSettings.width} strokeLinecap="round" strokeLinejoin="round" />
             )}
           </svg>
 
