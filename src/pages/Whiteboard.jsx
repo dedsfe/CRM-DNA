@@ -676,9 +676,29 @@ const getRopePath = (fromX, fromY, toX, toY) => {
   };
 };
 
+const getNodeSize = (node) => {
+  if (!node) return { w: 80, h: 80 };
+  const funnelKey = (node.funnelType && FUNNEL_NODES[node.funnelType]) 
+    ? node.funnelType 
+    : (node.type && FUNNEL_NODES[node.type] ? node.type : null);
+  
+  if (funnelKey) {
+    // Aggressively sanitize any non-square legacy or stretched dimensions
+    if (!node.width || !node.height || node.width !== node.height || node.width === 180 || node.width === 160) {
+      return { w: 80, h: 80 };
+    }
+    const size = Math.max(node.width || 80, node.height || 80);
+    return { w: size, h: size };
+  }
+  
+  return {
+    w: node.width || (node.type === 'text' ? 200 : (node.type === 'post-it' ? 260 : 200)),
+    h: node.height || (node.type === 'text' ? 50 : (node.type === 'post-it' ? 120 : 100))
+  };
+};
+
 const getAnchorPosition = (node, anchor) => {
-  const w = node.width || 260;
-  const h = node.height || 120;
+  const { w, h } = getNodeSize(node);
   const cx = node.x + w / 2;
   const cy = node.y + h / 2;
   switch (anchor) {
@@ -691,10 +711,8 @@ const getAnchorPosition = (node, anchor) => {
 };
 
 const getSmartAnchorPosition = (node1, node2) => {
-  const w1 = node1.width || 260;
-  const h1 = node1.height || 120;
-  const w2 = node2.width || 260;
-  const h2 = node2.height || 120;
+  const { w: w1, h: h1 } = getNodeSize(node1);
+  const { w: w2, h: h2 } = getNodeSize(node2);
   
   const c1 = { x: node1.x + w1 / 2, y: node1.y + h1 / 2 };
   const c2 = { x: node2.x + w2 / 2, y: node2.y + h2 / 2 };
@@ -884,6 +902,11 @@ const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect, onWay
 
 
 const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, user }) => {
+  const funnelKey = (node.funnelType && FUNNEL_NODES[node.funnelType]) 
+    ? node.funnelType 
+    : (node.type && FUNNEL_NODES[node.type] ? node.type : null);
+  const isFunnelNode = !!funnelKey;
+
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
   const startGroupPositions = useRef({}); 
@@ -974,7 +997,8 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     setResizeDir(dir);
     e.target.setPointerCapture(e.pointerId);
     startPos.current = { x: e.clientX, y: e.clientY };
-    startSize.current = { w: node.width || 260, h: node.height || 120, x: node.x, y: node.y };
+    const { w, h } = getNodeSize(node);
+    startSize.current = { w, h, x: node.x, y: node.y };
   };
 
   const handleResizePointerMove = (e) => {
@@ -994,6 +1018,19 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     if (newW < minW) { if (resizeDir.includes('left')) newX -= (minW - newW); newW = minW; }
     if (newH < minH) { if (resizeDir.includes('top')) newY -= (minH - newH); newH = minH; }
 
+    if (isFunnelNode) {
+      // Force aspect ratio to 1:1 square for all funnel nodes and maintain alignment shift
+      const size = Math.max(newW, newH);
+      if (resizeDir.includes('left')) {
+        newX += (newW - size);
+      }
+      if (resizeDir.includes('top')) {
+        newY += (newH - size);
+      }
+      newW = size;
+      newH = size;
+    }
+
     updateNode(node.id, { width: newW, height: newH, x: newX, y: newY });
   };
 
@@ -1010,10 +1047,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     onConnectionStart(node.id, anchor, e.clientX, e.clientY);
   };
 
-  const funnelKey = (node.funnelType && FUNNEL_NODES[node.funnelType]) 
-    ? node.funnelType 
-    : (node.type && FUNNEL_NODES[node.type] ? node.type : null);
-  const isFunnelNode = !!funnelKey;
+  // Declared at the top of DraggableNode component
 
   const typeClass = `wb-node--${node.type || 'post-it'}`;
   const activeClass = isActiveNode ? 'wb-node--active' : '';
@@ -1027,10 +1061,12 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     'diamond': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 }
   }[node.type || 'post-it'] || {};
 
+  const { w: renderWidth, h: renderHeight } = getNodeSize(node);
+
   return (
     <div
       className={`wb-node ${typeClass} ${activeClass} ${noPointerClass} ${draftingClass}`}
-      style={{ transform: `translate(${node.x}px, ${node.y}px)`, width: node.width || 260, height: node.height || 120 }}
+      style={{ transform: `translate(${node.x}px, ${node.y}px)`, width: renderWidth, height: renderHeight }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -1043,7 +1079,7 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       ) : isFunnelNode ? (
         /* Funnelytics-style illustration directly */
         <div className="wb-funnel-illustration" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {FUNNEL_NODES[funnelKey].icon(node.width || 80)}
+          {FUNNEL_NODES[funnelKey].icon(renderWidth)}
         </div>
       ) : (
         <div className="wb-node-shape-bg" style={{
@@ -1480,11 +1516,12 @@ export default function Whiteboard() {
       setLassoRect(newLasso);
 
       const newSelectedIds = nodes.filter(n => {
+        const { w, h } = getNodeSize(n);
         return (
           n.x < newLasso.x + newLasso.w &&
-          n.x + (n.width || 260) > newLasso.x &&
+          n.x + w > newLasso.x &&
           n.y < newLasso.y + newLasso.h &&
-          n.y + (n.height || 120) > newLasso.y
+          n.y + h > newLasso.y
         );
       }).map(n => n.id);
       

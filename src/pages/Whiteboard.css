@@ -423,6 +423,15 @@ details[open] > summary.wb-palette-title::after {
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 
+.wb-funnel-illustration svg {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  display: block;
+}
+
 .wb-node--active .wb-funnel-illustration {
   transform: scale(1.05);
   filter: drop-shadow(0 4px 15px rgba(59, 130, 246, 0.3));
@@ -456,6 +465,14 @@ details[open] > summary.wb-palette-title::after {
   flex: none;
 }
 
+.funnel-label-editor .ProseMirror {
+  outline: none;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  min-width: 120px;
+  min-height: 18px;
+}
+
 .funnel-label-editor:hover {
   background: rgba(255, 255, 255, 0.85);
   border-color: #cbd5e1;
@@ -468,12 +485,6 @@ details[open] > summary.wb-palette-title::after {
   border-color: #3b82f6 !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 4px 10px rgba(0, 0, 0, 0.05) !important;
   color: #0f172a;
-}
-
-.funnel-label-editor .ProseMirror {
-  outline: none;
-  word-wrap: break-word;
-  white-space: pre-wrap;
 }
 
 .funnel-label-editor p {
