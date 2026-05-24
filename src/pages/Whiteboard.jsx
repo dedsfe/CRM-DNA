@@ -66,7 +66,7 @@ const FUNNEL_NODES = {
         <rect x="5" y="10" width="70" height="15" rx="0" fill="#f8fafc" />
         <line x1="5" y1="25" x2="75" y2="25" stroke="#e2e8f0" strokeWidth="1.5" />
         <circle cx="20" cy="40" r="10" fill="#1877F2" />
-        <path d="M22 40h-2.5v-3.5h-1.5V34h1.5v-2.2c0-1.7 1-2.8 2.8-2.8h1.7v2.5h-1c-.8 0-1 .4-1 1v1.5h2L22 40z" fill="#ffffff" />
+        <path d="M22 50h-3V39h-2v-3h2v-2.5c0-2.5 1-4 3.5-4h2.5v3h-2c-0.8 0-1 0.5-1 1.5V36h3v3h-3V50z" fill="#ffffff" />
         <rect x="35" y="33" width="30" height="5" rx="2.5" fill="#1877F2" opacity="0.8" />
         <rect x="35" y="43" width="22" height="4" rx="2" fill="#cbd5e1" />
         <circle cx="15" cy="60" r="2.5" fill="#94a3b8" />
