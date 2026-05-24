@@ -80,11 +80,79 @@ const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) =
   );
 };
 
-const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart, onConnectionMove, onConnectionEnd }) => {
+// --- Funções Matemáticas de Física e Ancoragem ---
+const getStraightPath = (fromX, fromY, toX, toY) => {
+  const cpX = (fromX + toX) / 2;
+  const cpY = (fromY + toY) / 2;
+  const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
+  return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
+};
+
+const getRopePath = (fromX, fromY, toX, toY) => {
+  const dx = Math.abs(toX - fromX);
+  const dy = Math.abs(toY - fromY);
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  
+  // Tensão realista da corda
+  const sag = Math.min(dist * 0.45, 300) + 20; 
+  
+  const cpX = (fromX + toX) / 2;
+  const cpY = Math.max(fromY, toY) + sag;
+  const angle = Math.atan2(toY - cpY, toX - cpX) * 180 / Math.PI;
+
+  return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
+};
+
+const getAnchorPosition = (node, anchor) => {
+  const cx = node.x + (node.width || 260) / 2;
+  const cy = node.y + (node.height || 120) / 2;
+  switch (anchor) {
+    case 'top': return { x: cx, y: node.y };
+    case 'bottom': return { x: cx, y: node.y + (node.height || 120) };
+    case 'left': return { x: node.x, y: cy };
+    case 'right': return { x: node.x + (node.width || 260), y: cy };
+    default: return { x: cx, y: cy }; // center fallback
+  }
+};
+
+const Connection = ({ conn, nodes }) => {
+  const fromNode = nodes.find(n => n.id === conn.from);
+  const toNode = nodes.find(n => n.id === conn.to);
+  if (!fromNode || !toNode) return null;
+
+  const [snapped, setSnapped] = useState(!conn.isNew);
+
+  useEffect(() => {
+    if (conn.isNew && !snapped) {
+      // 30ms para renderizar o frame da corda com gravidade e engatilhar a transição CSS
+      const timer = setTimeout(() => {
+        setSnapped(true);
+        conn.isNew = false; 
+      }, 30);
+      return () => clearTimeout(timer);
+    }
+  }, [conn, snapped]);
+
+  const fromPos = getAnchorPosition(fromNode, conn.fromAnchor || 'center');
+  const toPos = getAnchorPosition(toNode, conn.toAnchor || 'center');
+
+  const { path, angle } = snapped 
+    ? getStraightPath(fromPos.x, fromPos.y, toPos.x, toPos.y)
+    : getRopePath(fromPos.x, fromPos.y, toPos.x, toPos.y);
+
+  return (
+    <g>
+      <path d={path} className="wb-connection-path wb-anim-snap" />
+      <polygon points="0,-6 12,0 0,6" transform={`translate(${toPos.x}, ${toPos.y}) rotate(${angle})`} fill="#64748b" className="wb-connection-arrowhead wb-anim-snap" />
+    </g>
+  );
+};
+
+
+const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds, isCameraMoving, isDrafting, onEditorFocus, isActiveNode, cameraZoom, saveHistory, onConnectionStart }) => {
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
   const startGroupPositions = useRef({}); 
-  const isConnectingRef = useRef(false); // Para garantir captura de eventos lisa da corda
 
   const [resizeDir, setResizeDir] = useState(null);
   const startSize = useRef({ w: 0, h: 0, x: 0, y: 0 });
@@ -191,10 +259,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     }
   };
 
-  const handleConnectionPointerDown = (e) => {
+  const handleConnectionPointerDown = (e, anchor) => {
     e.stopPropagation();
     e.preventDefault(); 
-    onConnectionStart(node.id, e.clientX, e.clientY);
+    onConnectionStart(node.id, anchor, e.clientX, e.clientY);
   };
 
   const typeClass = `wb-node--${node.type || 'post-it'}`;
@@ -215,11 +283,11 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       {isTextMode && <div className="wb-node-text-handle" />}
       <EditorContent editor={editor} className="wb-node-editor" />
 
-      {/* Anchors de Conexão com Eventos Físicos Locais */}
-      <div className="wb-connection-anchor wb-anchor-top" onPointerDown={handleConnectionPointerDown} title="Puxar seta para cima" />
-      <div className="wb-connection-anchor wb-anchor-right" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a direita" />
-      <div className="wb-connection-anchor wb-anchor-bottom" onPointerDown={handleConnectionPointerDown} title="Puxar seta para baixo" />
-      <div className="wb-connection-anchor wb-anchor-left" onPointerDown={handleConnectionPointerDown} title="Puxar seta para a esquerda" />
+      {/* Anchors de Conexão */}
+      <div className="wb-connection-anchor wb-anchor-top" data-anchor="top" onPointerDown={(e) => handleConnectionPointerDown(e, 'top')} title="Puxar seta para cima" />
+      <div className="wb-connection-anchor wb-anchor-right" data-anchor="right" onPointerDown={(e) => handleConnectionPointerDown(e, 'right')} title="Puxar seta para a direita" />
+      <div className="wb-connection-anchor wb-anchor-bottom" data-anchor="bottom" onPointerDown={(e) => handleConnectionPointerDown(e, 'bottom')} title="Puxar seta para baixo" />
+      <div className="wb-connection-anchor wb-anchor-left" data-anchor="left" onPointerDown={(e) => handleConnectionPointerDown(e, 'left')} title="Puxar seta para a esquerda" />
 
       <div className="wb-resize-handles">
         {['top-left', 'top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left'].map(dir => (
@@ -348,8 +416,8 @@ export default function Whiteboard() {
   // --- Lógica Rastro da Seta (Gravidade) ---
   const draftRef = useRef(null);
 
-  const handleConnectionStart = useCallback((fromId, clientX, clientY) => {
-    draftRef.current = { fromId, mouseX: clientX, mouseY: clientY };
+  const handleConnectionStart = useCallback((fromId, fromAnchor, clientX, clientY) => {
+    draftRef.current = { fromId, fromAnchor, mouseX: clientX, mouseY: clientY };
     setDraftConnection(draftRef.current);
 
     const onMove = (e) => {
@@ -364,14 +432,34 @@ export default function Whiteboard() {
       const draft = draftRef.current;
       if (draft) {
         const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        const targetAnchorEl = elements.find(el => el.classList.contains('wb-connection-anchor'));
         const targetNodeEl = elements.find(el => el.classList.contains('wb-node'));
         
         if (targetNodeEl) {
           const toId = targetNodeEl.getAttribute('data-id');
           if (toId && toId !== draft.fromId) {
+            
+            let toAnchor = 'center';
+            if (targetAnchorEl) {
+              toAnchor = targetAnchorEl.getAttribute('data-anchor');
+            } else {
+              // Calcula a âncora mais próxima do ponto onde o usuário soltou dentro do node
+              const nodeRect = targetNodeEl.getBoundingClientRect();
+              const cx = nodeRect.left + nodeRect.width / 2;
+              const cy = nodeRect.top + nodeRect.height / 2;
+              const dx = e.clientX - cx;
+              const dy = e.clientY - cy;
+              
+              if (Math.abs(dx) > Math.abs(dy)) {
+                toAnchor = dx > 0 ? 'right' : 'left';
+              } else {
+                toAnchor = dy > 0 ? 'bottom' : 'top';
+              }
+            }
+
             setConnections(prev => {
               saveHistory(nodes, prev);
-              return [...prev, { id: Date.now().toString(), from: draft.fromId, to: toId }];
+              return [...prev, { id: Date.now().toString(), from: draft.fromId, fromAnchor: draft.fromAnchor, to: toId, toAnchor, isNew: true }];
             });
           }
         }
@@ -413,7 +501,6 @@ export default function Whiteboard() {
       };
       setLassoRect(newLasso);
 
-      // Calcular interseção
       const newSelectedIds = nodes.filter(n => {
         return (
           n.x < newLasso.x + newLasso.w &&
@@ -445,7 +532,6 @@ export default function Whiteboard() {
   const handleWheel = useCallback((e) => {
     e.preventDefault();
     if (e.ctrlKey || e.metaKey) {
-      // Zoom
       const zoomSensitivity = 0.005;
       const delta = -e.deltaY * zoomSensitivity;
       setCamera((prev) => {
@@ -454,7 +540,6 @@ export default function Whiteboard() {
         return { ...prev, zoom: newZoom };
       });
     } else {
-      // Pan
       setCamera((prev) => ({
         ...prev,
         x: prev.x - e.deltaX,
@@ -494,98 +579,19 @@ export default function Whiteboard() {
     setSelectedNodeIds([newNode.id]);
   };
 
-  const updateNode = (id, newProps) => setNodes((prev) => prev.map(n => n.id === id ? { ...n, ...newProps } : n));
-
-  const updateMultipleNodes = (idsToMove, dx, dy) => {
-    setNodes(prev => prev.map(n => {
-      if (idsToMove.includes(n.id)) {
-        return { ...n, x: n.x + dx, y: n.y + dy };
-      }
-      return n;
-    }));
-  };
-
-  const handleEditorFocus = (editor, id, isShift, keepGroup = false) => {
-    setActiveEditor(editor);
-    if (isShift) {
-      setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    } else if (!keepGroup) {
-      setSelectedNodeIds([id]);
-    }
-  };
-
-  const handleExport = () => {
-    if (canvasRef.current) {
-      toPng(canvasRef.current, { backgroundColor: '#f8fafc' }).then((dataUrl) => {
-        const link = document.createElement('a');
-        link.download = 'crm-dna-whiteboard.png';
-        link.href = dataUrl;
-        link.click();
-      }).catch(err => {
-        console.error('Erro na exportação:', err);
-        alert('Erro ao exportar a imagem. Tente reduzir o zoom ou o número de elementos visíveis.');
-      });
-    }
-  };
-
-  // Curva Catenária Mágica (Corda com Gravidade)
-  const getStraightPath = (fromX, fromY, toX, toY) => {
-    const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
-    return { path: `M ${fromX} ${fromY} L ${toX} ${toY}`, angle };
-  };
-
-  const getRopePath = (fromX, fromY, toX, toY) => {
-    const dx = Math.abs(toX - fromX);
-    const dy = Math.abs(toY - fromY);
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    
-    // Tensão realista da corda (mais exagerada quando puxando)
-    const sag = Math.min(dist * 0.45, 300) + 20; 
-    
-    const cpX = (fromX + toX) / 2;
-    const cpY = Math.max(fromY, toY) + sag;
-    const angle = Math.atan2(toY - cpY, toX - cpX) * 180 / Math.PI;
-
-    return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
-  };
-
-  const renderConnections = () => {
-    return connections.map(conn => {
-      const fromNode = nodes.find(n => n.id === conn.from);
-      const toNode = nodes.find(n => n.id === conn.to);
-      if (!fromNode || !toNode) return null;
-
-      const fromX = fromNode.x + (fromNode.width || 260) / 2;
-      const fromY = fromNode.y + (fromNode.height || 120) / 2;
-      const toX = toNode.x + (toNode.width || 260) / 2;
-      const toY = toNode.y + (toNode.height || 120) / 2;
-
-      // Conexão fixa é reta e dura
-      const { path, angle } = getStraightPath(fromX, fromY, toX, toY);
-
-      return (
-        <g key={conn.id}>
-          <path d={path} className="wb-connection-path" />
-          <polygon points="0,-6 12,0 0,6" transform={`translate(${toX}, ${toY}) rotate(${angle})`} fill="#64748b" className="wb-connection-arrowhead" />
-        </g>
-      );
-    });
-  };
-
   const renderDraftConnection = () => {
     if (!draftConnection) return null;
     const fromNode = nodes.find(n => n.id === draftConnection.fromId);
     if (!fromNode) return null;
 
-    const fromX = fromNode.x + (fromNode.width || 260) / 2;
-    const fromY = fromNode.y + (fromNode.height || 120) / 2;
+    const fromPos = getAnchorPosition(fromNode, draftConnection.fromAnchor);
     
     const rect = canvasRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
     const toX = (draftConnection.mouseX - rect.left - camera.x) / camera.zoom;
     const toY = (draftConnection.mouseY - rect.top - camera.y) / camera.zoom;
 
     // Conexão solta (puxando) é uma corda com gravidade
-    const { path, angle } = getRopePath(fromX, fromY, toX, toY);
+    const { path, angle } = getRopePath(fromPos.x, fromPos.y, toX, toY);
 
     return (
       <g>
@@ -634,7 +640,7 @@ export default function Whiteboard() {
           style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`, transformOrigin: '0 0' }}
         >
           <svg className="wb-connections-svg" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-            {renderConnections()}
+            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} />)}
             {renderDraftConnection()}
           </svg>
 
