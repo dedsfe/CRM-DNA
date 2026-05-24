@@ -16,7 +16,8 @@ import {
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
-  Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare
+  Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare,
+  ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
@@ -179,11 +180,45 @@ const getSmoothSvgPath = (points) => {
   return path;
 };
 
-const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
+const getConnectionPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor, lineType = 'bezier') => {
   const dx = Math.abs(toX - fromX);
   const dy = Math.abs(toY - fromY);
   const dist = Math.sqrt(dx * dx + dy * dy);
 
+  let angle = 0;
+  if (toAnchor === 'top') angle = 90; 
+  else if (toAnchor === 'bottom') angle = -90; 
+  else if (toAnchor === 'left') angle = 0; 
+  else if (toAnchor === 'right') angle = 180; 
+  else {
+    angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
+  }
+
+  if (lineType === 'straight') {
+    return { 
+      path: `M ${fromX} ${fromY} L ${toX} ${toY}`, 
+      angle, 
+      midX: (fromX + toX) / 2, 
+      midY: (fromY + toY) / 2 
+    };
+  }
+  
+  if (lineType === 'orthogonal') {
+    let midX = (fromX + toX) / 2;
+    let midY = (fromY + toY) / 2;
+    let path = '';
+    
+    // Simple orthogonal routing
+    if (fromAnchor === 'left' || fromAnchor === 'right' || toAnchor === 'left' || toAnchor === 'right') {
+      path = `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`;
+    } else {
+      path = `M ${fromX} ${fromY} L ${fromX} ${midY} L ${toX} ${midY} L ${toX} ${toY}`;
+    }
+
+    return { path, angle, midX, midY };
+  }
+
+  // bezier
   const tension = Math.min(Math.max(dist * 0.4, 60), 250);
 
   const getCP = (x, y, anchor) => {
@@ -199,12 +234,7 @@ const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
   const cp1 = getCP(fromX, fromY, fromAnchor);
   const cp2 = getCP(toX, toY, toAnchor);
   
-  let angle = 0;
-  if (toAnchor === 'top') angle = 90; 
-  else if (toAnchor === 'bottom') angle = -90; 
-  else if (toAnchor === 'left') angle = 0; 
-  else if (toAnchor === 'right') angle = 180; 
-  else {
+  if (toAnchor === 'center') {
     if (cp2.cx === toX && cp2.cy === toY) {
       angle = Math.atan2(toY - cp1.cy, toX - cp1.cx) * 180 / Math.PI;
     } else {
@@ -212,7 +242,10 @@ const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
     }
   }
 
-  return { path: `M ${fromX} ${fromY} C ${cp1.cx} ${cp1.cy}, ${cp2.cx} ${cp2.cy}, ${toX} ${toY}`, angle };
+  const midX = 0.125 * fromX + 0.375 * cp1.cx + 0.375 * cp2.cx + 0.125 * toX;
+  const midY = 0.125 * fromY + 0.375 * cp1.cy + 0.375 * cp2.cy + 0.125 * toY;
+
+  return { path: `M ${fromX} ${fromY} C ${cp1.cx} ${cp1.cy}, ${cp2.cx} ${cp2.cy}, ${toX} ${toY}`, angle, midX, midY };
 };
 
 const getRopePath = (fromX, fromY, toX, toY) => {
@@ -222,11 +255,12 @@ const getRopePath = (fromX, fromY, toX, toY) => {
   
   const sag = Math.min(dist * 0.45, 300) + 20; 
   
-  const cpX = (fromX + toX) / 2;
-  const cpY = Math.max(fromY, toY) + sag;
-  const angle = Math.atan2(toY - cpY, toX - cpX) * 180 / Math.PI;
-
-  return { path: `M ${fromX} ${fromY} C ${cpX} ${cpY}, ${cpX} ${cpY}, ${toX} ${toY}`, angle };
+  return {
+    path: `M ${fromX} ${fromY} Q ${(fromX + toX) / 2} ${Math.max(fromY, toY) + sag} ${toX} ${toY}`,
+    angle: 0,
+    midX: (fromX + toX) / 2,
+    midY: Math.max(fromY, toY) + sag / 2
+  };
 };
 
 const getAnchorPosition = (node, anchor) => {
@@ -241,8 +275,9 @@ const getAnchorPosition = (node, anchor) => {
   }
 };
 
-const Connection = ({ conn, nodes }) => {
+const Connection = ({ conn, nodes, updateConnection }) => {
   const [snapped, setSnapped] = useState(!conn.isNew);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (conn.isNew && !snapped) {
@@ -261,14 +296,64 @@ const Connection = ({ conn, nodes }) => {
   const fromPos = getAnchorPosition(fromNode, conn.fromAnchor || 'center');
   const toPos = getAnchorPosition(toNode, conn.toAnchor || 'center');
 
-  const { path, angle } = snapped 
-    ? getMiroBezierPath(fromPos.x, fromPos.y, conn.fromAnchor || 'center', toPos.x, toPos.y, conn.toAnchor || 'center')
+  const { path, angle, midX, midY } = snapped 
+    ? getConnectionPath(fromPos.x, fromPos.y, conn.fromAnchor || 'center', toPos.x, toPos.y, conn.toAnchor || 'center', conn.lineType || 'bezier')
     : getRopePath(fromPos.x, fromPos.y, toPos.x, toPos.y);
 
   return (
     <g>
-      <path d={path} className="wb-connection-path wb-anim-snap" />
+      <path 
+        d={path} 
+        className="wb-connection-path wb-anim-snap" 
+        onDoubleClick={() => setIsEditing(true)}
+        style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+      />
       <polygon points="0,-6 12,0 0,6" transform={`translate(${toPos.x}, ${toPos.y}) rotate(${angle})`} fill="#64748b" className="wb-connection-arrowhead wb-anim-snap" />
+      
+      {conn.label && !isEditing && (
+        <foreignObject x={midX - 75} y={midY - 15} width={150} height={30} style={{ overflow: 'visible', pointerEvents: 'none' }}>
+          <div 
+            className="wb-connection-label" 
+            onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+            style={{ pointerEvents: 'auto', textAlign: 'center', background: 'white', padding: '2px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px', color: '#334155', width: 'fit-content', margin: '0 auto', cursor: 'pointer' }}
+          >
+            {conn.label}
+          </div>
+        </foreignObject>
+      )}
+
+      {isEditing && (
+        <foreignObject x={midX - 75} y={midY - 45} width={150} height={80} style={{ overflow: 'visible' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
+            <select 
+              value={conn.lineType || 'bezier'}
+              onChange={(e) => updateConnection(conn.id, { lineType: e.target.value })}
+              style={{ fontSize: '10px', padding: '2px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
+            >
+              <option value="bezier">Curva</option>
+              <option value="straight">Reta</option>
+              <option value="orthogonal">Ortogonal</option>
+            </select>
+            <input 
+              autoFocus
+              className="wb-connection-input"
+              defaultValue={conn.label || ''}
+              style={{ width: '100%', textAlign: 'center', fontSize: '12px', padding: '4px', borderRadius: '4px', border: '2px solid #3b82f6', outline: 'none' }}
+              onBlur={(e) => {
+                 // small delay to allow select to be clicked
+                 setTimeout(() => setIsEditing(false), 200);
+                 updateConnection(conn.id, { label: e.target.value });
+              }}
+              onKeyDown={(e) => {
+                 if (e.key === 'Enter') {
+                   updateConnection(conn.id, { label: e.target.value });
+                   setIsEditing(false);
+                 }
+              }}
+            />
+          </div>
+        </foreignObject>
+      )}
     </g>
   );
 };
@@ -650,6 +735,11 @@ export default function Whiteboard() {
     }));
   }, []);
 
+  const updateConnection = useCallback((id, newProps) => {
+    saveHistory();
+    setConnections(prev => prev.map(c => c.id === id ? { ...c, ...newProps } : c));
+  }, [saveHistory]);
+
   const handleEditorFocus = useCallback((editor, id, isShift, keepGroup = false) => {
     setActiveEditor(editor);
     if (isShift) {
@@ -902,7 +992,12 @@ export default function Whiteboard() {
 
   const addNodeAtPosition = useCallback((type, clientX, clientY) => {
     saveHistory();
-    const defaultSizes = { 'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 } };
+    const defaultSizes = { 
+      'text': { w: 200, h: 50 }, 'post-it': { w: 260, h: 120 }, 'rounded-rect': { w: 200, h: 100 }, 'circle': { w: 160, h: 160 }, 'diamond': { w: 180, h: 180 }, 'comment': { w: 240, h: 80 },
+      'traffic-facebook': { w: 160, h: 60 }, 'traffic-google': { w: 160, h: 60 }, 'traffic-email': { w: 160, h: 60 }, 'traffic-instagram': { w: 160, h: 60 },
+      'page-optin': { w: 160, h: 60 }, 'page-sales': { w: 160, h: 60 }, 'page-vsl': { w: 160, h: 60 }, 'page-checkout': { w: 160, h: 60 }, 'page-thankyou': { w: 160, h: 60 },
+      'action-purchase': { w: 160, h: 60 }, 'action-lead': { w: 160, h: 60 }
+    };
     const size = defaultSizes[type] || { w: 200, h: 100 };
     
     const rect = canvasRef.current.getBoundingClientRect();
@@ -912,12 +1007,41 @@ export default function Whiteboard() {
     const worldX = (xInsideCanvas - camera.x) / camera.zoom - size.w / 2;
     const worldY = (yInsideCanvas - camera.y) / camera.zoom - size.h / 2;
 
+    const titles = {
+      'traffic-facebook': 'Facebook Ads', 'traffic-google': 'Google Ads', 'traffic-email': 'E-mail', 'traffic-instagram': 'Instagram',
+      'page-optin': 'Opt-in Page', 'page-sales': 'Página de Vendas', 'page-vsl': 'VSL', 'page-checkout': 'Checkout', 'page-thankyou': 'Thank You',
+      'action-purchase': 'Compra', 'action-lead': 'Lead'
+    };
+    
+    const colors = {
+      'traffic': { bg: '#e0f2fe', border: '#0ea5e9' },
+      'page': { bg: '#dcfce7', border: '#22c55e' },
+      'action': { bg: '#ffedd5', border: '#f97316' }
+    };
+
+    let textHTML = '<p style="text-align: center"></p>';
+    let bg = undefined;
+    let borderColor = undefined;
+    let borderWidth = undefined;
+    let nodeType = type;
+
+    if (type.startsWith('traffic-') || type.startsWith('page-') || type.startsWith('action-')) {
+      const category = type.split('-')[0];
+      textHTML = `<p style="text-align: center"><strong>${titles[type]}</strong></p>`;
+      bg = colors[category].bg;
+      borderColor = colors[category].border;
+      borderWidth = 2;
+      nodeType = 'rounded-rect';
+    }
+
     const newNode = {
       id: Date.now().toString(),
-      type: type,
+      type: nodeType,
+      funnelType: type !== nodeType ? type : undefined,
       x: worldX, y: worldY,
       width: size.w, height: size.h,
-      text: '<p style="text-align: center"></p>',
+      text: textHTML,
+      bg, borderColor, borderWidth,
       author: user || 'André',
       createdAt: new Date().toISOString()
     };
@@ -1037,13 +1161,44 @@ export default function Whiteboard() {
       </div>
 
       <div className="wb-left-palette">
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
+        <div className="wb-palette-group">
+          <span className="wb-palette-title">Básico</span>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+        </div>
+
         <div className="wb-palette-divider" />
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
-        <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+        
+        <div className="wb-palette-group">
+          <span className="wb-palette-title">Tráfego</span>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-facebook', mouseX: e.clientX, mouseY: e.clientY }); }} title="Facebook Ads"><ThumbsUp size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-google', mouseX: e.clientX, mouseY: e.clientY }); }} title="Google Ads"><Search size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-email', mouseX: e.clientX, mouseY: e.clientY }); }} title="E-mail"><Mail size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-instagram', mouseX: e.clientX, mouseY: e.clientY }); }} title="Instagram"><Camera size={20} /></button>
+        </div>
+
+        <div className="wb-palette-divider" />
+        
+        <div className="wb-palette-group">
+          <span className="wb-palette-title">Páginas</span>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-optin', mouseX: e.clientX, mouseY: e.clientY }); }} title="Opt-in / Landing Page"><LayoutTemplate size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-sales', mouseX: e.clientX, mouseY: e.clientY }); }} title="Página de Vendas"><ShoppingBag size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-vsl', mouseX: e.clientX, mouseY: e.clientY }); }} title="VSL"><Video size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-checkout', mouseX: e.clientX, mouseY: e.clientY }); }} title="Checkout"><CreditCard size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-thankyou', mouseX: e.clientX, mouseY: e.clientY }); }} title="Thank You Page"><CheckCircle size={20} /></button>
+        </div>
+
+        <div className="wb-palette-divider" />
+        
+        <div className="wb-palette-group">
+          <span className="wb-palette-title">Ações</span>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-purchase', mouseX: e.clientX, mouseY: e.clientY }); }} title="Compra"><BadgeDollarSign size={20} /></button>
+          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-lead', mouseX: e.clientX, mouseY: e.clientY }); }} title="Lead"><UserPlus size={20} /></button>
+        </div>
       </div>
 
       {/* Toolbar Inferior de Ferramentas de Interação */}
@@ -1085,7 +1240,7 @@ export default function Whiteboard() {
           style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`, transformOrigin: '0 0' }}
         >
           <svg className="wb-connections-svg" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} />)}
+            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} updateConnection={updateConnection} />)}
             {renderDraftConnection()}
             {currentDrawPath && (
               <path d={getSmoothSvgPath(currentDrawPath)} fill="none" stroke={penSettings.color} strokeWidth={penSettings.width} strokeLinecap="round" strokeLinejoin="round" />
