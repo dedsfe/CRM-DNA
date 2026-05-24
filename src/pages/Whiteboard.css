@@ -125,3 +125,33 @@
 
 /* Lasso Tool */
 .wb-lasso-rect { position: absolute; background: rgba(49, 130, 206, 0.1); border: 1px solid rgba(49, 130, 206, 0.5); pointer-events: none; z-index: 9000; }
+
+/* Floating Toolbar */
+.wb-floating-toolbar {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  margin-top: -16px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  display: flex;
+  padding: 8px 12px;
+  gap: 6px;
+  z-index: 100;
+  pointer-events: auto;
+  align-items: center;
+  animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: translate(-50%, -80%) scale(0.9); }
+  to { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
+.wb-toolbar-section { display: flex; gap: 4px; }
+.wb-color-swatch {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid #e2e8f0; cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.wb-color-swatch:hover { transform: scale(1.2); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }

@@ -43,39 +43,64 @@ const FontSize = Extension.create({
   },
 });
 
-const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) => {
+const FloatingToolbar = ({ editor, selectedNodes, updateNode, onDelete, position }) => {
+  if (selectedNodes.length === 0 || !position) return null;
+
+  const activeNode = selectedNodes.length === 1 ? selectedNodes[0] : null;
   const disabled = !editor;
-  const currentFontSize = editor?.getAttributes('textStyle')?.fontSize?.replace('px', '') || '15';
-  const fontSizes = [10, 12, 14, 15, 16, 18, 20, 24, 30, 36, 48, 64, 72];
+
+  const bgColors = ['#ffffff', '#fef08a', '#bbf7d0', '#bfdbfe', '#e9d5ff', '#fecaca', 'transparent'];
+  const borderColors = ['transparent', '#94a3b8', '#1e293b', '#ef4444', '#3b82f6', '#22c55e'];
+
+  const setNodeStyle = (key, value) => {
+    if (activeNode) {
+      updateNode(activeNode.id, { [key]: value });
+    }
+  };
 
   return (
-    <div className={`wb-global-toolbar`}>
-      <button onClick={onUndo} className="wb-toolbar-btn" title="Desfazer (Ctrl+Z)" disabled={!canUndo}><Undo size={16} /></button>
-      <button onClick={onRedo} className="wb-toolbar-btn" title="Refazer (Ctrl+Y)" disabled={!canRedo}><Redo size={16} /></button>
-      <div className="wb-toolbar-divider" />
-      <select className="wb-toolbar-select" disabled={disabled} value={currentFontSize} onChange={(e) => editor && editor.chain().focus().setFontSize(`${e.target.value}px`).run()} title="Tamanho da Fonte">
-        {fontSizes.map(size => <option key={size} value={size}>{size}</option>)}
-      </select>
-      <div className="wb-toolbar-divider" />
+    <div className="wb-floating-toolbar" style={{ left: position.x, top: position.y }}>
+      {/* Estilos de Forma (Background e Borda) */}
+      {activeNode && activeNode.type !== 'text' && (
+        <>
+          <div className="wb-toolbar-section">
+            {bgColors.map(c => (
+              <button key={`bg-${c}`} className="wb-color-swatch" style={{ background: c }} onClick={() => setNodeStyle('bg', c)} title="Cor de Fundo" />
+            ))}
+          </div>
+          <div className="wb-toolbar-divider" />
+          <div className="wb-toolbar-section">
+            {borderColors.map(c => (
+              <button key={`bd-${c}`} className="wb-color-swatch" style={{ background: c, border: c === 'transparent' ? '1px dashed #ccc' : 'none' }} onClick={() => setNodeStyle('borderColor', c)} title="Cor da Borda" />
+            ))}
+          </div>
+          <div className="wb-toolbar-divider" />
+          <select className="wb-toolbar-select" value={activeNode.borderStyle || 'solid'} onChange={(e) => setNodeStyle('borderStyle', e.target.value)} title="Estilo da Borda">
+            <option value="solid">Sólida</option>
+            <option value="dashed">Tracejada</option>
+            <option value="dotted">Pontilhada</option>
+          </select>
+          <select className="wb-toolbar-select" value={activeNode.borderWidth || 2} onChange={(e) => setNodeStyle('borderWidth', parseInt(e.target.value))} title="Grossura da Borda">
+            <option value={0}>Sem borda</option>
+            <option value={2}>Fina</option>
+            <option value={4}>Média</option>
+            <option value={8}>Grossa</option>
+          </select>
+          <div className="wb-toolbar-divider" />
+        </>
+      )}
+
+      {/* Estilos de Texto */}
       <button onClick={() => editor && editor.chain().focus().toggleBold().run()} className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`} disabled={disabled}><Bold size={16} /></button>
       <button onClick={() => editor && editor.chain().focus().toggleItalic().run()} className={`wb-toolbar-btn ${editor?.isActive('italic') ? 'active' : ''}`} disabled={disabled}><Italic size={16} /></button>
       <button onClick={() => editor && editor.chain().focus().toggleUnderline().run()} className={`wb-toolbar-btn ${editor?.isActive('underline') ? 'active' : ''}`} disabled={disabled}><UnderlineIcon size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().toggleStrike().run()} className={`wb-toolbar-btn ${editor?.isActive('strike') ? 'active' : ''}`} disabled={disabled}><Strikethrough size={16} /></button>
-      <div className="wb-toolbar-divider" />
-      <div className="wb-toolbar-color-picker" style={{ opacity: disabled ? 0.5 : 1 }}>
-        <Palette size={16} />
-        <input type="color" onInput={(e) => editor && editor.chain().focus().setColor(e.target.value).run()} value={editor?.getAttributes('textStyle').color || '#000000'} disabled={disabled} />
-      </div>
-      <button onClick={() => editor && editor.chain().focus().toggleHighlight().run()} className={`wb-toolbar-btn ${editor?.isActive('highlight') ? 'active' : ''}`} disabled={disabled}><Highlighter size={16} /></button>
       <div className="wb-toolbar-divider" />
       <button onClick={() => editor && editor.chain().focus().setTextAlign('left').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'left' }) ? 'active' : ''}`} disabled={disabled}><AlignLeft size={16} /></button>
       <button onClick={() => editor && editor.chain().focus().setTextAlign('center').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'center' }) ? 'active' : ''}`} disabled={disabled}><AlignCenter size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().setTextAlign('right').run()} className={`wb-toolbar-btn ${editor?.isActive({ textAlign: 'right' }) ? 'active' : ''}`} disabled={disabled}><AlignRight size={16} /></button>
       <div className="wb-toolbar-divider" />
       <button onClick={() => editor && editor.chain().focus().toggleBulletList().run()} className={`wb-toolbar-btn ${editor?.isActive('bulletList') ? 'active' : ''}`} disabled={disabled}><List size={16} /></button>
-      <button onClick={() => editor && editor.chain().focus().toggleOrderedList().run()} className={`wb-toolbar-btn ${editor?.isActive('orderedList') ? 'active' : ''}`} disabled={disabled}><ListOrdered size={16} /></button>
       <div className="wb-toolbar-divider" />
-      <button onClick={onDelete} className="wb-toolbar-btn" disabled={disabled} style={{ color: disabled ? undefined : 'var(--red-600)' }}><Trash2 size={16} /></button>
+      <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }}><Trash2 size={16} /></button>
     </div>
   );
 };
@@ -309,7 +334,12 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       onPointerUp={handlePointerUp}
       data-id={node.id}
     >
-      <div className="wb-node-shape-bg" />
+      <div className="wb-node-shape-bg" style={{
+        backgroundColor: node.bg || undefined,
+        borderColor: node.borderColor || undefined,
+        borderStyle: node.borderStyle || undefined,
+        borderWidth: node.borderWidth !== undefined ? `${node.borderWidth}px` : undefined,
+      }} />
       {isTextMode && <div className="wb-node-text-handle" />}
       <EditorContent editor={editor} className="wb-node-editor" />
 
@@ -675,10 +705,10 @@ export default function Whiteboard() {
     >
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
-        <GlobalMenuBar 
-          editor={activeEditor} onDelete={deleteSelectedNodes}
-          canUndo={past.length > 0} canRedo={future.length > 0} onUndo={undo} onRedo={redo}
-        />
+        <div style={{ display: 'flex', gap: 8, pointerEvents: 'auto' }}>
+          <button onClick={undo} className="btn btn-secondary btn-sm" disabled={past.length === 0} title="Desfazer"><Undo size={16} /></button>
+          <button onClick={redo} className="btn btn-secondary btn-sm" disabled={future.length === 0} title="Refazer"><Redo size={16} /></button>
+        </div>
         <div className="whiteboard-actions">
           <button className="btn btn-secondary btn-sm" onClick={handleExport} title="Baixar Imagem PNG"><Download size={16} /> Exportar</button>
         </div>
@@ -726,17 +756,46 @@ export default function Whiteboard() {
             />
           ))}
 
-          {lassoRect && (
-            <div 
-              className="wb-lasso-rect" 
-              style={{
-                left: lassoRect.x, top: lassoRect.y,
-                width: lassoRect.w, height: lassoRect.h
-              }} 
-            />
-          )}
+            {lassoRect && (
+              <div 
+                className="wb-lasso-rect" 
+                style={{
+                  left: lassoRect.x, top: lassoRect.y,
+                  width: lassoRect.w, height: lassoRect.h
+                }} 
+              />
+            )}
+          </div>
         </div>
-      </div>
+
+        {(() => {
+          if (selectedNodeIds.length === 0) return null;
+          const sNodes = nodes.filter(n => selectedNodeIds.includes(n.id));
+          if (sNodes.length === 0) return null;
+          
+          let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+          sNodes.forEach(n => {
+            minX = Math.min(minX, n.x);
+            minY = Math.min(minY, n.y);
+            maxX = Math.max(maxX, n.x + (n.width || 260));
+            maxY = Math.max(maxY, n.y + (n.height || 120));
+          });
+
+          // Converte para coordenadas da tela (acima da bounding box inteira)
+          const rect = canvasRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
+          const screenX = rect.left + (minX * camera.zoom + camera.x) + ((maxX - minX) * camera.zoom) / 2;
+          const screenY = rect.top + (minY * camera.zoom + camera.y);
+
+          return (
+            <FloatingToolbar 
+              editor={activeEditor} 
+              selectedNodes={sNodes} 
+              updateNode={updateNode} 
+              onDelete={deleteSelectedNodes} 
+              position={{ x: screenX, y: screenY }} 
+            />
+          );
+        })()}
 
       {draggedShape && (
         <div 
