@@ -12,7 +12,7 @@ import {
   List, ListOrdered, 
   AlignLeft, AlignCenter, AlignRight,
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
-  Trash2, Undo, Redo, Download, PenTool
+  Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import './Whiteboard.css';
@@ -78,7 +78,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
   const isText = activeNode?.type === 'text';
   const isShape = !isDrawing && !isText;
 
-  // Defaults baseados no DraggableNode
   const def = {
     'post-it': { bg: '#FFF3B0' },
     'rounded-rect': { bg: '#ebf8ff', borderColor: '#3182ce', borderWidth: 2 },
@@ -88,7 +87,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
 
   return (
     <div className="wb-global-toolbar">
-      {/* Fundo (Apenas para Shapes) */}
       {isShape && (
         <>
           <div className="wb-toolbar-section">
@@ -101,7 +99,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
         </>
       )}
 
-      {/* Borda ou Cor do Pincel (Shapes e Drawings) */}
       {(isShape || isDrawing) && (
         <>
           <div className="wb-toolbar-section" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -128,7 +125,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
         </>
       )}
 
-      {/* Estilos de Texto (Shapes e Text) */}
       {(isShape || isText) && (
         <>
           <button onClick={() => editor && editor.chain().focus().toggleBold().run()} className={`wb-toolbar-btn ${editor?.isActive('bold') ? 'active' : ''}`} disabled={disabled} title="Negrito"><Bold size={16} /></button>
@@ -148,7 +144,6 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
   );
 };
 
-// --- Funções Matemáticas de Física e Ancoragem ---
 const getSmoothSvgPath = (points) => {
   if (points.length === 0) return '';
   let path = `M ${points[0].x} ${points[0].y}`;
@@ -168,7 +163,6 @@ const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
   const dy = Math.abs(toY - fromY);
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  // Tensão da curva bezier
   const tension = Math.min(Math.max(dist * 0.4, 60), 250);
 
   const getCP = (x, y, anchor) => {
@@ -177,7 +171,7 @@ const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
       case 'bottom': return { cx: x, cy: y + tension };
       case 'left': return { cx: x - tension, cy: y };
       case 'right': return { cx: x + tension, cy: y };
-      default: return { cx: x, cy: y }; // center
+      default: return { cx: x, cy: y };
     }
   };
 
@@ -205,7 +199,6 @@ const getRopePath = (fromX, fromY, toX, toY) => {
   const dy = Math.abs(toY - fromY);
   const dist = Math.sqrt(dx * dx + dy * dy);
   
-  // Tensão realista da corda
   const sag = Math.min(dist * 0.45, 300) + 20; 
   
   const cpX = (fromX + toX) / 2;
@@ -223,7 +216,7 @@ const getAnchorPosition = (node, anchor) => {
     case 'bottom': return { x: cx, y: node.y + (node.height || 120) };
     case 'left': return { x: node.x, y: cy };
     case 'right': return { x: node.x + (node.width || 260), y: cy };
-    default: return { x: cx, y: cy }; // center fallback
+    default: return { x: cx, y: cy };
   }
 };
 
@@ -232,7 +225,6 @@ const Connection = ({ conn, nodes }) => {
 
   useEffect(() => {
     if (conn.isNew && !snapped) {
-      // 30ms para renderizar o frame da corda com gravidade e engatilhar a transição CSS
       const timer = setTimeout(() => {
         setSnapped(true);
         conn.isNew = false; 
@@ -290,7 +282,6 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     }
   }, [node.text, editor]);
 
-  // --- Movimentação ---
   const handlePointerDown = (e) => {
     e.stopPropagation();
     if (e.button !== 0) return;
@@ -332,7 +323,6 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
     }
   };
 
-  // --- Redimensionamento ---
   const handleResizePointerDown = (e, dir) => {
     e.stopPropagation();
     if (e.button !== 0) return;
@@ -413,7 +403,6 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
       {isTextMode && <div className="wb-node-text-handle" />}
       {node.type !== 'drawing' && <EditorContent editor={editor} className="wb-node-editor" />}
 
-      {/* Anchors de Conexão */}
       <div className="wb-connection-anchor wb-anchor-top" data-anchor="top" onPointerDown={(e) => handleConnectionPointerDown(e, 'top')} title="Puxar seta para cima" />
       <div className="wb-connection-anchor wb-anchor-right" data-anchor="right" onPointerDown={(e) => handleConnectionPointerDown(e, 'right')} title="Puxar seta para a direita" />
       <div className="wb-connection-anchor wb-anchor-bottom" data-anchor="bottom" onPointerDown={(e) => handleConnectionPointerDown(e, 'bottom')} title="Puxar seta para baixo" />
@@ -431,8 +420,10 @@ const DraggableNode = ({ node, updateNode, updateMultipleNodes, selectedNodeIds,
 export default function Whiteboard() {
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   
-  const [interactionMode, setInteractionMode] = useState('none');
+  const [interactionMode, setInteractionMode] = useState('select');
+  const [isPanning, setIsPanning] = useState(false);
   const startInteraction = useRef({ x: 0, y: 0 });
+  const startPos = useRef({ x: 0, y: 0 });
   const [isSpaceDown, setIsSpaceDown] = useState(false);
 
   const [activeEditor, setActiveEditor] = useState(null); 
@@ -541,20 +532,19 @@ export default function Whiteboard() {
   const canvasRef = useRef(null);
 
   const handlePointerDown = (e) => {
-    if (e.button === 1 || e.button === 2 || isSpaceDown) {
-      setInteractionMode('panning');
+    if (interactionMode === 'pan' || e.button === 1 || isSpaceDown) {
+      setIsPanning(true);
+      startPos.current = { x: e.clientX, y: e.clientY };
     } 
-    else if (e.button === 0) {
+    else if (e.button === 0 && interactionMode !== 'pan') {
       if (interactionMode === 'drawing') {
         const rect = canvasRef.current.getBoundingClientRect();
         const x = (e.clientX - rect.left - camera.x) / camera.zoom;
         const y = (e.clientY - rect.top - camera.y) / camera.zoom;
         setCurrentDrawPath([{ x, y }]);
       } else {
-        setInteractionMode('lassoing');
-        if (!e.shiftKey) {
-          setSelectedNodeIds([]); 
-        }
+        setInteractionMode('select');
+        if (!e.shiftKey) setSelectedNodeIds([]); 
         setActiveEditor(null);
         
         const rect = canvasRef.current.getBoundingClientRect();
@@ -574,7 +564,6 @@ export default function Whiteboard() {
     startInteraction.current = { x: e.clientX, y: e.clientY };
   };
 
-  // --- Lógica Rastro da Seta (Gravidade) ---
   const draftRef = useRef(null);
 
   const handleConnectionStart = useCallback((fromId, fromAnchor, clientX, clientY) => {
@@ -604,7 +593,6 @@ export default function Whiteboard() {
             if (targetAnchorEl) {
               toAnchor = targetAnchorEl.getAttribute('data-anchor');
             } else {
-              // Calcula a âncora mais próxima do ponto onde o usuário soltou dentro do node
               const nodeRect = targetNodeEl.getBoundingClientRect();
               const cx = nodeRect.left + nodeRect.width / 2;
               const cy = nodeRect.top + nodeRect.height / 2;
@@ -633,8 +621,15 @@ export default function Whiteboard() {
     window.addEventListener('pointerup', onUp);
   }, [nodes, saveHistory]);
   
-  // --- Eventos Globais do Container ---
   const handleContainerPointerMove = (e) => {
+    if (isPanning) {
+      const dx = e.clientX - startPos.current.x;
+      const dy = e.clientY - startPos.current.y;
+      startPos.current = { x: e.clientX, y: e.clientY };
+      setCamera(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
+      return;
+    }
+
     if (draggedShape) {
       setDraggedShape(prev => ({ ...prev, mouseX: e.clientX, mouseY: e.clientY }));
       return;
@@ -646,13 +641,7 @@ export default function Whiteboard() {
       const y = (e.clientY - rect.top - camera.y) / camera.zoom;
       setCurrentDrawPath(prev => [...prev, { x, y }]);
     }
-    else if (interactionMode === 'panning') {
-      const dx = e.clientX - startInteraction.current.x;
-      const dy = e.clientY - startInteraction.current.y;
-      startInteraction.current = { x: e.clientX, y: e.clientY };
-      setCamera((prev) => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
-    } 
-    else if (interactionMode === 'lassoing') {
+    else if (lassoRect && interactionMode === 'select') {
       const rect = canvasRef.current.getBoundingClientRect();
       const xInside = e.clientX - rect.left;
       const yInside = e.clientY - rect.top;
@@ -682,6 +671,12 @@ export default function Whiteboard() {
   };
 
   const handleContainerPointerUp = (e) => {
+    if (isPanning) {
+      setIsPanning(false);
+      if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+      return;
+    }
+
     if (draggedShape) {
       addNodeAtPosition(draggedShape.type, e.clientX, e.clientY);
       setDraggedShape(null);
@@ -718,8 +713,7 @@ export default function Whiteboard() {
       return;
     }
     
-    if (interactionMode !== 'none') {
-      setInteractionMode('none');
+    if (lassoRect) {
       setLassoRect(null);
       if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
     }
@@ -800,7 +794,6 @@ export default function Whiteboard() {
     const toX = (draftConnection.mouseX - rect.left - camera.x) / camera.zoom;
     const toY = (draftConnection.mouseY - rect.top - camera.y) / camera.zoom;
 
-    // Conexão solta (puxando) é uma corda com gravidade
     const { path, angle } = getRopePath(fromPos.x, fromPos.y, toX, toY);
 
     return (
@@ -820,13 +813,27 @@ export default function Whiteboard() {
       <div className="whiteboard-header">
         <h2 style={{ pointerEvents: 'auto' }}>Canvas</h2>
         
-        {/* Renderiza a GlobalToolbar no centro do Header se houver seleção */}
-        {selectedNodeIds.length > 0 && (
+        {(selectedNodeIds.length > 0 && interactionMode !== 'drawing') && (
           <GlobalToolbar 
             editor={activeEditor} 
             selectedNodes={nodes.filter(n => selectedNodeIds.includes(n.id))} 
             updateNode={updateNode} 
-            onDelete={deleteSelectedNodes} 
+            onDelete={deleteSelectedNodes}
+            interactionMode={interactionMode}
+            penSettings={penSettings}
+            setPenSettings={setPenSettings}
+          />
+        )}
+        
+        {interactionMode === 'drawing' && (
+          <GlobalToolbar 
+            editor={null} 
+            selectedNodes={[]} 
+            updateNode={() => {}} 
+            onDelete={() => {}} 
+            interactionMode={interactionMode}
+            penSettings={penSettings}
+            setPenSettings={setPenSettings}
           />
         )}
 
@@ -842,11 +849,36 @@ export default function Whiteboard() {
       <div className="wb-left-palette">
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
-        <button onClick={() => setInteractionMode(prev => prev === 'drawing' ? 'none' : 'drawing')} className={interactionMode === 'drawing' ? 'active' : ''} style={{ color: interactionMode === 'drawing' ? 'var(--blue-600)' : '', background: interactionMode === 'drawing' ? 'var(--blue-100)' : '' }} title="Pincel (Desenho Livre)"><PenTool size={20} /></button>
         <div className="wb-palette-divider" />
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
         <button onPointerDown={(e) => { e.preventDefault(); e.target.setPointerCapture(e.pointerId); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+      </div>
+
+      {/* Toolbar Inferior de Ferramentas de Interação */}
+      <div className="wb-bottom-toolbar">
+        <button 
+          onClick={() => setInteractionMode('select')} 
+          className={`wb-bottom-btn ${interactionMode === 'select' ? 'active' : ''}`} 
+          title="Selecionar / Mover (V)"
+        >
+          <MousePointer2 size={18} />
+        </button>
+        <button 
+          onClick={() => setInteractionMode('pan')} 
+          className={`wb-bottom-btn ${interactionMode === 'pan' ? 'active' : ''}`} 
+          title="Navegar pelo Canvas (Espaço + Arrastar)"
+        >
+          <Hand size={18} />
+        </button>
+        <div className="wb-bottom-divider" />
+        <button 
+          onClick={() => setInteractionMode('drawing')} 
+          className={`wb-bottom-btn ${interactionMode === 'drawing' ? 'active' : ''}`} 
+          title="Pincel / Desenho Livre (P)"
+        >
+          <PenTool size={18} />
+        </button>
       </div>
 
       <div 

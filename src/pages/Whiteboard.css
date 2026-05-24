@@ -56,7 +56,8 @@
 }
 .whiteboard-canvas--panning { cursor: grabbing !important; }
 .whiteboard-container--space .whiteboard-canvas { cursor: grab !important; }
-.whiteboard-layer { position: absolute; top: 0; left: 0; width: 0; height: 0; will-change: transform; }
+.whiteboard-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.whiteboard-layer > * { pointer-events: auto; }
 
 .wb-node { position: absolute; top: 0; left: 0; cursor: grab; display: flex; flex-direction: column; transition: box-shadow 0.2s ease; z-index: 10; border: 2px solid transparent; border-radius: var(--r-sm); }
 .wb-node:active { cursor: grabbing; }
@@ -155,3 +156,51 @@
 }
 .wb-toolbar-select:hover:not(:disabled) { background-color: var(--neutral-100); }
 .wb-toolbar-select:focus { background-color: var(--white); border-color: var(--blue-500); box-shadow: 0 0 0 2px var(--blue-100); }
+
+/* Bottom Toolbar (Interactions like Figma) */
+.wb-bottom-toolbar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  padding: 6px;
+  gap: 4px;
+  z-index: 100;
+  pointer-events: auto;
+  align-items: center;
+}
+
+.wb-bottom-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--neutral-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wb-bottom-btn:hover {
+  background: var(--neutral-100);
+  color: var(--black);
+}
+
+.wb-bottom-btn.active {
+  background: var(--blue-100);
+  color: var(--blue-600);
+}
+
+.wb-bottom-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--neutral-200);
+  margin: 0 4px;
+}
