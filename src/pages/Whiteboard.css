@@ -139,6 +139,15 @@
   to { stroke-dashoffset: -18; }
 }
 
+.wb-flow-anim {
+  stroke-dasharray: 12 12 !important;
+  animation: marching-ants 0.8s linear infinite !important;
+}
+
+@keyframes marching-ants {
+  to { stroke-dashoffset: -24; }
+}
+
 /* Lasso Tool */
 .wb-lasso-rect { position: absolute; background: rgba(49, 130, 206, 0.1); border: 1px solid rgba(49, 130, 206, 0.5); pointer-events: none; z-index: 9000; }
 

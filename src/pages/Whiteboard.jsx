@@ -17,7 +17,7 @@ import {
   Highlighter, Palette, Type, StickyNote, Square, Circle, Diamond,
   Trash2, Undo, Redo, Download, MousePointer2, Hand, PenTool,
   Lock, Unlock, ArrowUpToLine, ArrowDownToLine, Copy, ChevronLeft, MessageSquare,
-  ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus
+  ThumbsUp, Search, Mail, Camera, LayoutTemplate, ShoppingBag, Video, CreditCard, CheckCircle, BadgeDollarSign, UserPlus, Play
 } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { supabase } from '../lib/supabase';
@@ -88,6 +88,84 @@ const GlobalToolbar = ({ editor, selectedNodes, selectedConnections, updateNode,
             <option value="orthogonal">Ortogonal</option>
           </select>
         </div>
+        <div className="wb-toolbar-divider" />
+        
+        <div className="wb-toolbar-section">
+          <select 
+            className="wb-toolbar-select" 
+            style={{ paddingLeft: 8, paddingRight: 20 }}
+            value={activeConn.strokeType || 'solid'}
+            onChange={(e) => updateConnection(activeConn.id, { strokeType: e.target.value })}
+            title="Padrão"
+          >
+            <option value="solid">━ Sólida</option>
+            <option value="dashed">┅ Tracejada</option>
+            <option value="dotted">… Pontilhada</option>
+          </select>
+        </div>
+        <div className="wb-toolbar-divider" />
+
+        <div className="wb-toolbar-section">
+          <select 
+            className="wb-toolbar-select" 
+            style={{ paddingLeft: 8, paddingRight: 20 }}
+            value={activeConn.arrowType || 'end'}
+            onChange={(e) => updateConnection(activeConn.id, { arrowType: e.target.value })}
+            title="Setas"
+          >
+            <option value="end">→ Final</option>
+            <option value="start">← Início</option>
+            <option value="both">↔ Dupla</option>
+            <option value="none">━ Nenhuma</option>
+          </select>
+        </div>
+        <div className="wb-toolbar-divider" />
+
+        <button 
+          onClick={() => updateConnection(activeConn.id, { isAnimated: !activeConn.isAnimated })} 
+          className={`wb-toolbar-btn ${activeConn.isAnimated ? 'active' : ''}`} 
+          title="Animar Fluxo"
+        >
+          <Play size={16} />
+        </button>
+        <div className="wb-toolbar-divider" />
+        
+        <div className="wb-toolbar-section">
+          <div className="wb-toolbar-color-picker" title="Cor da Conexão" style={{ '--current-color': activeConn.color || '#94a3b8' }}>
+            <Palette size={16} />
+            <input type="color" value={activeConn.color || '#94a3b8'} onChange={(e) => updateConnection(activeConn.id, { color: e.target.value })} />
+          </div>
+        </div>
+        
+        <div className="wb-toolbar-section">
+          <select 
+            className="wb-toolbar-select" 
+            style={{ paddingLeft: 8, paddingRight: 20 }}
+            value={activeConn.strokeWidth || 2}
+            onChange={(e) => updateConnection(activeConn.id, { strokeWidth: parseInt(e.target.value) })}
+            title="Espessura"
+          >
+            <option value={1}>Fina (1px)</option>
+            <option value={2}>Normal (2px)</option>
+            <option value={4}>Grossa (4px)</option>
+            <option value={8}>Muito Grossa (8px)</option>
+          </select>
+        </div>
+
+        <div className="wb-toolbar-divider" />
+
+        {/* Badge */}
+        <div className="wb-toolbar-section">
+          <input 
+            type="text" 
+            placeholder="Métrica (+20%)" 
+            value={activeConn.badge || ''} 
+            onChange={(e) => updateConnection(activeConn.id, { badge: e.target.value })} 
+            style={{ width: '100px', padding: '4px 8px', fontSize: '12px', border: '1px solid var(--neutral-200)', borderRadius: '4px', outline: 'none' }}
+            title="Adicionar Badge de Métrica"
+          />
+        </div>
+
         <div className="wb-toolbar-divider" />
         <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }} title="Deletar Conexão"><Trash2 size={16} /></button>
       </div>
@@ -205,45 +283,48 @@ const getSmoothSvgPath = (points) => {
   return path;
 };
 
-const getConnectionPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor, lineType = 'bezier') => {
-  const dx = Math.abs(toX - fromX);
-  const dy = Math.abs(toY - fromY);
-  const dist = Math.sqrt(dx * dx + dy * dy);
+const getConnectionPath = (fromPos, fromAnchor, toPos, toAnchor, lineType = 'bezier', wp = null) => {
+  const fromX = fromPos.x; const fromY = fromPos.y;
+  const toX = toPos.x; const toY = toPos.y;
 
   let angle = 0;
   if (toAnchor === 'top') angle = 90; 
   else if (toAnchor === 'bottom') angle = -90; 
   else if (toAnchor === 'left') angle = 0; 
   else if (toAnchor === 'right') angle = 180; 
-  else {
-    angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
-  }
+  else angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
 
   if (lineType === 'straight') {
-    return { 
-      path: `M ${fromX} ${fromY} L ${toX} ${toY}`, 
-      angle, 
-      midX: (fromX + toX) / 2, 
-      midY: (fromY + toY) / 2 
-    };
+    if (wp) return { path: `M ${fromX} ${fromY} L ${wp.x} ${wp.y} L ${toX} ${toY}`, angle, midX: wp.x, midY: wp.y };
+    return { path: `M ${fromX} ${fromY} L ${toX} ${toY}`, angle, midX: (fromX + toX) / 2, midY: (fromY + toY) / 2 };
   }
   
   if (lineType === 'orthogonal') {
+    if (wp) {
+       let path = `M ${fromX} ${fromY} L ${wp.x} ${fromY} L ${wp.x} ${toY} L ${toX} ${toY}`;
+       return { path, angle, midX: wp.x, midY: wp.y };
+    }
     let midX = (fromX + toX) / 2;
     let midY = (fromY + toY) / 2;
     let path = '';
-    
-    // Simple orthogonal routing
     if (fromAnchor === 'left' || fromAnchor === 'right' || toAnchor === 'left' || toAnchor === 'right') {
       path = `M ${fromX} ${fromY} L ${midX} ${fromY} L ${midX} ${toY} L ${toX} ${toY}`;
     } else {
       path = `M ${fromX} ${fromY} L ${fromX} ${midY} L ${toX} ${midY} L ${toX} ${toY}`;
     }
-
     return { path, angle, midX, midY };
   }
 
   // bezier
+  if (wp) {
+     const cx = 2 * wp.x - 0.5 * fromX - 0.5 * toX;
+     const cy = 2 * wp.y - 0.5 * fromY - 0.5 * toY;
+     return { path: `M ${fromX} ${fromY} Q ${cx} ${cy} ${toX} ${toY}`, angle, midX: wp.x, midY: wp.y };
+  }
+
+  const dx = Math.abs(toX - fromX);
+  const dy = Math.abs(toY - fromY);
+  const dist = Math.sqrt(dx * dx + dy * dy);
   const tension = Math.min(Math.max(dist * 0.4, 60), 250);
 
   const getCP = (x, y, anchor) => {
@@ -259,14 +340,6 @@ const getConnectionPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor, lineTyp
   const cp1 = getCP(fromX, fromY, fromAnchor);
   const cp2 = getCP(toX, toY, toAnchor);
   
-  if (toAnchor === 'center') {
-    if (cp2.cx === toX && cp2.cy === toY) {
-      angle = Math.atan2(toY - cp1.cy, toX - cp1.cx) * 180 / Math.PI;
-    } else {
-      angle = Math.atan2(toY - cp2.cy, toX - cp2.cx) * 180 / Math.PI;
-    }
-  }
-
   const midX = 0.125 * fromX + 0.375 * cp1.cx + 0.375 * cp2.cx + 0.125 * toX;
   const midY = 0.125 * fromY + 0.375 * cp1.cy + 0.375 * cp2.cy + 0.125 * toY;
 
@@ -288,19 +361,47 @@ const getRopePath = (fromX, fromY, toX, toY) => {
   };
 };
 
-const getAnchorPosition = (node, anchor) => {
-  const cx = node.x + (node.width || 260) / 2;
-  const cy = node.y + (node.height || 120) / 2;
-  switch (anchor) {
-    case 'top': return { x: cx, y: node.y };
-    case 'bottom': return { x: cx, y: node.y + (node.height || 120) };
-    case 'left': return { x: node.x, y: cy };
-    case 'right': return { x: node.x + (node.width || 260), y: cy };
-    default: return { x: cx, y: cy };
+const getSmartAnchorPosition = (node1, node2) => {
+  const w1 = node1.width || 260;
+  const h1 = node1.height || 120;
+  const w2 = node2.width || 260;
+  const h2 = node2.height || 120;
+  
+  const c1 = { x: node1.x + w1 / 2, y: node1.y + h1 / 2 };
+  const c2 = { x: node2.x + w2 / 2, y: node2.y + h2 / 2 };
+  
+  const dx = c2.x - c1.x;
+  const dy = c2.y - c1.y;
+  
+  let a1 = 'right';
+  let a2 = 'left';
+  if (Math.abs(dx) > Math.abs(dy)) {
+    a1 = dx > 0 ? 'right' : 'left';
+    a2 = dx > 0 ? 'left' : 'right';
+  } else {
+    a1 = dy > 0 ? 'bottom' : 'top';
+    a2 = dy > 0 ? 'top' : 'bottom';
   }
+  
+  const getPos = (node, anchor, w, h, cx, cy) => {
+    switch (anchor) {
+      case 'top': return { x: cx, y: node.y };
+      case 'bottom': return { x: cx, y: node.y + h };
+      case 'left': return { x: node.x, y: cy };
+      case 'right': return { x: node.x + w, y: cy };
+      default: return { x: cx, y: cy };
+    }
+  };
+  
+  return {
+    fromPos: getPos(node1, a1, w1, h1, c1.x, c1.y),
+    toPos: getPos(node2, a2, w2, h2, c2.x, c2.y),
+    fromAnchor: a1,
+    toAnchor: a2
+  };
 };
 
-const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect }) => {
+const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect, onWaypointDragStart }) => {
   const [snapped, setSnapped] = useState(!conn.isNew);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -318,24 +419,87 @@ const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect }) => 
   const toNode = nodes.find(n => n.id === conn.to);
   if (!fromNode || !toNode) return null;
 
-  const fromPos = getAnchorPosition(fromNode, conn.fromAnchor || 'center');
-  const toPos = getAnchorPosition(toNode, conn.toAnchor || 'center');
+  const { fromPos, toPos, fromAnchor, toAnchor } = getSmartAnchorPosition(fromNode, toNode);
 
   const { path, angle, midX, midY } = snapped 
-    ? getConnectionPath(fromPos.x, fromPos.y, conn.fromAnchor || 'center', toPos.x, toPos.y, conn.toAnchor || 'center', conn.lineType || 'bezier')
+    ? getConnectionPath(fromPos, fromAnchor, toPos, toAnchor, conn.lineType || 'bezier', conn.wp)
     : getRopePath(fromPos.x, fromPos.y, toPos.x, toPos.y);
+
+  const strokeColor = conn.color || (isSelected ? '#3b82f6' : '#94a3b8');
+  const strokeWidth = conn.strokeWidth || (isSelected ? 3 : 2);
+  const strokeType = conn.strokeType || 'solid';
+  const dashArray = strokeType === 'dashed' ? '8 8' : (strokeType === 'dotted' ? '4 4' : 'none');
 
   return (
     <g>
+      {/* Invisible Hitbox Shield */}
       <path 
         d={path} 
-        className="wb-connection-path wb-anim-snap" 
+        fill="none"
+        stroke="transparent"
+        strokeWidth={25}
         onDoubleClick={() => setIsEditing(true)}
         onPointerDown={(e) => { e.stopPropagation(); onSelect(conn.id, e.shiftKey); }}
-        style={{ pointerEvents: 'stroke', cursor: 'pointer', strokeWidth: isSelected ? 4 : 2, stroke: isSelected ? '#3b82f6' : '#94a3b8' }}
+        style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
       />
-      <polygon points="0,-6 12,0 0,6" transform={`translate(${toPos.x}, ${toPos.y}) rotate(${angle})`} fill={isSelected ? '#3b82f6' : '#64748b'} className="wb-connection-arrowhead wb-anim-snap" />
       
+      {/* Visible Path */}
+      <path 
+        d={path} 
+        className={`wb-connection-path wb-anim-snap ${conn.isAnimated ? 'wb-flow-anim' : ''}`} 
+        style={{ 
+          pointerEvents: 'none', 
+          strokeWidth: strokeWidth, 
+          stroke: strokeColor,
+          strokeDasharray: dashArray
+        }}
+      />
+      
+      {/* End Arrowhead */}
+      {conn.arrowType !== 'none' && conn.arrowType !== 'start' && (
+        <polygon points="0,-6 12,0 0,6" transform={`translate(${toPos.x}, ${toPos.y}) rotate(${angle})`} fill={strokeColor} className="wb-connection-arrowhead wb-anim-snap" />
+      )}
+      
+      {/* Start Arrowhead (Bidirectional) */}
+      {(conn.arrowType === 'both' || conn.arrowType === 'start') && (
+        <polygon points="0,-6 12,0 0,6" transform={`translate(${fromPos.x}, ${fromPos.y}) rotate(${angle + 180})`} fill={strokeColor} className="wb-connection-arrowhead wb-anim-snap" />
+      )}
+      
+      {/* Waypoint Handle */}
+      {isSelected && !isEditing && (
+        <circle 
+          cx={midX} 
+          cy={midY} 
+          r={6} 
+          fill="#ffffff" 
+          stroke={strokeColor} 
+          strokeWidth={3}
+          style={{ cursor: 'grab', pointerEvents: 'auto' }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onWaypointDragStart(conn.id);
+          }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            updateConnection(conn.id, { wp: null }); // Reset waypoint
+          }}
+          title="Arraste para curvar, clique duplo para resetar"
+        />
+      )}
+      
+      {/* Badge Métrica */}
+      {conn.badge && !isEditing && (
+        <foreignObject x={midX - 40} y={midY - 45} width={80} height={24} style={{ overflow: 'visible', pointerEvents: 'none' }}>
+          <div 
+            style={{ pointerEvents: 'auto', textAlign: 'center', background: '#22c55e', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold', width: 'fit-content', margin: '0 auto', boxShadow: '0 2px 5px rgba(0,0,0,0.15)', cursor: 'pointer' }}
+            onDoubleClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
+          >
+            {conn.badge}
+          </div>
+        </foreignObject>
+      )}
+
+      {/* Free Text Label */}
       {conn.label && !isEditing && (
         <foreignObject x={midX - 75} y={midY - 15} width={150} height={30} style={{ overflow: 'visible', pointerEvents: 'none' }}>
           <div 
@@ -349,30 +513,35 @@ const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect }) => 
       )}
 
       {isEditing && (
-        <foreignObject x={midX - 75} y={midY - 45} width={150} height={80} style={{ overflow: 'visible' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
-            <select 
-              value={conn.lineType || 'bezier'}
-              onChange={(e) => updateConnection(conn.id, { lineType: e.target.value })}
-              style={{ fontSize: '10px', padding: '2px', borderRadius: '4px', border: '1px solid #cbd5e1' }}
-            >
-              <option value="bezier">Curva</option>
-              <option value="straight">Reta</option>
-              <option value="orthogonal">Ortogonal</option>
-            </select>
+        <foreignObject x={midX - 100} y={midY - 70} width={200} height={120} style={{ overflow: 'visible' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', background: 'white', padding: '8px', borderRadius: '8px', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>EDITAR CONEXÃO</span>
             <input 
-              autoFocus
               className="wb-connection-input"
+              placeholder="Texto Livre"
               defaultValue={conn.label || ''}
-              style={{ width: '100%', textAlign: 'center', fontSize: '12px', padding: '4px', borderRadius: '4px', border: '2px solid #3b82f6', outline: 'none' }}
+              style={{ width: '100%', textAlign: 'center', fontSize: '12px', padding: '6px', borderRadius: '4px', border: '1px solid #cbd5e1', outline: 'none' }}
               onBlur={(e) => {
-                 // small delay to allow select to be clicked
                  setTimeout(() => setIsEditing(false), 200);
                  updateConnection(conn.id, { label: e.target.value });
               }}
               onKeyDown={(e) => {
                  if (e.key === 'Enter') {
                    updateConnection(conn.id, { label: e.target.value });
+                   setIsEditing(false);
+                 }
+              }}
+            />
+            <input 
+              placeholder="Badge Numérico (Ex: +25%)"
+              defaultValue={conn.badge || ''}
+              style={{ width: '100%', textAlign: 'center', fontSize: '11px', padding: '4px', borderRadius: '4px', border: '1px solid #22c55e', background: '#f0fdf4', outline: 'none' }}
+              onBlur={(e) => {
+                 updateConnection(conn.id, { badge: e.target.value });
+              }}
+              onKeyDown={(e) => {
+                 if (e.key === 'Enter') {
+                   updateConnection(conn.id, { badge: e.target.value });
                    setIsEditing(false);
                  }
               }}
@@ -594,6 +763,7 @@ export default function Whiteboard() {
   const [activeEditor, setActiveEditor] = useState(null); 
   const [selectedNodeIds, setSelectedNodeIds] = useState([]);
   const [selectedConnectionIds, setSelectedConnectionIds] = useState([]);
+  const [draggedWaypointId, setDraggedWaypointId] = useState(null);
   const [lassoRect, setLassoRect] = useState(null); 
   const [currentDrawPath, setCurrentDrawPath] = useState(null);
   const [penSettings, setPenSettings] = useState({ color: '#ef4444', width: 4 });
@@ -823,6 +993,12 @@ export default function Whiteboard() {
     }
   }, []);
 
+  const handleWaypointDragStart = useCallback((id) => {
+    setInteractionMode('drag_waypoint');
+    setDraggedWaypointId(id);
+    saveHistory(nodes, connections); // save before drag
+  }, [nodes, connections, saveHistory]);
+
   const canvasRef = useRef(null);
 
   const handlePointerDown = (e) => {
@@ -933,6 +1109,12 @@ export default function Whiteboard() {
       const y = (e.clientY - rect.top - camera.y) / camera.zoom;
       setCurrentDrawPath(prev => [...prev, { x, y }]);
     }
+    else if (interactionMode === 'drag_waypoint' && draggedWaypointId) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left - camera.x) / camera.zoom;
+      const y = (e.clientY - rect.top - camera.y) / camera.zoom;
+      updateConnection(draggedWaypointId, { wp: { x, y } });
+    }
     else if (lassoRect && interactionMode === 'select') {
       const rect = canvasRef.current.getBoundingClientRect();
       const xInside = e.clientX - rect.left;
@@ -966,6 +1148,12 @@ export default function Whiteboard() {
     if (isPanning) {
       setIsPanning(false);
       if (e.target.hasPointerCapture && e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+      return;
+    }
+
+    if (interactionMode === 'drag_waypoint') {
+      setInteractionMode('select');
+      setDraggedWaypointId(null);
       return;
     }
 
@@ -1285,7 +1473,7 @@ export default function Whiteboard() {
           style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`, transformOrigin: '0 0' }}
         >
           <svg className="wb-connections-svg" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} updateConnection={updateConnection} isSelected={selectedConnectionIds.includes(conn.id)} onSelect={handleConnectionSelect} />)}
+            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} updateConnection={updateConnection} isSelected={selectedConnectionIds.includes(conn.id)} onSelect={handleConnectionSelect} onWaypointDragStart={handleWaypointDragStart} />)}
             {renderDraftConnection()}
             {currentDrawPath && (
               <path d={getSmoothSvgPath(currentDrawPath)} fill="none" stroke={penSettings.color} strokeWidth={penSettings.width} strokeLinecap="round" strokeLinejoin="round" />
