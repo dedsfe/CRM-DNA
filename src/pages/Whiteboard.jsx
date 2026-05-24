@@ -81,11 +81,41 @@ const GlobalMenuBar = ({ editor, onDelete, canUndo, canRedo, onUndo, onRedo }) =
 };
 
 // --- Funções Matemáticas de Física e Ancoragem ---
-const getStraightPath = (fromX, fromY, toX, toY) => {
-  const cpX = (fromX + toX) / 2;
-  const cpY = (fromY + toY) / 2;
-  const angle = Math.atan2(toY - fromY, toX - fromX) * 180 / Math.PI;
-  return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
+const getMiroBezierPath = (fromX, fromY, fromAnchor, toX, toY, toAnchor) => {
+  const dx = Math.abs(toX - fromX);
+  const dy = Math.abs(toY - fromY);
+  const dist = Math.sqrt(dx * dx + dy * dy);
+
+  // Tensão da curva bezier
+  const tension = Math.min(Math.max(dist * 0.4, 60), 250);
+
+  const getCP = (x, y, anchor) => {
+    switch (anchor) {
+      case 'top': return { cx: x, cy: y - tension };
+      case 'bottom': return { cx: x, cy: y + tension };
+      case 'left': return { cx: x - tension, cy: y };
+      case 'right': return { cx: x + tension, cy: y };
+      default: return { cx: x, cy: y }; // center
+    }
+  };
+
+  const cp1 = getCP(fromX, fromY, fromAnchor);
+  const cp2 = getCP(toX, toY, toAnchor);
+  
+  let angle = 0;
+  if (toAnchor === 'top') angle = 90; 
+  else if (toAnchor === 'bottom') angle = -90; 
+  else if (toAnchor === 'left') angle = 0; 
+  else if (toAnchor === 'right') angle = 180; 
+  else {
+    if (cp2.cx === toX && cp2.cy === toY) {
+      angle = Math.atan2(toY - cp1.cy, toX - cp1.cx) * 180 / Math.PI;
+    } else {
+      angle = Math.atan2(toY - cp2.cy, toX - cp2.cx) * 180 / Math.PI;
+    }
+  }
+
+  return { path: `M ${fromX} ${fromY} C ${cp1.cx} ${cp1.cy}, ${cp2.cx} ${cp2.cy}, ${toX} ${toY}`, angle };
 };
 
 const getRopePath = (fromX, fromY, toX, toY) => {
@@ -100,7 +130,7 @@ const getRopePath = (fromX, fromY, toX, toY) => {
   const cpY = Math.max(fromY, toY) + sag;
   const angle = Math.atan2(toY - cpY, toX - cpX) * 180 / Math.PI;
 
-  return { path: `M ${fromX} ${fromY} Q ${cpX} ${cpY}, ${toX} ${toY}`, angle };
+  return { path: `M ${fromX} ${fromY} C ${cpX} ${cpY}, ${cpX} ${cpY}, ${toX} ${toY}`, angle };
 };
 
 const getAnchorPosition = (node, anchor) => {
@@ -137,7 +167,7 @@ const Connection = ({ conn, nodes }) => {
   const toPos = getAnchorPosition(toNode, conn.toAnchor || 'center');
 
   const { path, angle } = snapped 
-    ? getStraightPath(fromPos.x, fromPos.y, toPos.x, toPos.y)
+    ? getMiroBezierPath(fromPos.x, fromPos.y, conn.fromAnchor || 'center', toPos.x, toPos.y, conn.toAnchor || 'center')
     : getRopePath(fromPos.x, fromPos.y, toPos.x, toPos.y);
 
   return (
