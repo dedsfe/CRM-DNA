@@ -462,6 +462,31 @@ export default function Whiteboard() {
   const [past, setPast] = useState([]);
   const [future, setFuture] = useState([]);
 
+  const saveHistory = useCallback((currentNodes = nodes, currentConns = connections) => {
+    setPast(prev => [...prev, { nodes: currentNodes, conns: currentConns }].slice(-50));
+    setFuture([]);
+  }, [nodes, connections]);
+
+  const undo = useCallback(() => {
+    if (past.length === 0) return;
+    const previous = past[past.length - 1];
+    const newPast = past.slice(0, past.length - 1);
+    setFuture([{ nodes, conns: connections }, ...future]);
+    setPast(newPast);
+    setNodes(previous.nodes);
+    setConnections(previous.conns);
+  }, [past, future, nodes, connections]);
+
+  const redo = useCallback(() => {
+    if (future.length === 0) return;
+    const next = future[0];
+    const newFuture = future.slice(1);
+    setPast([...past, { nodes, conns: connections }]);
+    setFuture(newFuture);
+    setNodes(next.nodes);
+    setConnections(next.conns);
+  }, [past, future, nodes, connections]);
+
   // --- Atalhos de Teclado (Ctrl+C / Ctrl+V) ---
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -557,31 +582,6 @@ export default function Whiteboard() {
       setSelectedNodeIds([id]);
     }
   }, []);
-
-  const saveHistory = useCallback((currentNodes = nodes, currentConns = connections) => {
-    setPast(prev => [...prev, { nodes: currentNodes, conns: currentConns }].slice(-50));
-    setFuture([]);
-  }, [nodes, connections]);
-
-  const undo = useCallback(() => {
-    if (past.length === 0) return;
-    const previous = past[past.length - 1];
-    const newPast = past.slice(0, past.length - 1);
-    setFuture([{ nodes, conns: connections }, ...future]);
-    setPast(newPast);
-    setNodes(previous.nodes);
-    setConnections(previous.conns);
-  }, [past, future, nodes, connections]);
-
-  const redo = useCallback(() => {
-    if (future.length === 0) return;
-    const next = future[0];
-    const newFuture = future.slice(1);
-    setPast([...past, { nodes, conns: connections }]);
-    setFuture(newFuture);
-    setNodes(next.nodes);
-    setConnections(next.conns);
-  }, [past, future, nodes, connections]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
