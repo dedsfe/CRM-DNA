@@ -50,7 +50,7 @@ const FontSize = Extension.create({
   },
 });
 
-const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactionMode, penSettings, setPenSettings, bringToFront, sendToBack, duplicateNodes }) => {
+const GlobalToolbar = ({ editor, selectedNodes, selectedConnections, updateNode, updateConnection, onDelete, interactionMode, penSettings, setPenSettings, bringToFront, sendToBack, duplicateNodes }) => {
   if (interactionMode === 'drawing') {
     return (
       <div className="wb-global-toolbar">
@@ -65,6 +65,31 @@ const GlobalToolbar = ({ editor, selectedNodes, updateNode, onDelete, interactio
           <option value={8}>Grosso (8px)</option>
           <option value={12}>Marcador (12px)</option>
         </select>
+      </div>
+    );
+  }
+
+
+
+  if (selectedConnections?.length > 0 && selectedNodes.length === 0) {
+    const activeConn = selectedConnections[0];
+    return (
+      <div className="wb-global-toolbar">
+        <div className="wb-toolbar-section">
+          <select 
+            className="wb-toolbar-select" 
+            style={{ paddingLeft: 8, paddingRight: 20 }}
+            value={activeConn.lineType || 'bezier'}
+            onChange={(e) => updateConnection(activeConn.id, { lineType: e.target.value })}
+            title="Tipo de Linha"
+          >
+            <option value="bezier">Curva</option>
+            <option value="straight">Reta</option>
+            <option value="orthogonal">Ortogonal</option>
+          </select>
+        </div>
+        <div className="wb-toolbar-divider" />
+        <button onClick={onDelete} className="wb-toolbar-btn" style={{ color: 'var(--red-600)' }} title="Deletar Conexão"><Trash2 size={16} /></button>
       </div>
     );
   }
@@ -275,7 +300,7 @@ const getAnchorPosition = (node, anchor) => {
   }
 };
 
-const Connection = ({ conn, nodes, updateConnection }) => {
+const Connection = ({ conn, nodes, updateConnection, isSelected, onSelect }) => {
   const [snapped, setSnapped] = useState(!conn.isNew);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -306,9 +331,10 @@ const Connection = ({ conn, nodes, updateConnection }) => {
         d={path} 
         className="wb-connection-path wb-anim-snap" 
         onDoubleClick={() => setIsEditing(true)}
-        style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+        onPointerDown={(e) => { e.stopPropagation(); onSelect(conn.id, e.shiftKey); }}
+        style={{ pointerEvents: 'stroke', cursor: 'pointer', strokeWidth: isSelected ? 4 : 2, stroke: isSelected ? '#3b82f6' : '#94a3b8' }}
       />
-      <polygon points="0,-6 12,0 0,6" transform={`translate(${toPos.x}, ${toPos.y}) rotate(${angle})`} fill="#64748b" className="wb-connection-arrowhead wb-anim-snap" />
+      <polygon points="0,-6 12,0 0,6" transform={`translate(${toPos.x}, ${toPos.y}) rotate(${angle})`} fill={isSelected ? '#3b82f6' : '#64748b'} className="wb-connection-arrowhead wb-anim-snap" />
       
       {conn.label && !isEditing && (
         <foreignObject x={midX - 75} y={midY - 15} width={150} height={30} style={{ overflow: 'visible', pointerEvents: 'none' }}>
@@ -567,6 +593,7 @@ export default function Whiteboard() {
 
   const [activeEditor, setActiveEditor] = useState(null); 
   const [selectedNodeIds, setSelectedNodeIds] = useState([]);
+  const [selectedConnectionIds, setSelectedConnectionIds] = useState([]);
   const [lassoRect, setLassoRect] = useState(null); 
   const [currentDrawPath, setCurrentDrawPath] = useState(null);
   const [penSettings, setPenSettings] = useState({ color: '#ef4444', width: 4 });
@@ -746,6 +773,7 @@ export default function Whiteboard() {
       setSelectedNodeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     } else if (!keepGroup) {
       setSelectedNodeIds([id]);
+      setSelectedConnectionIds([]);
     }
   }, []);
 
@@ -774,16 +802,26 @@ export default function Whiteboard() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [undo, redo, selectedNodeIds, nodes, connections]);
+  }, [undo, redo, selectedNodeIds, selectedConnectionIds, nodes, connections]);
 
-  const deleteSelectedNodes = () => {
-    if (selectedNodeIds.length === 0) return;
-    saveHistory();
+  const deleteSelectedNodes = useCallback(() => {
+    if (selectedNodeIds.length === 0 && selectedConnectionIds.length === 0) return;
+    saveHistory(nodes, connections);
     setNodes(prev => prev.filter(n => !selectedNodeIds.includes(n.id)));
-    setConnections(prev => prev.filter(c => !selectedNodeIds.includes(c.from) && !selectedNodeIds.includes(c.to)));
+    setConnections(prev => prev.filter(c => !selectedNodeIds.includes(c.from) && !selectedNodeIds.includes(c.to) && !selectedConnectionIds.includes(c.id)));
     setSelectedNodeIds([]);
+    setSelectedConnectionIds([]);
     setActiveEditor(null);
-  };
+  }, [selectedNodeIds, selectedConnectionIds, nodes, connections, saveHistory]);
+
+  const handleConnectionSelect = useCallback((id, isShift) => {
+    if (isShift) {
+      setSelectedConnectionIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    } else {
+      setSelectedConnectionIds([id]);
+      setSelectedNodeIds([]);
+    }
+  }, []);
 
   const canvasRef = useRef(null);
 
@@ -800,7 +838,10 @@ export default function Whiteboard() {
         setCurrentDrawPath([{ x, y }]);
       } else {
         setInteractionMode('select');
-        if (!e.shiftKey) setSelectedNodeIds([]); 
+        if (!e.shiftKey) {
+            setSelectedNodeIds([]); 
+            setSelectedConnectionIds([]);
+        }
         setActiveEditor(null);
         
         const rect = canvasRef.current.getBoundingClientRect();
@@ -1124,11 +1165,13 @@ export default function Whiteboard() {
           <h2>Canvas</h2>
         </div>
         
-        {(selectedNodeIds.length > 0 && interactionMode !== 'drawing') && (
+        {(selectedNodeIds.length > 0 || selectedConnectionIds.length > 0) && interactionMode !== 'drawing' && (
           <GlobalToolbar 
             editor={activeEditor} 
             selectedNodes={nodes.filter(n => selectedNodeIds.includes(n.id))} 
+            selectedConnections={connections.filter(c => selectedConnectionIds.includes(c.id))}
             updateNode={updateNode} 
+            updateConnection={updateConnection}
             onDelete={deleteSelectedNodes}
             interactionMode={interactionMode}
             penSettings={penSettings}
@@ -1161,44 +1204,46 @@ export default function Whiteboard() {
       </div>
 
       <div className="wb-left-palette">
-        <div className="wb-palette-group">
-          <span className="wb-palette-title">Básico</span>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
-        </div>
-
-        <div className="wb-palette-divider" />
+        <details className="wb-palette-group" open>
+          <summary className="wb-palette-title">Básico</summary>
+          <div className="wb-palette-items">
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'text', mouseX: e.clientX, mouseY: e.clientY }); }} title="Texto Solto"><Type size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'post-it', mouseX: e.clientX, mouseY: e.clientY }); }} title="Nota (Post-it)"><StickyNote size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'comment', mouseX: e.clientX, mouseY: e.clientY }); }} title="Comentário"><MessageSquare size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'rounded-rect', mouseX: e.clientX, mouseY: e.clientY }); }} title="Retângulo"><Square size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'circle', mouseX: e.clientX, mouseY: e.clientY }); }} title="Círculo"><Circle size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'diamond', mouseX: e.clientX, mouseY: e.clientY }); }} title="Losango (Decisão)"><Diamond size={20} /></button>
+          </div>
+        </details>
         
-        <div className="wb-palette-group">
-          <span className="wb-palette-title">Tráfego</span>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-facebook', mouseX: e.clientX, mouseY: e.clientY }); }} title="Facebook Ads"><ThumbsUp size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-google', mouseX: e.clientX, mouseY: e.clientY }); }} title="Google Ads"><Search size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-email', mouseX: e.clientX, mouseY: e.clientY }); }} title="E-mail"><Mail size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-instagram', mouseX: e.clientX, mouseY: e.clientY }); }} title="Instagram"><Camera size={20} /></button>
-        </div>
-
-        <div className="wb-palette-divider" />
+        <details className="wb-palette-group" open>
+          <summary className="wb-palette-title">Tráfego</summary>
+          <div className="wb-palette-items">
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-facebook', mouseX: e.clientX, mouseY: e.clientY }); }} title="Facebook Ads"><ThumbsUp size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-google', mouseX: e.clientX, mouseY: e.clientY }); }} title="Google Ads"><Search size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-email', mouseX: e.clientX, mouseY: e.clientY }); }} title="E-mail"><Mail size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'traffic-instagram', mouseX: e.clientX, mouseY: e.clientY }); }} title="Instagram"><Camera size={20} /></button>
+          </div>
+        </details>
         
-        <div className="wb-palette-group">
-          <span className="wb-palette-title">Páginas</span>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-optin', mouseX: e.clientX, mouseY: e.clientY }); }} title="Opt-in / Landing Page"><LayoutTemplate size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-sales', mouseX: e.clientX, mouseY: e.clientY }); }} title="Página de Vendas"><ShoppingBag size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-vsl', mouseX: e.clientX, mouseY: e.clientY }); }} title="VSL"><Video size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-checkout', mouseX: e.clientX, mouseY: e.clientY }); }} title="Checkout"><CreditCard size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-thankyou', mouseX: e.clientX, mouseY: e.clientY }); }} title="Thank You Page"><CheckCircle size={20} /></button>
-        </div>
-
-        <div className="wb-palette-divider" />
+        <details className="wb-palette-group" open>
+          <summary className="wb-palette-title">Páginas</summary>
+          <div className="wb-palette-items">
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-optin', mouseX: e.clientX, mouseY: e.clientY }); }} title="Opt-in / Landing Page"><LayoutTemplate size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-sales', mouseX: e.clientX, mouseY: e.clientY }); }} title="Página de Vendas"><ShoppingBag size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-vsl', mouseX: e.clientX, mouseY: e.clientY }); }} title="VSL"><Video size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-checkout', mouseX: e.clientX, mouseY: e.clientY }); }} title="Checkout"><CreditCard size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'page-thankyou', mouseX: e.clientX, mouseY: e.clientY }); }} title="Thank You Page"><CheckCircle size={20} /></button>
+          </div>
+        </details>
         
-        <div className="wb-palette-group">
-          <span className="wb-palette-title">Ações</span>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-purchase', mouseX: e.clientX, mouseY: e.clientY }); }} title="Compra"><BadgeDollarSign size={20} /></button>
-          <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-lead', mouseX: e.clientX, mouseY: e.clientY }); }} title="Lead"><UserPlus size={20} /></button>
-        </div>
+        <details className="wb-palette-group" open>
+          <summary className="wb-palette-title">Ações</summary>
+          <div className="wb-palette-items">
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-purchase', mouseX: e.clientX, mouseY: e.clientY }); }} title="Compra"><BadgeDollarSign size={20} /></button>
+            <button onPointerDown={(e) => { e.preventDefault(); setDraggedShape({ type: 'action-lead', mouseX: e.clientX, mouseY: e.clientY }); }} title="Lead"><UserPlus size={20} /></button>
+          </div>
+        </details>
       </div>
 
       {/* Toolbar Inferior de Ferramentas de Interação */}
@@ -1240,7 +1285,7 @@ export default function Whiteboard() {
           style={{ transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`, transformOrigin: '0 0' }}
         >
           <svg className="wb-connections-svg" style={{ overflow: 'visible', position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}>
-            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} updateConnection={updateConnection} />)}
+            {connections.map(conn => <Connection key={conn.id} conn={conn} nodes={nodes} updateConnection={updateConnection} isSelected={selectedConnectionIds.includes(conn.id)} onSelect={handleConnectionSelect} />)}
             {renderDraftConnection()}
             {currentDrawPath && (
               <path d={getSmoothSvgPath(currentDrawPath)} fill="none" stroke={penSettings.color} strokeWidth={penSettings.width} strokeLinecap="round" strokeLinejoin="round" />

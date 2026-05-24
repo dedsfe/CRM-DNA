@@ -242,24 +242,48 @@
 }
 
 /* --- Palette Groups --- */
-.wb-palette-group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+details.wb-palette-group {
   margin-bottom: 12px;
   width: 100%;
 }
 
-.wb-palette-title {
-  font-size: 10px;
+summary.wb-palette-title {
+  font-size: 11px;
   text-transform: uppercase;
-  color: var(--gray-400);
+  color: var(--slate-500);
   font-weight: 700;
   letter-spacing: 0.5px;
-  margin-top: 4px;
-  text-align: center;
-  width: 100%;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none; /* Hide default arrow */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 4px;
+}
+summary.wb-palette-title::-webkit-details-marker {
+  display: none;
+}
+summary.wb-palette-title:hover {
+  background: var(--slate-100);
+}
+summary.wb-palette-title::after {
+  content: '▼';
+  font-size: 8px;
+  color: var(--slate-400);
+  transition: transform 0.2s;
+}
+details[open] > summary.wb-palette-title::after {
+  transform: rotate(180deg);
+}
+
+.wb-palette-items {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .wb-left-palette {
