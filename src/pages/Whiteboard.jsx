@@ -923,7 +923,9 @@ export default function Whiteboard() {
       type: type,
       x: worldX, y: worldY,
       width: size.w, height: size.h,
-      text: '<p style="text-align: center"></p>'
+      text: '<p style="text-align: center"></p>',
+      author: user || 'André',
+      createdAt: new Date().toISOString()
     };
     setNodes((prev) => [...prev, newNode]);
     setSelectedNodeIds([newNode.id]);

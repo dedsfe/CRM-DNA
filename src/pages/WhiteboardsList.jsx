@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../lib/auth';
 import { supabase } from '../lib/supabase';
 import { Plus, Search, Trash2 } from 'lucide-react';
 import './WhiteboardsList.css';
@@ -8,6 +9,7 @@ export default function WhiteboardsList() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,11 +32,9 @@ export default function WhiteboardsList() {
   };
 
   const handleCreate = async () => {
-    const owner = prompt("Quem é o dono deste quadro? (Andre ou Dany)", "Andre");
-    if (!owner) return;
-
     const title = prompt("Qual o nome do quadro?", "Novo Quadro");
     if (!title) return;
+    const owner = user || 'André';
 
     const { data, error } = await supabase
       .from('whiteboards')
@@ -93,7 +93,7 @@ export default function WhiteboardsList() {
                 </button>
               </div>
               <div className="wb-card-meta">
-                <span className={`wb-card-tag ${proj.owner.toLowerCase()}`}>
+                <span className={`wb-card-tag ${proj.owner.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()}`}>
                   {proj.owner}
                 </span>
                 <span className="wb-card-date">
