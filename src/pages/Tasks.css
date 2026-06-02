@@ -32,6 +32,10 @@
   color: var(--neutral-400);
 }
 
+.tp-header-action {
+  align-self: flex-start;
+}
+
 /* ── SUMMARY BAR ── */
 .summary-bar {
   display: grid;
@@ -713,6 +717,11 @@
   .tp-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .tp-header-action {
+    width: 100%;
+    justify-content: center;
   }
 
   /* Botões de ação precisam ficar sempre visíveis (pois não há hover no touch) */

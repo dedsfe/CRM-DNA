@@ -475,14 +475,21 @@ export default function Clients() {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     const paramId = searchParams.get('id');
     const paramTab = searchParams.get('tab');
+    const quickAction = searchParams.get('quickAction');
     if (paramId) setSelectedId(paramId);
     if (paramTab) setActiveTab(paramTab);
-  }, [searchParams]);
+    if (quickAction === 'new-client') {
+      setClientModal({});
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('quickAction');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const openTaskComments   = (task)   => setCommentTarget({ type: 'task',   id: task.id,   title: task.title });
   const openClientComments = (client) => setCommentTarget({ type: 'client', id: client.id, title: client.name });

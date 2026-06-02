@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { fetchMeetings, fetchClients, insertMeeting, updateMeeting, deleteMeeting } from '../lib/api';
 import { Calendar as CalendarIcon, Clock, Plus, Video, Trash2, Edit2, X, MessageSquare } from 'lucide-react';
 import Modal from '../components/Modal';
@@ -16,6 +17,7 @@ export default function Meetings() {
   const [error, setError] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Form state
   const [form, setForm] = useState({
@@ -58,6 +60,25 @@ export default function Meetings() {
     }
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    if (loading || searchParams.get('quickAction') !== 'new-meeting') return;
+    const timer = window.setTimeout(() => {
+      setEditingMeeting(null);
+      setForm({
+        title: '',
+        clientId: clients[0]?.id || '',
+        scheduledAt: formatDateTimeLocal(new Date().toISOString()),
+        meetLink: '',
+        notes: '',
+      });
+      setModalOpen(true);
+    }, 0);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('quickAction');
+    setSearchParams(nextParams, { replace: true });
+    return () => window.clearTimeout(timer);
+  }, [clients, loading, searchParams, setSearchParams]);
 
   const handleSave = async () => {
     try {

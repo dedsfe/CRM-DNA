@@ -146,6 +146,51 @@ function TaskEditModal({ task, clients, onClose, onSave, onDelete }) {
   );
 }
 
+function TaskCreateModal({ clients, onClose, onSave }) {
+  const defaultClientId = clients[0]?.id ?? '';
+  const [form, setForm] = useState({
+    clientId: defaultClientId,
+    title: '',
+    description: '',
+    dueDate: '',
+    assignees: ['André'],
+    priority: 'medium',
+    status: 'pending',
+  });
+  const [busy, setBusy] = useState(false);
+  const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
+  const clientId = form.clientId || defaultClientId;
+  const valid = form.title.trim() && form.dueDate && clientId && form.assignees.length > 0;
+
+  return (
+    <Modal onClose={onClose}>
+      <div className="modal-head">
+        <h3>✅ Nova Tarefa</h3>
+        <button className="icon-btn" onClick={onClose}><X size={16} /></button>
+      </div>
+
+      <div className="modal-body">
+        <TaskFields form={{ ...form, clientId }} set={set} clients={clients} />
+      </div>
+
+      <div className="modal-foot">
+        <button className="btn btn-secondary btn-sm" onClick={onClose} disabled={busy}>Cancelar</button>
+        <button
+          className="btn btn-primary btn-sm"
+          disabled={!valid || busy}
+          onClick={async () => {
+            setBusy(true);
+            await onSave({ ...form, clientId });
+            onClose();
+          }}
+        >
+          {busy ? 'Criando…' : 'Criar Tarefa'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 /* ─── Formulário inline (criar tarefa dentro da coluna) ─── */
 function InlineAddTask({ status, clients, onAdd, onCancel }) {
   const [form, setForm] = useState({
@@ -351,6 +396,7 @@ export default function Tasks() {
   const [filterClient, setFilterClient] = useState('All');
   const [filterDate, setFilterDate] = useState('All');
   const [showDone, setShowDone] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [addingStage, setAddingStage] = useState(null);
   const [commentTarget, setCommentTarget] = useState(null);
@@ -379,7 +425,15 @@ export default function Tasks() {
 
   /* Abre a tarefa vinda de um link da caixa de entrada (?task=ID) */
   useEffect(() => {
+    const quickAction = searchParams.get('quickAction');
     const id = searchParams.get('task');
+    if (quickAction === 'new-task') {
+      const timer = window.setTimeout(() => setCreating(true), 0);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('quickAction');
+      setSearchParams(nextParams, { replace: true });
+      return () => window.clearTimeout(timer);
+    }
     if (!id || tasks.length === 0) return;
     const t = tasks.find(x => x.id === id);
     if (t) {
@@ -480,6 +534,9 @@ export default function Tasks() {
           <h1 className="tp-title">✅ Tarefas</h1>
           <p className="tp-sub">Visão global de todas as entregas</p>
         </div>
+        <button className="btn btn-primary tp-header-action" onClick={() => setCreating(true)}>
+          <Plus size={15} /> Nova Tarefa
+        </button>
       </div>
 
       {error && <div className="db-error">⚠️ {error}</div>}
@@ -618,6 +675,14 @@ export default function Tasks() {
           onClose={() => setEditing(null)}
           onSave={update}
           onDelete={remove}
+        />
+      )}
+
+      {creating && (
+        <TaskCreateModal
+          clients={clients}
+          onClose={() => setCreating(false)}
+          onSave={add}
         />
       )}
 
