@@ -1,44 +1,43 @@
 # Mini Feature Report
 
 ## Resumo
-Implementei um launcher global de acoes rapidas para mobile no topo do app, permitindo abrir os fluxos de `Novo Cliente`, `Nova Tarefa` e `Agendar Reuniao` com menos navegacao. Tambem adicionei um modal de criacao direta de tarefas para que o atalho abra um fluxo real e imediato.
+Implementei um bloco mobile de foco rapido na tela de tarefas. Ele permite alternar entre recortes uteis com um toque, como `Minhas`, `Hoje`, `Atrasadas` e `Em andamento`, e ainda mostra uma previa acionavel das tarefas mais urgentes no contexto atual.
 
 ## Problema identificado
-No mobile, os fluxos de criacao estavam espalhados pelas telas e exigiam navegacao manual ate cada pagina para encontrar o CTA correto. Isso aumentava o atrito em uma rotina em que cadastrar um cliente, registrar uma tarefa ou agendar uma reuniao deveria ser rapido.
+A pagina de tarefas ja tinha bons dados e filtros, mas no mobile a triagem diaria ainda era custosa. O usuario precisava percorrer filtros e colunas do kanban para descobrir rapidamente o que exigia atencao imediata, o que reduz a agilidade da experiencia em tela pequena.
 
 ## Solucao implementada
-- Adicionei um botao `+` global no `TopBar` mobile.
-- O botao abre um sheet nativo com tres atalhos: cliente, tarefa e reuniao.
-- Cada atalho leva o usuario direto para a rota correta e dispara o fluxo de criacao da tela.
-- Na tela de tarefas, criei um modal dedicado de criacao para que o atalho nao dependa do formulario inline do kanban.
-- Mantive os fluxos existentes intactos, apenas reduzindo passos no mobile.
+- Adicionei um card mobile de `Triagem mobile` no topo da pagina de tarefas.
+- Criei filtros de foco com um toque para `Tudo`, `Minhas`, `Hoje`, `Atrasadas` e `Em andamento`.
+- Esses filtros reaproveitam o contexto atual da pagina e refinam a lista sem alterar contratos, rotas ou APIs.
+- Adicionei uma previa com ate 3 tarefas abertas priorizadas por urgencia, prazo e status.
+- Cada item da previa abre diretamente a tarefa para edicao.
+- Inclui um botao `Limpar visao` para resetar rapidamente os filtros ativos no mobile.
 
 ## Arquivos modificados
-- `src/components/MobileQuickActions.jsx`: novo launcher mobile com sheet e atalhos globais.
-- `src/components/MobileQuickActions.css`: estilo do launcher e do sheet mobile.
-- `src/components/TopBar.jsx`: integracao do launcher ao shell principal.
-- `src/lib/navigation.js`: helpers de navegacao para os atalhos de criacao.
-- `src/pages/Clients.jsx`: abertura do modal de novo cliente quando a tela recebe o atalho rapido.
-- `src/pages/Tasks.jsx`: novo modal de criacao de tarefa e disparo pelo atalho rapido.
-- `src/pages/Tasks.css`: ajuste visual do novo CTA da tela de tarefas.
-- `src/pages/Meetings.jsx`: abertura do modal de nova reuniao quando a tela recebe o atalho rapido.
+- `src/pages/Tasks.jsx`: nova logica do foco rapido mobile, priorizacao da previa e integracao com o estado de filtros existente.
+- `src/pages/Tasks.css`: novo layout e estilos do card mobile, pills de foco e cards compactos da previa.
+- `docs/mini-feature-report.md`: documentacao da melhoria, validacao e observacoes.
 
 ## Por que isso melhora o produto
-O mobile passa a ter um ponto unico e previsivel para criacao rapida de registros importantes. Isso reduz friccao operacional, acelera tarefas do dia a dia e melhora a percepcao de usabilidade sem alterar contratos, rotas principais ou comportamento existente das paginas.
+Essa mudanca melhora a velocidade de triagem no mobile, que costuma ser o pior contexto para navegar entre varios filtros e colunas. O usuario passa a enxergar o trabalho mais urgente imediatamente e consegue abrir tarefas criticas sem procurar manualmente pelo kanban inteiro.
 
 ## Validacao realizada
 - `git status --short --branch`: repositorio inicialmente limpo, em `HEAD detached`.
-- `npm run lint` antes da feature: falhou por erros preexistentes do projeto.
-- `npm run build` antes da feature: inicialmente bloqueado por dependencias ausentes no worktree; depois validado com `node_modules` reutilizado do repo principal.
-- `git commit --allow-empty -m "chore: create pre-mini-feature restore point"`: ponto seguro criado antes da alteracao.
-- `git push origin HEAD:main`: ponto seguro publicado no GitHub antes da feature.
+- `git commit --allow-empty -m "chore: create pre-mini-feature safety checkpoint"`: checkpoint criado antes de qualquer alteracao funcional.
+- `git push origin HEAD:main`: checkpoint publicado no GitHub antes da implementacao.
+- `npm run lint` antes da feature: falhou por problemas preexistentes amplos do repositorio.
+- `npm run build` antes da feature: passou apos reapontar `node_modules` deste worktree para os `node_modules` ja presentes no clone principal.
 - `npm run build` apos a feature: passou com sucesso.
-- `npm run lint` apos a feature: continua falhando apenas por problemas preexistentes do repositorio; os arquivos novos/alterados da feature foram limpos em relacao ao delta introduzido.
+- `./node_modules/eslint/bin/eslint.js src/pages/Tasks.jsx`: confirmou que os erros restantes nessa tela sao preexistentes (`showDone` nao usado e `setEditing` dentro de effect), sem novos erros do delta implementado.
+- `npm run lint` apos a feature: continua falhando pelos mesmos problemas preexistentes espalhados pelo projeto.
+- `cd mcp-server && npm run build`: passou (`No build step required`).
+- `cd mcp-server && npm test`: continua falhando porque o script do projeto ainda e apenas `echo "Error: no test specified" && exit 1`.
 - Tentativa de validacao manual mobile:
-  - `npm run dev -- --host 127.0.0.1 --port 4173`: bloqueado pelo sandbox com `listen EPERM`.
-  - Browser plugin em `file://.../dist/index.html`: bloqueado pela politica de URL do Browser.
+  - `npm run dev -- --host 127.0.0.1 --port 4173`: bloqueado pelo ambiente com `listen EPERM`.
+  - Browser plugin em `file://.../dist/index.html`: bloqueado pela politica de URL do browser embutido.
 
 ## Riscos e observacoes
-- A validacao manual em navegador nao foi concluida por restricoes externas do ambiente, nao por falha conhecida do codigo.
-- O projeto possui baseline de lint quebrado em varios arquivos fora do escopo desta feature.
-- O launcher depende dos fluxos locais de cada pagina; se esses fluxos forem refatorados no futuro, os atalhos devem ser mantidos sincronizados.
+- A validacao visual manual do fluxo mobile nao foi concluida por restricoes do ambiente, nao por erro conhecido do codigo.
+- O projeto possui uma baseline de lint quebrada em varios arquivos fora do escopo desta entrega.
+- O foco rapido depende do estado local de filtros da pagina; futuras refatoracoes dessa tela devem manter a ordem de aplicacao dos filtros para preservar o comportamento esperado.

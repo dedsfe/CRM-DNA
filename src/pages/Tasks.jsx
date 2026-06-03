@@ -51,6 +51,120 @@ const priorityConfig = {
 const userEmoji = (u) => (u === 'André' ? '🧑' : '👩');
 const toggleInArray = (arr, val) =>
   arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+const formatTaskDate = (date) =>
+  date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : 'Sem data';
+const taskPriorityScore = { high: 0, medium: 1, low: 2 };
+
+function sortTasksForFocus(a, b) {
+  const overdueDelta = Number(isOverdue(a.dueDate)) - Number(isOverdue(b.dueDate));
+  if (overdueDelta !== 0) return overdueDelta < 0 ? 1 : -1;
+
+  const statusScore = { in_progress: 0, pending: 1, completed: 2 };
+  const statusDelta = statusScore[a.status] - statusScore[b.status];
+  if (statusDelta !== 0) return statusDelta;
+
+  const dateDelta = a.dueDate.localeCompare(b.dueDate);
+  if (dateDelta !== 0) return dateDelta;
+
+  return (taskPriorityScore[a.priority] ?? 99) - (taskPriorityScore[b.priority] ?? 99);
+}
+
+function MobileFocusCard({
+  user,
+  clients,
+  tasks,
+  mobileFocus,
+  onFocusChange,
+  onOpenTask,
+  onResetView,
+  hasActiveFilters,
+}) {
+  const openTasks = tasks.filter((task) => task.status !== 'completed');
+  const myTasksCount = user ? openTasks.filter((task) => task.assignees.includes(user)).length : 0;
+  const todayTasksCount = openTasks.filter((task) => task.dueDate === today).length;
+  const overdueTasksCount = openTasks.filter((task) => isOverdue(task.dueDate)).length;
+  const inProgressTasksCount = tasks.filter((task) => task.status === 'in_progress').length;
+  const previewTasks = [...openTasks].sort(sortTasksForFocus).slice(0, 3);
+
+  const focusOptions = [
+    { value: 'all', label: 'Tudo', count: openTasks.length },
+    { value: 'mine', label: 'Minhas', count: myTasksCount },
+    { value: 'today', label: 'Hoje', count: todayTasksCount },
+    { value: 'overdue', label: 'Atrasadas', count: overdueTasksCount },
+    { value: 'in-progress', label: 'Em andamento', count: inProgressTasksCount },
+  ];
+
+  const activeSummary = {
+    all: 'Veja rapidamente o que está em aberto no seu contexto atual.',
+    mine: `Foco nas tarefas atribuídas para ${user ?? 'você'}.`,
+    today: 'Priorize as entregas que vencem hoje.',
+    overdue: 'Resolva primeiro o que já passou do prazo.',
+    'in-progress': 'Retome o que já foi iniciado e ainda está aberto.',
+  };
+
+  return (
+    <section className="mobile-focus-card" aria-label="Foco rápido de tarefas">
+      <div className="mobile-focus-head">
+        <div>
+          <p className="mobile-focus-kicker">Triagem mobile</p>
+          <h2 className="mobile-focus-title">O que precisa da sua atenção</h2>
+          <p className="mobile-focus-sub">{activeSummary[mobileFocus]}</p>
+        </div>
+        {hasActiveFilters && (
+          <button className="mobile-focus-reset" type="button" onClick={onResetView}>
+            Limpar visão
+          </button>
+        )}
+      </div>
+
+      <div className="mobile-focus-pills">
+        {focusOptions.map(({ value, label, count }) => (
+          <button
+            key={value}
+            type="button"
+            className={`mobile-focus-pill ${mobileFocus === value ? 'mobile-focus-pill--active' : ''}`}
+            onClick={() => onFocusChange(value)}
+          >
+            <span>{label}</span>
+            <strong>{count}</strong>
+          </button>
+        ))}
+      </div>
+
+      <div className="mobile-focus-preview">
+        {previewTasks.length === 0 ? (
+          <p className="mobile-focus-empty">Nenhuma tarefa aberta neste recorte.</p>
+        ) : (
+          previewTasks.map((task) => {
+            const client = clients.find((item) => item.id === task.clientId);
+            const overdue = isOverdue(task.dueDate);
+            const statusLabel = task.status === 'in_progress' ? 'Em andamento' : overdue ? 'Atrasada' : 'Aberta';
+
+            return (
+              <button
+                key={task.id}
+                type="button"
+                className="mobile-focus-task"
+                onClick={() => onOpenTask(task)}
+              >
+                <div className="mobile-focus-task-top">
+                  <span className={`mobile-focus-task-status mobile-focus-task-status--${overdue ? 'overdue' : task.status === 'in_progress' ? 'progress' : 'pending'}`}>
+                    {statusLabel}
+                  </span>
+                  <span className="mobile-focus-task-date">{formatTaskDate(task.dueDate)}</span>
+                </div>
+                <strong className="mobile-focus-task-title">{task.title}</strong>
+                <span className="mobile-focus-task-meta">
+                  {client?.emoji} {client?.name ?? 'Cliente'} · {task.assignees.map((assignee) => userEmoji(assignee)).join(' ')}
+                </span>
+              </button>
+            );
+          })
+        )}
+      </div>
+    </section>
+  );
+}
 
 /* ─── Campos compartilhados do formulário de tarefa ─── */
 function TaskFields({ form, set, clients }) {
@@ -401,6 +515,7 @@ export default function Tasks() {
   const [addingStage, setAddingStage] = useState(null);
   const [commentTarget, setCommentTarget] = useState(null);
   const [draggedTask, setDraggedTask] = useState(null);
+  const [mobileFocus, setMobileFocus] = useState('all');
   const isMobile = useIsMobile();
   const { user } = useAuth();
   const { notifyDeleted } = useUndo();
@@ -517,6 +632,19 @@ export default function Tasks() {
     });
   }
 
+  const mobileFocusContext = byFilter;
+  if (isMobile && mobileFocus !== 'all') {
+    if (mobileFocus === 'mine' && user) {
+      byFilter = byFilter.filter((task) => task.assignees.includes(user));
+    } else if (mobileFocus === 'today') {
+      byFilter = byFilter.filter((task) => task.status !== 'completed' && task.dueDate === today);
+    } else if (mobileFocus === 'overdue') {
+      byFilter = byFilter.filter((task) => task.status !== 'completed' && isOverdue(task.dueDate));
+    } else if (mobileFocus === 'in-progress') {
+      byFilter = byFilter.filter((task) => task.status === 'in_progress');
+    }
+  }
+
   const pendingTasks = byFilter.filter(t => t.status === 'pending')
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const inProgressTasks = byFilter.filter(t => t.status === 'in_progress')
@@ -524,6 +652,18 @@ export default function Tasks() {
   const completedTasks = byFilter.filter(t => t.status === 'completed')
     .sort((a, b) => b.dueDate.localeCompare(a.dueDate));
   const overdue = [...pendingTasks, ...inProgressTasks].filter(t => isOverdue(t.dueDate));
+  const hasActiveFilters = filterUser !== 'All'
+    || filterStage !== 'All'
+    || filterClient !== 'All'
+    || filterDate !== 'All'
+    || mobileFocus !== 'all';
+  const resetView = () => {
+    setFilter('All');
+    setStage('All');
+    setFilterClient('All');
+    setFilterDate('All');
+    setMobileFocus('all');
+  };
 
   return (
     <div className="tp">
@@ -545,6 +685,19 @@ export default function Tasks() {
         <div className="db-loading">Carregando tarefas…</div>
       ) : (
       <>
+      {isMobile && (
+        <MobileFocusCard
+          user={user}
+          clients={clients}
+          tasks={mobileFocusContext}
+          mobileFocus={mobileFocus}
+          onFocusChange={setMobileFocus}
+          onOpenTask={setEditing}
+          onResetView={resetView}
+          hasActiveFilters={hasActiveFilters}
+        />
+      )}
+
       {/* ── SUMMARY BAR ── */}
       <div className="summary-bar">
         <div className="summary-item summary-item--orange">
